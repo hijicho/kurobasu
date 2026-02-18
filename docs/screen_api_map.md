@@ -48,9 +48,10 @@
       "offering_id": 501,
       "subject": { "subject_id": 9001, "title": "線形代数" },
       "academic_year": 2026,
-      "term": "spring",
+      "term": "前期",
       "modality": "onsite",
-      "instructor_names": ["山田 太郎"],
+      "instructor_names": ["山田 太郎", "公大　花子"],
+      "rate" : "AA",
       "meetings": [
         { "day": 1, "period": 2 },
         { "day": 4, "period": 2 }
@@ -66,7 +67,7 @@
 
 ---
 
-## 画面3：授業詳細（= 評価一覧）
+## 画面3：授業詳細（= 評価一覧） **保留**
 
 目的：選んだ授業（offering）に紐づくレビュー（評価）一覧を表示する。
 

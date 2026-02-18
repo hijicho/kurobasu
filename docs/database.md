@@ -88,6 +88,7 @@
 | review_id | BIGSERIAL | PK |
 | offering_id | BIGINT | NOT NULL, FK → offerings(offering_id), ON DELETE CASCADE |
 | md_url | TEXT | NOT NULL（Markdownの保存先URLなど） |
+| review_count | BIGINT
 | status | review_status_enum | NOT NULL, DEFAULT 'public'（public/private/deleted） |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now()（推奨） |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now()（推奨） |
