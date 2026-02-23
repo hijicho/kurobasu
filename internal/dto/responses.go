@@ -42,18 +42,14 @@ type MeetingResponse struct {
 // OfferingResponse: 開講情報のレスポーンス
 // =====================
 type OfferingResponse struct {
-	OfferingID      int64                `json:"offering_id"`
-	Subject         SubjectResponse      `json:"subject"`
-	AcademicYear    int16                `json:"academic_year"`
-	Term            string               `json:"term"` // spring, fall, intensive, year
-	Modality        string               `json:"modality"`   // onsite, online, hybrid, unknown
-	InstructorNames []string             `json:"instructor_names"`
-	Meetings        []MeetingResponse    `json:"meetings"` // この開講の授業時間割
-}
-	Modality        string               `json:"modality"`
-	InstructorNames []string             `json:"instructor_names"`
-	Meetings        []MeetingResponse    `json:"meetings"`
-	Rate            *string              `json:"rate,omitempty"`
+	OfferingID      int64             `json:"offering_id"`
+	Subject         SubjectResponse   `json:"subject"`
+	AcademicYear    int16             `json:"academic_year"`
+	Term            string            `json:"term"` // spring, fall, intensive, year
+	Modality        string            `json:"modality"` // onsite, online, hybrid, unknown
+	InstructorNames []string          `json:"instructor_names"`
+	Meetings        []MeetingResponse `json:"meetings"` // この開講の授業時間割
+	Rate            *string           `json:"rate,omitempty"`
 }
 
 // Review Response
