@@ -10,9 +10,9 @@ type TimetableItem struct {
 	IsSelected  bool      `gorm:"column:is_selected;not null;default:true" json:"is_selected"`
 	CreatedAt   time.Time `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
 
-	// リレーション
-	Timetable *Timetable `gorm:"foreignKey:TimetableID;references:TimetableID;constraint:OnDelete:CASCADE" json:"timetable,omitempty"`
-	Offering  *Offering  `gorm:"foreignKey:OfferingID;references:OfferingID;constraint:OnDelete:CASCADE" json:"offering,omitempty"`
+	// リレーション (no FK constraint, only for eager loading)
+	Timetable *Timetable `gorm:"foreignKey:TimetableID;references:TimetableID;-:all" json:"timetable,omitempty"`
+	Offering  *Offering  `gorm:"foreignKey:OfferingID;references:OfferingID;-:all" json:"offering,omitempty"`
 }
 
 func (TimetableItem) TableName() string {

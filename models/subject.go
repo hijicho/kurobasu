@@ -9,8 +9,8 @@ type Subject struct {
 	CreatedAt  time.Time `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
 	UpdatedAt  time.Time `gorm:"column:updated_at;not null;default:current_timestamp" json:"updated_at"`
 
-	// リレーション
-	Category *Category `gorm:"foreignKey:CategoryID;references:CategoryID" json:"category,omitempty"`
+	// リレーション (no FK constraint, only for eager loading)
+	Category *Category `gorm:"foreignKey:CategoryID;references:CategoryID;-:all" json:"category,omitempty"`
 }
 
 func (Subject) TableName() string {

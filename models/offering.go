@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql/driver"
-	"encoding/json"
 	"time"
 
 	"github.com/lib/pq"
@@ -45,8 +44,8 @@ type Offering struct {
 	InstructorNames pq.StringArray `gorm:"column:instructor_names;type:text[];not null;default:'{}'" json:"instructor_names"`
 	CreatedAt       time.Time      `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
 
-	// リレーション
-	Subject *Subject `gorm:"foreignKey:SubjectID;references:SubjectID" json:"subject,omitempty"`
+	// リレーション (no FK constraint, only for eager loading)
+	Subject *Subject `gorm:"foreignKey:SubjectID;references:SubjectID;-:all" json:"subject,omitempty"`
 }
 
 func (Offering) TableName() string {

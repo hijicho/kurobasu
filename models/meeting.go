@@ -6,8 +6,8 @@ type Meeting struct {
 	Day        int16 `gorm:"column:day;not null;check:day>=1 AND day<=7" json:"day"`
 	Period     int16 `gorm:"column:period;not null;check:period>=1 AND period<=10" json:"period"`
 
-	// リレーション
-	Offering *Offering `gorm:"foreignKey:OfferingID;references:OfferingID;constraint:OnDelete:CASCADE" json:"offering,omitempty"`
+	// リレーション (no FK constraint, only for eager loading)
+	Offering *Offering `gorm:"foreignKey:OfferingID;references:OfferingID;-:all" json:"offering,omitempty"`
 }
 
 func (Meeting) TableName() string {

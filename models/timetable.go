@@ -11,11 +11,12 @@ type Timetable struct {
 	IsPublic    bool      `gorm:"column:is_public;not null;default:false" json:"is_public"`
 	CreatedAt   time.Time `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
 
-	// リレーション
-	User  *User            `gorm:"foreignKey:UserID;references:UserID;constraint:OnDelete:CASCADE" json:"user,omitempty"`
-	Items []TimetableItem  `gorm:"foreignKey:TimetableID;references:TimetableID;constraint:OnDelete:CASCADE" json:"items,omitempty"`
+	// リレーション (no FK constraint, only for eager loading)
+	User  *User            `gorm:"foreignKey:UserID;references:UserID;-:all" json:"user,omitempty"`
+	Items []TimetableItem  `gorm:"foreignKey:TimetableID;references:TimetableID;-:all" json:"items,omitempty"`
 }
 
 func (Timetable) TableName() string {
 	return "timetables"
 }
+
