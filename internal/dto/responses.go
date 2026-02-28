@@ -51,6 +51,11 @@ type OfferingResponse struct {
 	Meetings        []MeetingResponse `json:"meetings"` // この開講の授業時間割
 	Rate            *string           `json:"rate,omitempty"`
 }
+	Modality        string               `json:"modality"`
+	InstructorNames []string             `json:"instructor_names"`
+	Meetings        []MeetingResponse    `json:"meetings"`
+	Rate            *string              `json:"rate,omitempty"`
+}
 
 // Review Response
 type ReviewResponse struct {
