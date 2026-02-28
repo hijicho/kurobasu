@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hageruto/kurobasu/config"
 	"github.com/hageruto/kurobasu/internal/dto"
@@ -14,12 +15,10 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// TestMain: すべてのテスト実行前に DB を初期化
+// TestMain: テスト前に DB 接続チェックのみ行う（マイグレーション/シードは行わない）
 func TestMain(m *testing.M) {
-	// .env ファイルをロード
-	godotenv.Load("../.env")
+	godotenv.Load()
 
-	// DB に接続
 	dsn := "host=" + os.Getenv("DB_HOST") +
 		" port=" + os.Getenv("DB_PORT") +
 		" user=" + os.Getenv("DB_USER") +
@@ -31,30 +30,48 @@ func TestMain(m *testing.M) {
 		panic("Failed to initialize database: " + err.Error())
 	}
 
-	// テストを実行
+	// 簡単な接続確認
+	sqlDB, err := config.DB.DB()
+	if err != nil {
+		panic("Failed to get sql.DB: " + err.Error())
+	}
+	sqlDB.SetConnMaxLifetime(time.Second * 2)
+	if err := sqlDB.Ping(); err != nil {
+		panic("Failed to ping database: " + err.Error())
+	}
+
 	code := m.Run()
 	os.Exit(code)
 }
 
 // =====================
-// Helper Functions
+// Helper: doRequest
+// - logs request body and response body/status
 // =====================
-
-// makeRequest は HTTP リクエストを作成し、レスポンスを返す
-func makeRequest(method, path string, body interface{}) *httptest.ResponseRecorder {
+func doRequest(t *testing.T, method, path string, body interface{}) *httptest.ResponseRecorder {
 	mux := router.SetupRoutes()
 
 	var req *http.Request
 	if body != nil {
-		bodyBytes, _ := json.Marshal(body)
-		req = httptest.NewRequest(method, path, bytes.NewReader(bodyBytes))
-		req.Header.Set("Content-Type", "application/json")
+		switch v := body.(type) {
+		case string:
+			req = httptest.NewRequest(method, path, bytes.NewBufferString(v))
+			req.Header.Set("Content-Type", "application/json")
+			t.Logf("REQ %s %s body(raw): %s", method, path, v)
+		default:
+			b, _ := json.Marshal(v)
+			req = httptest.NewRequest(method, path, bytes.NewReader(b))
+			req.Header.Set("Content-Type", "application/json")
+			t.Logf("REQ %s %s body(json): %s", method, path, string(b))
+		}
 	} else {
 		req = httptest.NewRequest(method, path, nil)
+		t.Logf("REQ %s %s", method, path)
 	}
 
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
+	t.Logf("RESP %s %s status=%d body=%s", method, path, w.Code, w.Body.String())
 	return w
 }
 
@@ -162,9 +179,9 @@ func TestCreateReview(t *testing.T) {
 
 	w := makeRequest("POST", "/api/v1/reviews", body)
 
-	// OfferingID が存在しない場合はエラー
-	if w.Code != http.StatusInternalServerError && w.Code != http.StatusCreated {
-		t.Errorf("Status code: got %d, want 500 or 201", w.Code)
+	// OfferingID が存在しない場合はエラー (404) または作成成功 (201)
+	if w.Code != http.StatusNotFound && w.Code != http.StatusCreated {
+		t.Errorf("Status code: got %d, want 404 or 201", w.Code)
 	}
 }
 
