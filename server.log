@@ -1,0 +1,13 @@
+panic: http: multiple registrations for /api/v1/me
+
+goroutine 1 [running]:
+net/http.(*serveMux121).handle(0xc0000a9b60, {0x7b4526, 0xa}, {0x849880, 0xc0002382c0})
+	/usr/lib/go-1.22/src/net/http/servemux121.go:59 +0x20e
+net/http.(*serveMux121).handleFunc(...)
+	/usr/lib/go-1.22/src/net/http/servemux121.go:96
+net/http.(*ServeMux).HandleFunc(0xc00003fe58?, {0x7b4526?, 0x4c652c?}, 0x7b2661?)
+	/usr/lib/go-1.22/src/net/http/server.go:2710 +0x3c
+github.com/hageruto/kurobasu/internal/router.SetupRoutes()
+	/home/hageruto/Projects/kurobasu/internal/router/router.go:27 +0x2df
+main.main()
+	/home/hageruto/Projects/kurobasu/cmd/server/main.go:25 +0xca
