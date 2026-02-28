@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -57,6 +58,10 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 
 	revRepo := &repository.ReviewRepository{}
 	if err := revRepo.CreateReview(review); err != nil {
+		if errors.Is(err, repository.ErrOfferingNotFound) {
+			errorResponse(w, http.StatusNotFound, "Offering not found")
+			return
+		}
 		errorResponse(w, http.StatusInternalServerError, "Failed to create review")
 		return
 	}
