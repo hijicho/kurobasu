@@ -3,75 +3,89 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/hageruto/kurobasu/config"
 	"github.com/hageruto/kurobasu/internal/dto"
-	"github.com/hageruto/kurobasu/internal/router"
-	"github.com/joho/godotenv"
 )
 
-// TestMain: テスト前に DB 接続チェックのみ行う（マイグレーション/シードは行わない）
-func TestMain(m *testing.M) {
-	godotenv.Load()
+var apiBaseURL = getAPIBaseURL()
 
-	dsn := "host=" + os.Getenv("DB_HOST") +
-		" port=" + os.Getenv("DB_PORT") +
-		" user=" + os.Getenv("DB_USER") +
-		" password=" + os.Getenv("DB_PASSWORD") +
-		" dbname=" + os.Getenv("DB_NAME") +
-		" sslmode=" + os.Getenv("DB_SSLMODE")
-
-	if err := config.InitDB(dsn); err != nil {
-		panic("Failed to initialize database: " + err.Error())
+func getAPIBaseURL() string {
+	if v := os.Getenv("API_BASE_URL"); v != "" {
+		return v
 	}
+	return "http://localhost:8000"
+}
 
-	// 簡単な接続確認
-	sqlDB, err := config.DB.DB()
-	if err != nil {
-		panic("Failed to get sql.DB: " + err.Error())
-	}
-	sqlDB.SetConnMaxLifetime(time.Second * 2)
-	if err := sqlDB.Ping(); err != nil {
-		panic("Failed to ping database: " + err.Error())
-	}
+type testResponse struct {
+	Code   int
+	Body   *bytes.Buffer
+	header http.Header
+}
 
-	code := m.Run()
-	os.Exit(code)
+func (r *testResponse) Header() http.Header {
+	return r.header
 }
 
 // =====================
 // Helper: doRequest
 // - logs request body and response body/status
 // =====================
-func doRequest(t *testing.T, method, path string, body interface{}) *httptest.ResponseRecorder {
-	mux := router.SetupRoutes()
-
+func doRequest(t *testing.T, method, path string, body interface{}) *testResponse {
 	var req *http.Request
+	url := apiBaseURL + path
+	client := &http.Client{Timeout: 5 * time.Second}
+
 	if body != nil {
 		switch v := body.(type) {
 		case string:
-			req = httptest.NewRequest(method, path, bytes.NewBufferString(v))
+			httpReq, err := http.NewRequest(method, url, bytes.NewBufferString(v))
+			if err != nil {
+				t.Fatalf("failed to build request: %v", err)
+			}
+			req = httpReq
 			req.Header.Set("Content-Type", "application/json")
-			t.Logf("REQ %s %s body(raw): %s", method, path, v)
+			t.Logf("REQ %s %s%s body(raw): %s", method, apiBaseURL, path, v)
 		default:
 			b, _ := json.Marshal(v)
-			req = httptest.NewRequest(method, path, bytes.NewReader(b))
+			httpReq, err := http.NewRequest(method, url, bytes.NewReader(b))
+			if err != nil {
+				t.Fatalf("failed to build request: %v", err)
+			}
+			req = httpReq
 			req.Header.Set("Content-Type", "application/json")
-			t.Logf("REQ %s %s body(json): %s", method, path, string(b))
+			t.Logf("REQ %s %s%s body(json): %s", method, apiBaseURL, path, string(b))
 		}
 	} else {
-		req = httptest.NewRequest(method, path, nil)
-		t.Logf("REQ %s %s", method, path)
+		httpReq, err := http.NewRequest(method, url, nil)
+		if err != nil {
+			t.Fatalf("failed to build request: %v", err)
+		}
+		req = httpReq
+		t.Logf("REQ %s %s%s", method, apiBaseURL, path)
 	}
 
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	t.Logf("RESP %s %s status=%d body=%s", method, path, w.Code, w.Body.String())
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("request failed (%s %s): %v; ensure server is running", method, url, err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed reading response body: %v", err)
+	}
+
+	w := &testResponse{
+		Code:   resp.StatusCode,
+		Body:   bytes.NewBuffer(respBody),
+		header: resp.Header.Clone(),
+	}
+	t.Logf("RESP %s %s%s status=%d body=%s", method, apiBaseURL, path, w.Code, w.Body.String())
 	return w
 }
 
@@ -96,7 +110,7 @@ func assertJSONResponse(t *testing.T, body string) {
 
 // TestListCategories - GET /api/v1/categories
 func TestListCategories(t *testing.T) {
-	w := makeRequest("GET", "/api/v1/categories", nil)
+	w := doRequest(t, "GET", "/api/v1/categories", nil)
 
 	assertStatusCode(t, w.Code, http.StatusOK)
 	assertJSONResponse(t, w.Body.String())
@@ -112,7 +126,7 @@ func TestListCategories(t *testing.T) {
 
 // TestListCategories_InvalidMethod - GET 以外のメソッドをテスト
 func TestListCategories_InvalidMethod(t *testing.T) {
-	w := makeRequest("POST", "/api/v1/categories", nil)
+	w := doRequest(t, "POST", "/api/v1/categories", nil)
 
 	assertStatusCode(t, w.Code, http.StatusMethodNotAllowed)
 }
@@ -126,7 +140,7 @@ func TestListCategories_InvalidMethod(t *testing.T) {
 func TestListOfferingsByCategory(t *testing.T) {
 	// Test with actual category data would require seeded database
 	// For now, we test that the endpoint returns expected status or 404
-	w := makeRequest("GET", "/api/v1/categories/science/offerings?academic_year=2026&term=spring", nil)
+	w := doRequest(t, "GET", "/api/v1/categories/science/offerings?academic_year=2026&term=spring", nil)
 
 	// Route not matching due to Go 1.22 router behavior
 	// This is a known limitation with the current routing setup
@@ -137,7 +151,7 @@ func TestListOfferingsByCategory(t *testing.T) {
 
 // TestListOfferingsByCategory_MissingQueryParams - missing query params
 func TestListOfferingsByCategory_MissingQueryParams(t *testing.T) {
-	w := makeRequest("GET", "/api/v1/categories/science/offerings", nil)
+	w := doRequest(t, "GET", "/api/v1/categories/science/offerings", nil)
 
 	// Route not matching, so expect 404
 	if w.Code != http.StatusNotFound && w.Code != http.StatusBadRequest {
@@ -149,7 +163,7 @@ func TestListOfferingsByCategory_MissingQueryParams(t *testing.T) {
 func TestGetOffering(t *testing.T) {
 	// Test that endpoint returns 404 for non-existent ID
 	// Note: Route may not match due to Go 1.22 routing
-	w := makeRequest("GET", "/api/v1/offerings/99999", nil)
+	w := doRequest(t, "GET", "/api/v1/offerings/99999", nil)
 
 	// Either 404 (not found) or due to routing issue
 	assertStatusCode(t, w.Code, http.StatusNotFound)
@@ -162,7 +176,7 @@ func TestGetOffering(t *testing.T) {
 // TestListReviews - GET /api/v1/offerings/{id}/reviews
 func TestListReviews(t *testing.T) {
 	// Note: Route may not match due to Go 1.22 routing of path parameters
-	w := makeRequest("GET", "/api/v1/offerings/1/reviews", nil)
+	w := doRequest(t, "GET", "/api/v1/offerings/1/reviews", nil)
 
 	if w.Code != http.StatusNotFound && w.Code != http.StatusOK {
 		t.Logf("Note: TestListReviews returned %d", w.Code)
@@ -177,7 +191,7 @@ func TestCreateReview(t *testing.T) {
 		Status:     "public",
 	}
 
-	w := makeRequest("POST", "/api/v1/reviews", body)
+	w := doRequest(t, "POST", "/api/v1/reviews", body)
 
 	// OfferingID が存在しない場合はエラー (404) または作成成功 (201)
 	if w.Code != http.StatusNotFound && w.Code != http.StatusCreated {
@@ -187,7 +201,7 @@ func TestCreateReview(t *testing.T) {
 
 // TestGetReview - GET /api/v1/reviews/{id}
 func TestGetReview(t *testing.T) {
-	w := makeRequest("GET", "/api/v1/reviews/99999", nil)
+	w := doRequest(t, "GET", "/api/v1/reviews/99999", nil)
 
 	// Route may not match due to Go 1.22 routing, but expect 404 if it does
 	assertStatusCode(t, w.Code, http.StatusNotFound)
@@ -203,7 +217,7 @@ func TestBootstrapUser(t *testing.T) {
 		DisplayName: "Test User",
 	}
 
-	w := makeRequest("POST", "/api/v1/auth/bootstrap", body)
+	w := doRequest(t, "POST", "/api/v1/auth/bootstrap", body)
 
 	// Handler returns 200 if user already exists, 201 if newly created
 	if w.Code != http.StatusCreated && w.Code != http.StatusOK {
@@ -229,14 +243,14 @@ func TestBootstrapUser(t *testing.T) {
 
 // TestBootstrapUser_InvalidRequest - リクエストボディが無効
 func TestBootstrapUser_InvalidRequest(t *testing.T) {
-	w := makeRequest("POST", "/api/v1/auth/bootstrap", `invalid json`)
+	w := doRequest(t, "POST", "/api/v1/auth/bootstrap", `invalid json`)
 
 	assertStatusCode(t, w.Code, http.StatusBadRequest)
 }
 
 // TestGetCurrentUser - GET /api/v1/me
 func TestGetCurrentUser(t *testing.T) {
-	w := makeRequest("GET", "/api/v1/me", nil)
+	w := doRequest(t, "GET", "/api/v1/me", nil)
 
 	// 認可なしで 401 が返される
 	assertStatusCode(t, w.Code, http.StatusUnauthorized)
@@ -248,7 +262,7 @@ func TestUpdateCurrentUser(t *testing.T) {
 		DisplayName: "Updated Name",
 	}
 
-	w := makeRequest("PATCH", "/api/v1/me", body)
+	w := doRequest(t, "PATCH", "/api/v1/me", body)
 
 	// 認可なしで 401 が返される
 	assertStatusCode(t, w.Code, http.StatusUnauthorized)
@@ -266,7 +280,7 @@ func TestCreateTimetable(t *testing.T) {
 		Term:  "spring",
 	}
 
-	w := makeRequest("POST", "/api/v1/timetables", body)
+	w := doRequest(t, "POST", "/api/v1/timetables", body)
 
 	// 認可なしで 401 が返される
 	assertStatusCode(t, w.Code, http.StatusUnauthorized)
@@ -274,7 +288,7 @@ func TestCreateTimetable(t *testing.T) {
 
 // TestGetTimetable - GET /api/v1/timetables/{id}
 func TestGetTimetable(t *testing.T) {
-	w := makeRequest("GET", "/api/v1/timetables/99999", nil)
+	w := doRequest(t, "GET", "/api/v1/timetables/99999", nil)
 
 	assertStatusCode(t, w.Code, http.StatusNotFound)
 }
@@ -286,7 +300,7 @@ func TestUpdateTimetable(t *testing.T) {
 		IsPublic: &isPublic,
 	}
 
-	w := makeRequest("PATCH", "/api/v1/timetables/1", body)
+	w := doRequest(t, "PATCH", "/api/v1/timetables/1", body)
 
 	// ID が存在しない場合は 404 が返される
 	assertStatusCode(t, w.Code, http.StatusNotFound)
@@ -298,7 +312,7 @@ func TestUpdateTimetable(t *testing.T) {
 
 // TestGetDefaultAcademicYear - GET /api/v1/meta/default-academic-year
 func TestGetDefaultAcademicYear(t *testing.T) {
-	w := makeRequest("GET", "/api/v1/meta/default-academic-year", nil)
+	w := doRequest(t, "GET", "/api/v1/meta/default-academic-year", nil)
 
 	assertStatusCode(t, w.Code, http.StatusOK)
 	assertJSONResponse(t, w.Body.String())
@@ -321,7 +335,7 @@ func TestGetDefaultAcademicYear(t *testing.T) {
 
 // TestNotFound - 存在しないエンドポイント
 func TestNotFound(t *testing.T) {
-	w := makeRequest("GET", "/api/v1/nonexistent", nil)
+	w := doRequest(t, "GET", "/api/v1/nonexistent", nil)
 
 	// Go の http.ServeMux は存在しないパスに対して 404 を返す
 	if w.Code != http.StatusNotFound && w.Code != http.StatusMethodNotAllowed {
@@ -344,7 +358,7 @@ func TestResponseContentType(t *testing.T) {
 	}
 
 	for _, ep := range endpoints {
-		w := makeRequest(ep.method, ep.path, nil)
+		w := doRequest(t, ep.method, ep.path, nil)
 
 		contentType := w.Header().Get("Content-Type")
 		if contentType != "application/json" {
@@ -364,7 +378,7 @@ func TestConcurrentRequests(t *testing.T) {
 
 	for i := 0; i < numRequests; i++ {
 		go func() {
-			w := makeRequest("GET", "/api/v1/categories", nil)
+			w := doRequest(t, "GET", "/api/v1/categories", nil)
 			if w.Code != http.StatusOK {
 				t.Errorf("Status code: got %d, want 200", w.Code)
 			}
