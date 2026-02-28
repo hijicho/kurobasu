@@ -63,6 +63,8 @@ tests/
 3. データベースと テーブルが初期化されていること
    ```bash
    go run ./cmd/migrate
+   # または（マイグレーション + シード）
+   go run ./cmd/seed
    ```
 
 ### テスト実行

@@ -15,7 +15,7 @@ DB_SSLMODE=disable
 PORT=8000
 ```
 
-### 2. PostgreSQL デーベースを作成
+### 2. PostgreSQL データベースを作成
 ```bash
 createdb kurobasu
 ```
@@ -32,7 +32,16 @@ make migrate
 go run ./cmd/migrate
 ```
 
-### 5. サーバー起動
+### 5. シードデータ投入（任意）
+```bash
+make seed
+# または
+go run ./cmd/seed
+```
+
+`cmd/seed` はマイグレーションを実行した上でシードを投入します。
+
+### 6. サーバー起動
 ```bash
 make run
 # または
@@ -43,12 +52,14 @@ go run ./cmd/server
 - `cmd/` - 実行可能バイナリのエントリーポイント
   - `server/` - APIサーバー
   - `migrate/` - DBマイグレーション
+  - `seed/` - シードデータ投入
 - `config/` - DB接続設定
 - `models/` - GORMモデル定義
 - `internal/` - 内部パッケージ
   - `handlers/` - HTTPハンドラー
   - `router/` - ルーティング設定
-  - `migration/` - マイグレーションロジック 
+  - `migration/` - マイグレーションロジック
+  - `seed/` - シードロジック
 - `.env` - 環境変数設定（git ignore）
 
 ## コマンド
@@ -57,5 +68,6 @@ go run ./cmd/server
 make help      # ヘルプ表示
 make run       # サーバー起動
 make migrate   # マイグレーション実行
+make seed      # シード投入（マイグレーション込み）
 make clean     # ビルド成果物削除
 ```
