@@ -187,8 +187,7 @@ func TestListReviews(t *testing.T) {
 func TestCreateReview(t *testing.T) {
 	body := dto.CreateReviewRequest{
 		OfferingID: 1,
-		MdURL:      "https://example.com/review.md",
-		Status:     "public",
+		Comment:    "This was a helpful course.",
 	}
 
 	w := doRequest(t, "POST", "/api/v1/reviews", body)
@@ -199,13 +198,7 @@ func TestCreateReview(t *testing.T) {
 	}
 }
 
-// TestGetReview - GET /api/v1/reviews/{id}
-func TestGetReview(t *testing.T) {
-	w := doRequest(t, "GET", "/api/v1/reviews/99999", nil)
-
-	// Route may not match due to Go 1.22 routing, but expect 404 if it does
-	assertStatusCode(t, w.Code, http.StatusNotFound)
-}
+// TestGetReview removed: single-review endpoint deprecated
 
 // =====================
 // Auth Tests

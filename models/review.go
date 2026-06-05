@@ -2,27 +2,29 @@ package models
 
 import "time"
 
-type ReviewStatus string
+// UserReviewStatus はレビューの状態を表します
+type UserReviewStatus string
 
 const (
-	ReviewStatusPublic  ReviewStatus = "public"
-	ReviewStatusPrivate ReviewStatus = "private"
-	ReviewStatusDeleted ReviewStatus = "deleted"
+	UserReviewStatusPending  UserReviewStatus = "pending"
+	UserReviewStatusApproved UserReviewStatus = "approved"
 )
 
-type Review struct {
-	ReviewID    int64     `gorm:"primaryKey;column:review_id" json:"review_id"`
-	OfferingID  int64     `gorm:"column:offering_id;not null;index" json:"offering_id"`
-	MdURL       string    `gorm:"column:md_url;not null" json:"md_url"`
-	ReviewCount int64     `gorm:"column:review_count;default:0" json:"review_count"`
-	Status      string    `gorm:"column:status;type:varchar(20);not null;default:'public'" json:"status"`
-	CreatedAt   time.Time `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
-	UpdatedAt   time.Time `gorm:"column:updated_at;not null;default:current_timestamp" json:"updated_at"`
+// UserReview テーブル: ユーザーが投稿する授業レビュー
+type UserReview struct {
+	UserReviewID int64            `gorm:"primaryKey;column:user_review_id" json:"user_review_id"`
+	UserID       int64            `gorm:"column:user_id;not null;index" json:"user_id"`
+	OfferingID   int64            `gorm:"column:offering_id;not null;index" json:"offering_id"`
+	Comment      string           `gorm:"column:comment;type:text;not null" json:"comment"`
+	Status       UserReviewStatus `gorm:"column:status;type:varchar(20);not null;default:'pending'" json:"status"`
+	CreatedAt    time.Time        `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
+	UpdatedAt    time.Time        `gorm:"column:updated_at;not null;default:current_timestamp" json:"updated_at"`
 
-	// リレーション (no FK constraint, only for eager loading)
+	// リレーション用（オプション）
+	User     *User     `gorm:"foreignKey:UserID;references:UserID;-:all" json:"user,omitempty"`
 	Offering *Offering `gorm:"foreignKey:OfferingID;references:OfferingID;-:all" json:"offering,omitempty"`
 }
 
-func (Review) TableName() string {
-	return "reviews"
+func (UserReview) TableName() string {
+	return "user_reviews"
 }

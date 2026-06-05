@@ -45,8 +45,7 @@ func SetupRoutes() *http.ServeMux {
 	// 効果：新しい講義詳詳を作成。リクエストボディに JSON で詳詳情報を送らなければいけない
 	mux.HandleFunc("/api/v1/reviews", methodHandler(http.MethodPost, handlers.CreateReview))
 	// GET /api/v1/reviews/{id}
-	// 効果：特定の詳詳を一件取得
-	mux.HandleFunc("/api/v1/reviews/{id}", methodHandler(http.MethodGet, handlers.GetReview))
+	// (removed) 単一レビュー取得エンドポイントは廃止
 
 	// =====================
 	// 認護 (Auth) API

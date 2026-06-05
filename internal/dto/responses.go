@@ -53,12 +53,12 @@ type OfferingResponse struct {
 }
 
 // Review Response
-type ReviewResponse struct {
-	ReviewID  int64              `json:"review_id"`
-	MdURL     string             `json:"md_url"`
-	Status    string             `json:"status"`
-	Author    UserResponse       `json:"author"`
-	CreatedAt time.Time          `json:"created_at"`
+// ReviewResponse removed: use aggregated list or inline responses instead
+
+// ListReviewsResponse は複数レビューの配列レスポンス
+type ListReviewsResponse struct {
+	Comments []string `json:"comments"`
+	Count    int      `json:"count"`
 }
 
 // User Response
@@ -93,8 +93,7 @@ type TimetableItemResponse struct {
 // CreateReviewRequest
 type CreateReviewRequest struct {
 	OfferingID int64  `json:"offering_id"`
-	MdURL      string `json:"md_url"`
-	Status     string `json:"status"`
+	Comment    string `json:"comment"`
 }
 
 // BootstrapUserRequest

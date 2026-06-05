@@ -38,7 +38,7 @@ func RunSeeds() error {
 	seedTimetables(users)
 
 	// レビューのシード
-	seedReviews(offerings)
+	seedReviews(offerings, users)
 
 	log.Println("Database seeding completed successfully")
 	return nil
@@ -243,30 +243,34 @@ func seedTimetables(users []models.User) {
 // =====================
 // seedReviews: レビューデータをシード
 // =====================
-func seedReviews(offerings []models.Offering) {
-	if len(offerings) < 3 {
+func seedReviews(offerings []models.Offering, users []models.User) {
+	if len(offerings) < 3 || len(users) == 0 {
 		return
 	}
 
 	reviewData := []struct {
-		offeringID int64
-		mdURL      string
+		offeringIndex int
+		userIndex     int
+		comment       string
 	}{
-		{offerings[0].OfferingID, "https://example.com/reviews/physics-2026.md"},
-		{offerings[1].OfferingID, "https://example.com/reviews/chemistry-2026.md"},
-		{offerings[2].OfferingID, "https://example.com/reviews/calculus-2026.md"},
+		{0, 0, "Great introduction to the subject. Well-structured lectures."},
+		{1, 1, "Hands-on assignments were helpful, but grading was strict."},
+		{2, 2, "Clear explanations, recommended for beginners."},
 	}
 
 	for _, data := range reviewData {
-		rev := models.Review{
-			OfferingID:  data.offeringID,
-			MdURL:       data.mdURL,
-			Status:      "public",
-			ReviewCount: 0,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+		if data.offeringIndex >= len(offerings) || data.userIndex >= len(users) {
+			continue
 		}
-		config.DB.Where(models.Review{OfferingID: rev.OfferingID, MdURL: rev.MdURL}).FirstOrCreate(&rev)
+		rev := models.UserReview{
+			UserID:     users[data.userIndex].UserID,
+			OfferingID: offerings[data.offeringIndex].OfferingID,
+			Comment:    data.comment,
+			Status:     models.UserReviewStatusApproved,
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
+		}
+		config.DB.Where(models.UserReview{UserID: rev.UserID, OfferingID: rev.OfferingID, Comment: rev.Comment}).FirstOrCreate(&rev)
 	}
 
 	log.Println("✓ Reviews seeded")

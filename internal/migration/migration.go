@@ -27,7 +27,7 @@ func RunMigrations() error {
 		&models.Subject{},
 		&models.Offering{},
 		&models.Meeting{},
-		&models.Review{},
+		&models.UserReview{},
 		&models.User{},
 		&models.Timetable{},
 		&models.TimetableItem{},
@@ -87,16 +87,27 @@ func RunMigrations() error {
 		return err
 	}
 
-	// Review -> Offering relationship
-	// One Offering can have many Reviews (students rate their experience with the course)
-	// If an Offering is deleted, all Reviews for that Offering are automatically deleted
-	// Example: Spring 2026 Physics offering deleted -> All student reviews for it are deleted
+	// UserReview -> Offering relationship
+	// One Offering can have many UserReviews (students' comments about a course)
+	// If an Offering is deleted, all related UserReviews are automatically deleted
 	if err := addConstraintIfNotExists(
-		"reviews",
-		"fk_reviews_offering",
-		`ALTER TABLE reviews
-		 ADD CONSTRAINT fk_reviews_offering
+		"user_reviews",
+		"fk_user_reviews_offering",
+		`ALTER TABLE user_reviews
+		 ADD CONSTRAINT fk_user_reviews_offering
 		 FOREIGN KEY (offering_id) REFERENCES offerings(offering_id) ON DELETE CASCADE`,
+	); err != nil {
+		return err
+	}
+
+	// UserReview -> User relationship
+	// One User can have many UserReviews
+	if err := addConstraintIfNotExists(
+		"user_reviews",
+		"fk_user_reviews_user",
+		`ALTER TABLE user_reviews
+		 ADD CONSTRAINT fk_user_reviews_user
+		 FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE`,
 	); err != nil {
 		return err
 	}

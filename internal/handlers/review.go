@@ -22,21 +22,19 @@ func ListReviews(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items := make([]dto.ReviewResponse, len(reviews))
-	for i, rev := range reviews {
-		items[i] = dto.ReviewResponse{
-			ReviewID:  rev.ReviewID,
-			MdURL:     rev.MdURL,
-			Status:    rev.Status,
-			CreatedAt: rev.CreatedAt,
-			Author: dto.UserResponse{
-				UserID:      0,
-				DisplayName: "Anonymous",
-			},
+	// コメントを配列で返す
+	comments := make([]string, 0, len(reviews))
+	for _, rev := range reviews {
+		if rev.Comment != "" {
+			comments = append(comments, rev.Comment)
 		}
 	}
 
-	successResponse(w, dto.ListResponse{Items: items})
+	resp := dto.ListReviewsResponse{
+		Comments: comments,
+		Count:    len(comments),
+	}
+	successResponse(w, resp)
 }
 
 // CreateReview - POST /api/v1/reviews
@@ -47,13 +45,13 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	review := &models.Review{
-		OfferingID:  req.OfferingID,
-		MdURL:       req.MdURL,
-		Status:      req.Status,
-		ReviewCount: 0,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+	review := &models.UserReview{
+		UserID:     0, // anonymous / unknown in this flow
+		OfferingID: req.OfferingID,
+		Comment:    req.Comment,
+		Status:     models.UserReviewStatusPending,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
 	}
 
 	revRepo := &repository.ReviewRepository{}
@@ -66,43 +64,14 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := dto.ReviewResponse{
-		ReviewID:  review.ReviewID,
-		MdURL:     review.MdURL,
-		Status:    review.Status,
-		CreatedAt: review.CreatedAt,
-		Author: dto.UserResponse{
-			UserID:      0,
-			DisplayName: "Anonymous",
-		},
-	}
-
+	// Return minimal created info (no user details)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{"data": response})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": map[string]interface{}{
+		"review_id": review.UserReviewID,
+		"status":    string(review.Status),
+	}})
 }
 
 // GetReview - GET /api/v1/reviews/{id}
-func GetReview(w http.ResponseWriter, r *http.Request) {
-	id := extractID(r, "id")
-
-	revRepo := &repository.ReviewRepository{}
-	review, err := revRepo.GetReviewByID(id)
-	if err != nil {
-		errorResponse(w, http.StatusNotFound, "Review not found")
-		return
-	}
-
-	response := dto.ReviewResponse{
-		ReviewID:  review.ReviewID,
-		MdURL:     review.MdURL,
-		Status:    review.Status,
-		CreatedAt: review.CreatedAt,
-		Author: dto.UserResponse{
-			UserID:      0,
-			DisplayName: "Anonymous",
-		},
-	}
-
-	successResponse(w, response)
-}
+// GetReview endpoint removed; use ListReviews or other aggregated endpoints instead.

@@ -16,25 +16,25 @@ type ReviewRepository struct{}
 var ErrOfferingNotFound = errors.New("offering not found")
 
 // GetReviewsByOffering returns all public reviews for an offering
-func (r *ReviewRepository) GetReviewsByOffering(offeringID int64) ([]models.Review, error) {
-	var reviews []models.Review
+func (r *ReviewRepository) GetReviewsByOffering(offeringID int64) ([]models.UserReview, error) {
+	var reviews []models.UserReview
 	err := config.DB.
 		Preload("Offering").
-		Where("offering_id = ? AND status = ?", offeringID, "public").
+		Where("offering_id = ? AND status = ?", offeringID, string(models.UserReviewStatusApproved)).
 		Order("created_at DESC").
 		Find(&reviews).Error
 	return reviews, err
 }
 
 // GetReviewByID returns a single review by ID
-func (r *ReviewRepository) GetReviewByID(reviewID int64) (*models.Review, error) {
-	var review models.Review
+func (r *ReviewRepository) GetReviewByID(reviewID int64) (*models.UserReview, error) {
+	var review models.UserReview
 	err := config.DB.Preload("Offering").First(&review, reviewID).Error
 	return &review, err
 }
 
 // CreateReview creates a new review
-func (r *ReviewRepository) CreateReview(review *models.Review) error {
+func (r *ReviewRepository) CreateReview(review *models.UserReview) error {
 	// Ensure the referenced offering exists to avoid FK constraint errors
 	var off models.Offering
 	if err := config.DB.First(&off, review.OfferingID).Error; err != nil {
@@ -42,6 +42,11 @@ func (r *ReviewRepository) CreateReview(review *models.Review) error {
 			return fmt.Errorf("%w: %d", ErrOfferingNotFound, review.OfferingID)
 		}
 		return err
+	}
+
+	// Default status to pending if empty
+	if review.Status == "" {
+		review.Status = models.UserReviewStatusPending
 	}
 
 	return config.DB.Create(review).Error
