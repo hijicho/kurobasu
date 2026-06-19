@@ -36,6 +36,12 @@ func RunMigrations() error {
 		return err
 	}
 
+	// Ensure `role` column exists on users table for existing databases
+	// This is idempotent: `IF NOT EXISTS` prevents errors when the column already exists
+	if err := config.DB.Exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(20) NOT NULL DEFAULT 'user'`).Error; err != nil {
+		return fmt.Errorf("failed adding role column to users: %w", err)
+	}
+
 	// Add foreign key constraints using raw SQL
 	// Foreign Keys define relationships between tables and enforce referential integrity
 	// Why use raw SQL instead of GORM tags?

@@ -103,6 +103,12 @@
 | display_name | TEXT | NOT NULL |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
 
+### role について
+
+- 目的：アプリケーション内の権限制御（管理者と一般ユーザーの区別）
+- カラム：`role` `varchar(20)`、`NOT NULL`、デフォルト `'user'`
+- 例：`'user'`, `'admin'`。アプリ側では文字列比較か列挙でチェックします。
+
 ## 追加
 
 | カラム | 型 | 制約/補足 |
@@ -209,6 +215,7 @@ CREATE TABLE IF NOT EXISTS meetings (
 CREATE TABLE IF NOT EXISTS users (
   user_id      BIGSERIAL PRIMARY KEY,
   display_name TEXT NOT NULL,
+  role         varchar(20) NOT NULL DEFAULT 'user',
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -252,3 +259,27 @@ CREATE INDEX IF NOT EXISTS idx_meetings_offering ON meetings(offering_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_offering_created ON reviews(offering_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_timetable_items_timetable ON timetable_items(timetable_id);
 ```
+
+## マイグレーション注意事項（role カラムの追加）
+
+- 既存のデータベースに `role` カラムを追加するには、アプリケーションのマイグレーションで `ALTER TABLE` を実行します。今回のコードベースでは `internal/migration/migration.go` の `RunMigrations` 内で以下のような idempotent な SQL を実行しています：
+
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(20) NOT NULL DEFAULT 'user';
+```
+
+- このコマンドは既に `role` カラムが存在する場合は何もしないため、何度実行しても安全です。
+- ローカルでマイグレーションを反映する方法：
+
+```bash
+docker compose up --build
+```
+
+またはプロジェクトに用意されたマイグレート用バイナリを直接実行する場合は：
+
+```bash
+# 例: go run ./cmd/migrate  # プロジェクトの実行方法に合わせてください
+```
+
+- シードに初期管理者を追加したい場合は、`internal/seed/seed.go` を編集して特定ユーザーの `Role` を `'admin'` に設定してください。
+

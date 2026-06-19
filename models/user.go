@@ -20,6 +20,8 @@ type User struct {
 	// firebase_uid: Firebase Authentication の UID
 	// ユーザーが Firebase でログインしたときに取得される一意の識別子
 	FirebaseUID string    `gorm:"column:firebase_uid;uniqueIndex;not null" json:"firebase_uid"`
+	// role: ユーザーの権限 ('user' or 'admin')
+	Role        string    `gorm:"column:role;type:varchar(20);not null;default:'user'" json:"role"`
 	CreatedAt   time.Time `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
 }
 
