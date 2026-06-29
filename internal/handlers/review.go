@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hageruto/kurobasu/internal/dto"
+	"github.com/hageruto/kurobasu/internal/middleware"
 	"github.com/hageruto/kurobasu/internal/repository"
 	"github.com/hageruto/kurobasu/models"
 )
@@ -45,8 +46,14 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user, ok := middleware.CurrentUser(r)
+	if !ok {
+		errorResponse(w, http.StatusUnauthorized, "Authorization header required")
+		return
+	}
+
 	review := &models.UserReview{
-		UserID:     0, // anonymous / unknown in this flow
+		UserID:     user.UserID,
 		OfferingID: req.OfferingID,
 		Comment:    req.Comment,
 		Status:     models.UserReviewStatusPending,
@@ -71,6 +78,62 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 		"review_id": review.UserReviewID,
 		"status":    string(review.Status),
 	}})
+}
+
+// ListMyReviews - GET /api/v1/me/reviews
+func ListMyReviews(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.CurrentUser(r)
+	if !ok {
+		errorResponse(w, http.StatusUnauthorized, "Authorization header required")
+		return
+	}
+
+	revRepo := &repository.ReviewRepository{}
+	reviews, err := revRepo.GetReviewsByUser(user.UserID)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to fetch reviews")
+		return
+	}
+
+	items := make([]dto.UserReviewResponse, len(reviews))
+	for i, rev := range reviews {
+		items[i] = dto.UserReviewResponse{
+			ReviewID:   rev.UserReviewID,
+			OfferingID: rev.OfferingID,
+			Comment:    rev.Comment,
+			Status:     string(rev.Status),
+			CreatedAt:  rev.CreatedAt,
+			UpdatedAt:  rev.UpdatedAt,
+		}
+	}
+
+	successResponse(w, dto.ListUserReviewsResponse{Reviews: items, Count: len(items)})
+}
+
+// GetMyReview - GET /api/v1/me/reviews/{id}
+func GetMyReview(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.CurrentUser(r)
+	if !ok {
+		errorResponse(w, http.StatusUnauthorized, "Authorization header required")
+		return
+	}
+
+	reviewID := extractID(r, "id")
+	revRepo := &repository.ReviewRepository{}
+	review, err := revRepo.GetReviewByIDForUser(user.UserID, reviewID)
+	if err != nil {
+		errorResponse(w, http.StatusNotFound, "Review not found")
+		return
+	}
+
+	successResponse(w, dto.UserReviewResponse{
+		ReviewID:   review.UserReviewID,
+		OfferingID: review.OfferingID,
+		Comment:    review.Comment,
+		Status:     string(review.Status),
+		CreatedAt:  review.CreatedAt,
+		UpdatedAt:  review.UpdatedAt,
+	})
 }
 
 // GetReview - GET /api/v1/reviews/{id}

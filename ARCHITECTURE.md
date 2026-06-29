@@ -42,6 +42,7 @@ kurobasu/                                # ルートディレクトリ
 │   │   └── responses.go  ───────────────> 「データ転送オブジェクト」
 │   │                                   - API レスポンスの JSON 構造定義
 │   │                                   - DB モデルと API レスポンスを分離
+│   │                                   - 自分のレビュー一覧・詳細レスポンスも定義
 │   │
 │   └── migration/
 │       └── migration.go  ────────────────> 「DB マイグレーション実行」
@@ -60,7 +61,7 @@ kurobasu/                                # ルートディレクトリ
 │   ├── offering.go         ────────────> 開講情報（学期ごと、講師情報）
 │   ├── meeting.go          ────────────> 授業時間割（曜日・時限）
 │   ├── review.go           ────────────> 授業評価・クチコミ
-│   ├── user.go             ────────────> ユーザー（Firebase 認証）
+│   ├── user.go             ────────────> ユーザー（Firebase 認証、role 付き）
 │   ├── timetable.go        ────────────> 時間割
 │   └── timetable_item.go   ────────────> 時間割項目（どの授業を登録したか）
 │
@@ -128,6 +129,30 @@ $ go run ./cmd/server
      └─ {"data":{"items":[...]}}
 ```
 
+#### 認証が必要な API の流れ
+
+```
+例：GET http://localhost:8080/api/v1/me/reviews
+
+↓ HTTP リクエスト受信
+
+    ├─ router.SetupRoutes() が /api/v1/me/reviews をマッチング
+    │
+    ├─ middleware.RequireAuth() が Authorization ヘッダを確認
+    │  └─ Bearer トークン（開発環境では Firebase UID を想定）から users を解決
+    │
+    ├─ authenticated user を request context に格納
+    │
+    ├─ handlers.ListMyReviews() が呼び出される
+    │  └─ internal/handlers/review.go
+    │
+    ├─ repository.ReviewRepository.GetReviewsByUser(userID) を呼び出し
+    │  └─ internal/repository/review.go
+    │
+    └─ JSON で自分のレビュー一覧と status を返却
+         └─ {"data":{"reviews":[...],"count":1}}
+```
+
 ### 3. DB マイグレーション
 
 ```
@@ -159,6 +184,8 @@ $ go run ./cmd/migrate
      └─ timetable_items 関連の FK
 ```
 
+> 補足: 既存 DB には `users.role` カラムが追加されます。`RunMigrations()` 内で `ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(20) NOT NULL DEFAULT 'user'` を実行するため、何度実行しても安全です。
+
 ---
 
 ## 📂 各フォルダ詳細解説
@@ -175,6 +202,7 @@ $ go run ./cmd/migrate
     2. DB 接続初期化（`config.InitDB`）
     3. ルーティング設定（`router.SetupRoutes`）
     4. HTTP サーバー起動（ポート 8000）
+        5. 認証付きルートでは middleware が `users` を request context に格納
 
 - **`cmd/migrate/main.go`**
   - **用途**: DB スキーママイグレーション
@@ -183,6 +211,7 @@ $ go run ./cmd/migrate
     1. DB 接続
     2. すべてのモデルテーブル作成
     3. FK 制約追加
+        4. `users.role` の追加（既存 DB 対応）
 
 ---
 

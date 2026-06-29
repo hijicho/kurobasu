@@ -23,15 +23,59 @@ tests/
 - `TestGetOffering` - GET /api/v1/offerings/{id}
 
 ### レビュー API
-- `TestListReviews` - GET /api/v1/offerings/{id}/reviews
-- `TestCreateReview` - POST /api/v1/reviews
-- `TestGetReview` - GET /api/v1/reviews/{id}
 
 ### 認証 API
+
+#### レスポンス例
+
+`GET /api/v1/me/reviews`
+
+```json
+{
+  "data": {
+    "reviews": [
+      {
+        "review_id": 1,
+        "offering_id": 1,
+        "comment": "この授業はわかりやすかったです。",
+        "status": "pending",
+        "created_at": "2026-06-29T12:34:56Z",
+        "updated_at": "2026-06-29T12:34:56Z"
+      }
+    ],
+    "count": 1
+  }
+}
+```
+
+`GET /api/v1/me/reviews/{id}`
+
+```json
+{
+  "data": {
+    "review_id": 1,
+    "offering_id": 1,
+    "comment": "この授業はわかりやすかったです。",
+    "status": "approved",
+    "created_at": "2026-06-29T12:34:56Z",
+    "updated_at": "2026-06-29T13:00:00Z"
+  }
+}
+```
 - `TestBootstrapUser` - POST /api/v1/auth/bootstrap
 - `TestBootstrapUser_InvalidRequest` - リクエスト検証
 - `TestGetCurrentUser` - GET /api/v1/me
 - `TestUpdateCurrentUser` - PATCH /api/v1/me
+
+### 認証ヘッダ
+
+`/api/v1/me`、`/api/v1/reviews`、`/api/v1/me/reviews` 系のエンドポイントは `Authorization` ヘッダが必要です。開発環境では Firebase UID をそのままトークンとして扱うため、以下のように指定します。
+
+```bash
+curl -H "Authorization: Bearer seed_user_alice" http://localhost:8080/api/v1/me
+```
+
+自分のレビューの `status` を確認するテストを追加する場合は、`seed_user_alice` などの既存ユーザー UID を使って認証付きで叩きます。
 
 ### 時間割 API
 - `TestCreateTimetable` - POST /api/v1/timetables
@@ -148,6 +192,7 @@ Go 1.22 の http.ServeMux では、`{id}` のようなパス パラメータ マ
 - DB 初期化のみで、テストデータは挿入されません
 - 存在しないデータへのアクセスは 404 エラーを返します
 - 外部キー制約により、関連データがないリソースの作成は失敗します
+- 認証が必要な API をテストする場合は、`Authorization: Bearer <firebase_uid>` を付与するか、認証ミドルウェアをモックしてください
 
 ## トラブルシューティング
 

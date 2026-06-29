@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hageruto/kurobasu/internal/dto"
+	"github.com/hageruto/kurobasu/internal/middleware"
 	"github.com/hageruto/kurobasu/internal/repository"
 	"github.com/hageruto/kurobasu/models"
 )
@@ -57,7 +59,18 @@ func BootstrapUser(w http.ResponseWriter, r *http.Request) {
 
 // GetCurrentUser - GET /api/v1/me
 func GetCurrentUser(w http.ResponseWriter, r *http.Request) {
-	errorResponse(w, http.StatusUnauthorized, "Authorization header required")
+	user, ok := middleware.CurrentUser(r)
+	if !ok {
+		errorResponse(w, http.StatusUnauthorized, "Authorization header required")
+		return
+	}
+
+	response := dto.UserResponse{
+		UserID:      user.UserID,
+		DisplayName: user.DisplayName,
+		CreatedAt:   user.CreatedAt,
+	}
+	successResponse(w, response)
 }
 
 // UpdateCurrentUser - PATCH /api/v1/me
@@ -68,5 +81,28 @@ func UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errorResponse(w, http.StatusUnauthorized, "Authorization header required")
+	user, ok := middleware.CurrentUser(r)
+	if !ok {
+		errorResponse(w, http.StatusUnauthorized, "Authorization header required")
+		return
+	}
+
+	if strings.TrimSpace(req.DisplayName) == "" {
+		errorResponse(w, http.StatusBadRequest, "display_name is required")
+		return
+	}
+
+	user.DisplayName = req.DisplayName
+	userRepo := &repository.UserRepository{}
+	if err := userRepo.UpdateUser(user); err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to update user")
+		return
+	}
+
+	response := dto.UserResponse{
+		UserID:      user.UserID,
+		DisplayName: user.DisplayName,
+		CreatedAt:   user.CreatedAt,
+	}
+	successResponse(w, response)
 }

@@ -146,6 +146,24 @@ curl -X POST http://localhost:8080/api/v1/auth/bootstrap \
   -d '{"display_name": "Student Name"}'
 ```
 
+`/api/v1/me` と `/api/v1/reviews` の作成系エンドポイントは `Authorization` ヘッダが必要です。開発用実装では Firebase UID をそのままトークンとして扱っているため、次のように指定します。
+
+```bash
+curl -H "Authorization: Bearer seed_user_alice" http://localhost:8080/api/v1/me
+```
+
+**レスポンス例（`GET /api/v1/me`）:**
+
+```json
+{
+  "data": {
+    "user_id": 1,
+    "display_name": "Alice Johnson",
+    "created_at": "2026-06-29T12:34:56Z"
+  }
+}
+```
+
 ### Reviews（授業評価）
 
 ```bash
@@ -157,9 +175,55 @@ curl -X POST http://localhost:8080/api/v1/reviews \
   -H "Content-Type: application/json" \
   -d '{
     "offering_id": 1,
-    "md_url": "https://example.com/review.md",
-    "status": "public"
+    "comment": "この授業はわかりやすかったです。"
   }'
+```
+
+自分が作成したレビューの `status` を確認したい場合は、以下を使います。
+
+```bash
+# 自分のレビュー一覧を取得
+curl -H "Authorization: Bearer seed_user_alice" \
+  http://localhost:8080/api/v1/me/reviews
+
+# 自分のレビュー詳細を取得
+curl -H "Authorization: Bearer seed_user_alice" \
+  http://localhost:8080/api/v1/me/reviews/1
+```
+
+**レスポンス例（一覧）:**
+
+```json
+{
+  "data": {
+    "reviews": [
+      {
+        "review_id": 1,
+        "offering_id": 1,
+        "comment": "この授業はわかりやすかったです。",
+        "status": "pending",
+        "created_at": "2026-06-29T12:34:56Z",
+        "updated_at": "2026-06-29T12:34:56Z"
+      }
+    ],
+    "count": 1
+  }
+}
+```
+
+**レスポンス例（詳細）:**
+
+```json
+{
+  "data": {
+    "review_id": 1,
+    "offering_id": 1,
+    "comment": "この授業はわかりやすかったです。",
+    "status": "approved",
+    "created_at": "2026-06-29T12:34:56Z",
+    "updated_at": "2026-06-29T13:00:00Z"
+  }
+}
 ```
 
 詳細な API 仕様は [ARCHITECTURE.md](ARCHITECTURE.md) を参照。

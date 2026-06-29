@@ -61,6 +61,22 @@ type ListReviewsResponse struct {
 	Count    int      `json:"count"`
 }
 
+// UserReviewResponse はログインユーザーのレビュー情報を返します
+type UserReviewResponse struct {
+	ReviewID   int64     `json:"review_id"`
+	OfferingID int64     `json:"offering_id"`
+	Comment    string    `json:"comment"`
+	Status     string    `json:"status"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// ListUserReviewsResponse は自分のレビュー一覧レスポンスです
+type ListUserReviewsResponse struct {
+	Reviews []UserReviewResponse `json:"reviews"`
+	Count   int                  `json:"count"`
+}
+
 // User Response
 type UserResponse struct {
 	UserID      int64     `json:"user_id"`

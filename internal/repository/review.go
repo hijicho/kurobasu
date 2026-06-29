@@ -26,10 +26,29 @@ func (r *ReviewRepository) GetReviewsByOffering(offeringID int64) ([]models.User
 	return reviews, err
 }
 
+// GetReviewsByUser returns all reviews created by the given user.
+func (r *ReviewRepository) GetReviewsByUser(userID int64) ([]models.UserReview, error) {
+	var reviews []models.UserReview
+	err := config.DB.
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&reviews).Error
+	return reviews, err
+}
+
 // GetReviewByID returns a single review by ID
 func (r *ReviewRepository) GetReviewByID(reviewID int64) (*models.UserReview, error) {
 	var review models.UserReview
 	err := config.DB.Preload("Offering").First(&review, reviewID).Error
+	return &review, err
+}
+
+// GetReviewByIDForUser returns a single review by ID for the given user.
+func (r *ReviewRepository) GetReviewByIDForUser(userID, reviewID int64) (*models.UserReview, error) {
+	var review models.UserReview
+	err := config.DB.
+		Where("user_id = ?", userID).
+		First(&review, reviewID).Error
 	return &review, err
 }
 

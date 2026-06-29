@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/hageruto/kurobasu/internal/handlers" // HTTPハンドラーの実装
+	"github.com/hageruto/kurobasu/internal/middleware"
 	"net/http"
 )
 
@@ -43,9 +44,15 @@ func SetupRoutes() *http.ServeMux {
 	// =====================
 	// POST /api/v1/reviews
 	// 効果：新しい講義詳詳を作成。リクエストボディに JSON で詳詳情報を送らなければいけない
-	mux.HandleFunc("/api/v1/reviews", methodHandler(http.MethodPost, handlers.CreateReview))
+	mux.HandleFunc("/api/v1/reviews", middleware.RequireAuth(methodHandler(http.MethodPost, handlers.CreateReview)))
 	// GET /api/v1/reviews/{id}
 	// (removed) 単一レビュー取得エンドポイントは廃止
+	// GET /api/v1/me/reviews
+	// 効果：現在ログインしているユーザーが作成したレビュー一覧を取得
+	mux.HandleFunc("/api/v1/me/reviews", middleware.RequireAuth(methodHandler(http.MethodGet, handlers.ListMyReviews)))
+	// GET /api/v1/me/reviews/{id}
+	// 効果：現在ログインしているユーザーが作成した特定レビューを取得
+	mux.HandleFunc("/api/v1/me/reviews/{id}", middleware.RequireAuth(methodHandler(http.MethodGet, handlers.GetMyReview)))
 
 	// =====================
 	// 認護 (Auth) API
@@ -58,7 +65,7 @@ func SetupRoutes() *http.ServeMux {
 	// 効果：現在ログインしているユーザー情報を取得
 	// PATCH /api/v1/me
 	// 効果：現在ログインしているユーザー情報を更新
-	mux.HandleFunc("/api/v1/me", meHandler())
+	mux.HandleFunc("/api/v1/me", middleware.RequireAuth(meHandler()))
 
 	// =====================
 	// 時間割 (Timetables) API
