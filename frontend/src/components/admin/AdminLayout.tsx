@@ -11,14 +11,23 @@ type AdminLayoutProps = {
   subtitle?: string;
 };
 
-const navigationItems = [
+type Role = 'admin' | 'editor';
+
+type NavigationItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<React.ComponentProps<'svg'>>;
+  visibleRoles: Role[];
+};
+
+const navigationItems: NavigationItem[] = [
   { href: '/admin', label: '使い方', icon: Sparkles, visibleRoles: ['admin', 'editor'] },
   { href: '/reviews', label: '口コミ', icon: MessageSquareText, visibleRoles: ['admin', 'editor'] },
   { href: '/ads', label: '広告', icon: Megaphone, visibleRoles: ['admin', 'editor'] },
   { href: '/timetable', label: '時間割', icon: CalendarRange, visibleRoles: ['admin', 'editor'] },
   { href: '/admin-management', label: '管理人', icon: ShieldUser, visibleRoles: ['admin'] },
   { href: '/logout', label: 'ログアウト', icon: LogOut, visibleRoles: ['admin', 'editor'] },
-] as const;
+];
 
 export default function AdminLayout({ children, currentPath, title, subtitle }: AdminLayoutProps) {
   const { role, setRole } = useAdminRole();
