@@ -42,6 +42,15 @@ func RunMigrations() error {
 		return fmt.Errorf("failed adding role column to users: %w", err)
 	}
 
+	// user_reviews: pros/cons を type 列（pros/cons/others）に置き換えたため、
+	// 過去に追加された pros/cons 列が残っていれば破棄する
+	if err := config.DB.Exec(`ALTER TABLE user_reviews DROP COLUMN IF EXISTS pros`).Error; err != nil {
+		return fmt.Errorf("failed dropping pros column from user_reviews: %w", err)
+	}
+	if err := config.DB.Exec(`ALTER TABLE user_reviews DROP COLUMN IF EXISTS cons`).Error; err != nil {
+		return fmt.Errorf("failed dropping cons column from user_reviews: %w", err)
+	}
+
 	// Add foreign key constraints using raw SQL
 	// Foreign Keys define relationships between tables and enforce referential integrity
 	// Why use raw SQL instead of GORM tags?

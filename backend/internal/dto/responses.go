@@ -55,17 +55,21 @@ type OfferingResponse struct {
 // Review Response
 // ReviewResponse removed: use aggregated list or inline responses instead
 
-// ListReviewsResponse は複数レビューの配列レスポンス
+// ListReviewsResponse は開講に紐づく公開レビューを type 別に分けたレスポンス
 type ListReviewsResponse struct {
-	Comments []string `json:"comments"`
-	Count    int      `json:"count"`
+	Pros   []string `json:"pros"`
+	Cons   []string `json:"cons"`
+	Others []string `json:"others"`
+	Count  int      `json:"count"`
 }
 
-// UserReviewResponse はログインユーザーのレビュー情報を返します
+// UserReviewResponse はログインユーザーのレビュー1行分の情報を返します
+// （1回の投稿は pros/cons/[others] の複数行になるため、1行 = 1エントリ）
 type UserReviewResponse struct {
 	ReviewID   int64     `json:"review_id"`
 	OfferingID int64     `json:"offering_id"`
 	Comment    string    `json:"comment"`
+	Type       string    `json:"type"`
 	Status     string    `json:"status"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
@@ -80,8 +84,20 @@ type ListUserReviewsResponse struct {
 // User Response
 type UserResponse struct {
 	UserID      int64     `json:"user_id"`
+	FirebaseUID string    `json:"firebase_uid"`
 	DisplayName string    `json:"display_name"`
+	Role        string    `json:"role"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+// ListUsersResponse は管理者向けの全ユーザー一覧レスポンス
+type ListUsersResponse struct {
+	Items []UserResponse `json:"items"`
+}
+
+// UpdateUserRoleRequest はユーザーのロール変更リクエスト
+type UpdateUserRoleRequest struct {
+	Role string `json:"role"`
 }
 
 // Timetable Response
@@ -107,9 +123,12 @@ type TimetableItemResponse struct {
 // Request DTOs ================================
 
 // CreateReviewRequest
+// pros/cons は必須。others は任意の自由コメント
 type CreateReviewRequest struct {
 	OfferingID int64  `json:"offering_id"`
-	Comment    string `json:"comment"`
+	Pros       string `json:"pros"`
+	Cons       string `json:"cons"`
+	Others     string `json:"others,omitempty"`
 }
 
 // BootstrapUserRequest

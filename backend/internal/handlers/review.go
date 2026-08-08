@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hageruto/kurobasu/internal/dto"
@@ -11,6 +12,18 @@ import (
 	"github.com/hageruto/kurobasu/internal/repository"
 	"github.com/hageruto/kurobasu/models"
 )
+
+func toUserReviewResponse(rev *models.UserReview) dto.UserReviewResponse {
+	return dto.UserReviewResponse{
+		ReviewID:   rev.UserReviewID,
+		OfferingID: rev.OfferingID,
+		Comment:    rev.Comment,
+		Type:       string(rev.Type),
+		Status:     string(rev.Status),
+		CreatedAt:  rev.CreatedAt,
+		UpdatedAt:  rev.UpdatedAt,
+	}
+}
 
 // ListReviews - GET /api/v1/offerings/{id}/reviews
 func ListReviews(w http.ResponseWriter, r *http.Request) {
@@ -23,26 +36,41 @@ func ListReviews(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// コメントを配列で返す
-	comments := make([]string, 0, len(reviews))
+	resp := dto.ListReviewsResponse{
+		Pros:   []string{},
+		Cons:   []string{},
+		Others: []string{},
+	}
 	for _, rev := range reviews {
-		if rev.Comment != "" {
-			comments = append(comments, rev.Comment)
+		switch rev.Type {
+		case models.UserReviewTypePros:
+			resp.Pros = append(resp.Pros, rev.Comment)
+		case models.UserReviewTypeCons:
+			resp.Cons = append(resp.Cons, rev.Comment)
+		default:
+			resp.Others = append(resp.Others, rev.Comment)
 		}
 	}
+	resp.Count = len(reviews)
 
-	resp := dto.ListReviewsResponse{
-		Comments: comments,
-		Count:    len(comments),
-	}
 	successResponse(w, resp)
 }
 
 // CreateReview - POST /api/v1/reviews
+// 1回の投稿から pros/cons（必須）と others（任意）の複数行を作成する
 func CreateReview(w http.ResponseWriter, r *http.Request) {
 	var req dto.CreateReviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		errorResponse(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	pros := strings.TrimSpace(req.Pros)
+	cons := strings.TrimSpace(req.Cons)
+	others := strings.TrimSpace(req.Others)
+
+	if pros == "" || cons == "" {
+		errorResponse(w, http.StatusBadRequest, "pros and cons are required")
 		return
 	}
 
@@ -52,17 +80,29 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	review := &models.UserReview{
-		UserID:     user.UserID,
-		OfferingID: req.OfferingID,
-		Comment:    req.Comment,
-		Status:     models.UserReviewStatusPending,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+	now := time.Now()
+	newRow := func(reviewType models.UserReviewType, comment string) *models.UserReview {
+		return &models.UserReview{
+			UserID:     user.UserID,
+			OfferingID: req.OfferingID,
+			Comment:    comment,
+			Type:       reviewType,
+			Status:     models.UserReviewStatusPending,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}
+	}
+
+	reviews := []*models.UserReview{
+		newRow(models.UserReviewTypePros, pros),
+		newRow(models.UserReviewTypeCons, cons),
+	}
+	if others != "" {
+		reviews = append(reviews, newRow(models.UserReviewTypeOthers, others))
 	}
 
 	revRepo := &repository.ReviewRepository{}
-	if err := revRepo.CreateReview(review); err != nil {
+	if err := revRepo.CreateReviews(reviews); err != nil {
 		if errors.Is(err, repository.ErrOfferingNotFound) {
 			errorResponse(w, http.StatusNotFound, "Offering not found")
 			return
@@ -71,12 +111,17 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	reviewIDs := make([]int64, len(reviews))
+	for i, rev := range reviews {
+		reviewIDs[i] = rev.UserReviewID
+	}
+
 	// Return minimal created info (no user details)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{"data": map[string]interface{}{
-		"review_id": review.UserReviewID,
-		"status":    string(review.Status),
+		"review_ids": reviewIDs,
+		"status":     string(models.UserReviewStatusPending),
 	}})
 }
 
@@ -96,15 +141,8 @@ func ListMyReviews(w http.ResponseWriter, r *http.Request) {
 	}
 
 	items := make([]dto.UserReviewResponse, len(reviews))
-	for i, rev := range reviews {
-		items[i] = dto.UserReviewResponse{
-			ReviewID:   rev.UserReviewID,
-			OfferingID: rev.OfferingID,
-			Comment:    rev.Comment,
-			Status:     string(rev.Status),
-			CreatedAt:  rev.CreatedAt,
-			UpdatedAt:  rev.UpdatedAt,
-		}
+	for i := range reviews {
+		items[i] = toUserReviewResponse(&reviews[i])
 	}
 
 	successResponse(w, dto.ListUserReviewsResponse{Reviews: items, Count: len(items)})
@@ -126,14 +164,7 @@ func GetMyReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	successResponse(w, dto.UserReviewResponse{
-		ReviewID:   review.UserReviewID,
-		OfferingID: review.OfferingID,
-		Comment:    review.Comment,
-		Status:     string(review.Status),
-		CreatedAt:  review.CreatedAt,
-		UpdatedAt:  review.UpdatedAt,
-	})
+	successResponse(w, toUserReviewResponse(review))
 }
 
 // GetReview - GET /api/v1/reviews/{id}

@@ -31,3 +31,10 @@ func (r *UserRepository) CreateUser(user *models.User) error {
 func (r *UserRepository) UpdateUser(user *models.User) error {
 	return config.DB.Save(user).Error
 }
+
+// ListUsers returns all users, ordered by user_id
+func (r *UserRepository) ListUsers() ([]models.User, error) {
+	var users []models.User
+	err := config.DB.Order("user_id asc").Find(&users).Error
+	return users, err
+}

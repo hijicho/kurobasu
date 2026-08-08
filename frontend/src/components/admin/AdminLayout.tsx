@@ -1,7 +1,10 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CalendarRange, ChevronRight, LogOut, Megaphone, MessageSquareText, ShieldUser, Sparkles } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 import { useAdminRole } from '@/lib/admin-role-context';
 
 type AdminLayoutProps = {
@@ -29,8 +32,39 @@ const navigationItems: NavigationItem[] = [
   { href: '/logout', label: 'ログアウト', icon: LogOut, visibleRoles: ['admin', 'editor'] },
 ];
 
+function isAdminRole(role: string | null): role is Role {
+  return role === 'admin' || role === 'editor';
+}
+
 export default function AdminLayout({ children, currentPath, title, subtitle }: AdminLayoutProps) {
-  const { role, setRole } = useAdminRole();
+  const router = useRouter();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { role, loading: roleLoading } = useAdminRole();
+
+  // ロールはバックエンドの /me（DB の users.role）が唯一の情報源。
+  // フロント側で自由に切り替えることはできない。
+  const resolving = authLoading || (isAuthenticated && roleLoading);
+  const hasAdminAccess = isAdminRole(role);
+
+  useEffect(() => {
+    if (resolving) {
+      return;
+    }
+    if (!isAuthenticated || !hasAdminAccess) {
+      router.replace('/login');
+    }
+  }, [resolving, isAuthenticated, hasAdminAccess, router]);
+
+  if (resolving || !isAuthenticated || !hasAdminAccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
+        読み込み中...
+      </div>
+    );
+  }
+
+  const currentItem = navigationItems.find((item) => item.href === currentPath);
+  const canViewCurrentPage = !currentItem || currentItem.visibleRoles.includes(role as Role);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -49,7 +83,7 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
           <nav className="space-y-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isVisible = item.visibleRoles.includes(role);
+              const isVisible = item.visibleRoles.includes(role as Role);
               if (!isVisible) {
                 return null;
               }
@@ -83,32 +117,18 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
               {subtitle ? <p className="mt-1 text-sm text-slate-600">{subtitle}</p> : null}
             </div>
 
-            <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-slate-50 px-3 py-2">
-              <span className="text-sm font-medium text-slate-600">ロール切り替え</span>
-              <div className="flex rounded-full bg-white p-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setRole('admin')}
-                  className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-                    role === 'admin' ? 'bg-[#2b4dca] text-white' : 'text-slate-600'
-                  }`}
-                >
-                  admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('editor')}
-                  className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-                    role === 'editor' ? 'bg-[#2b4dca] text-white' : 'text-slate-600'
-                  }`}
-                >
-                  editor
-                </button>
-              </div>
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              ロール: <span className="font-semibold text-[#2b4dca]">{role}</span>
             </div>
           </header>
 
-          {children}
+          {canViewCurrentPage ? (
+            children
+          ) : (
+            <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 text-sm text-slate-600 shadow-sm">
+              この画面へのアクセス権がありません。
+            </div>
+          )}
         </main>
       </div>
     </div>

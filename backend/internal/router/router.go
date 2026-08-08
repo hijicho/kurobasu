@@ -14,7 +14,7 @@ import (
 //   2. エンドポイント URL パターンを登録
 //   3. 該当するハンドラー関数を关連付け
 // 戴返り値：*http.ServeMux (ルーターインスタンス)
-func SetupRoutes() *http.ServeMux {
+func SetupRoutes() http.Handler {
 	// http.ServeMux: Goの標準 HTTP ルーター
 	// URL パターンをハンドラー関数にマップして、リクエストをどのハンドラーが処理するかを決める
 	mux := http.NewServeMux()
@@ -58,14 +58,27 @@ func SetupRoutes() *http.ServeMux {
 	// 認護 (Auth) API
 	// =====================
 	// POST /api/v1/auth/bootstrap
-	// 効果：初回接箏時に新しいユーザーを作成
-	mux.HandleFunc("/api/v1/auth/bootstrap", methodHandler(http.MethodPost, handlers.BootstrapUser))
+	// 効果：初回接箏時に新しいユーザーを作成。有効な Firebase ID トークンが必要
+	mux.HandleFunc("/api/v1/auth/bootstrap", middleware.RequireFirebaseToken(methodHandler(http.MethodPost, handlers.BootstrapUser)))
+	// POST /api/v1/auth/logout
+	// 効果：Firebase のリフレッシュトークンを失効させる（サーバー側ログアウト）
+	mux.HandleFunc("/api/v1/auth/logout", middleware.RequireAuth(methodHandler(http.MethodPost, handlers.LogoutUser)))
 	// meHandler() を使用して同一うる URL で複数の HTTP メソッドを处理
 	// GET /api/v1/me
 	// 効果：現在ログインしているユーザー情報を取得
 	// PATCH /api/v1/me
 	// 効果：現在ログインしているユーザー情報を更新
 	mux.HandleFunc("/api/v1/me", middleware.RequireAuth(meHandler()))
+
+	// =====================
+	// 管理者 (Admin) API
+	// =====================
+	// GET /api/v1/admin/users
+	// 効果：全ユーザー一覧を取得（admin ロールのみ）
+	mux.HandleFunc("/api/v1/admin/users", middleware.RequireAuth(middleware.RequireRole("admin")(methodHandler(http.MethodGet, handlers.ListUsers))))
+	// PATCH /api/v1/admin/users/{id}/role
+	// 効果：ユーザーのロールを変更（admin ロールのみ）
+	mux.HandleFunc("/api/v1/admin/users/{id}/role", middleware.RequireAuth(middleware.RequireRole("admin")(methodHandler(http.MethodPatch, handlers.UpdateUserRole))))
 
 	// =====================
 	// 時間割 (Timetables) API
@@ -86,8 +99,8 @@ func SetupRoutes() *http.ServeMux {
 	// 効果：現在年度のデフォルト値を取得 (例：2026)
 	mux.HandleFunc("/api/v1/meta/default-academic-year", methodHandler(http.MethodGet, handlers.GetDefaultAcademicYear))
 
-	// 作成したルーターを返す
-	return mux
+	// 作成したルーターを CORS ミドルウェアでラップして返す
+	return middleware.CORS(mux)
 }
 
 // =====================

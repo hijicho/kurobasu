@@ -3,14 +3,22 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/hageruto/kurobasu/internal/dto"
+	"github.com/joho/godotenv"
 )
+
+func TestMain(m *testing.M) {
+	godotenv.Load("../.env")
+	os.Exit(m.Run())
+}
 
 var apiBaseURL = getAPIBaseURL()
 
@@ -19,6 +27,91 @@ func getAPIBaseURL() string {
 		return v
 	}
 	return "http://localhost:8000"
+}
+
+// =====================
+// Firebase test helpers
+// =====================
+// Some endpoints now require a real, verifiable Firebase ID token (see
+// middleware.RequireAuth / RequireFirebaseToken). Tests obtain one via the
+// Identity Toolkit REST API using a dedicated test account, driven by the
+// FIREBASE_WEB_API_KEY env var (the same public "apiKey" from the frontend's
+// Firebase config). Tests that need it are skipped if it's not set.
+
+const (
+	testUserEmail    = "kurobasu.test.suite@example.com"
+	testUserPassword = "TestPassw0rd!"
+)
+
+var (
+	testTokenOnce  sync.Once
+	testTokenValue string
+	testTokenErr   error
+)
+
+func authHeader(token string) map[string]string {
+	return map[string]string{"Authorization": "Bearer " + token}
+}
+
+func getTestFirebaseIDToken(t *testing.T) string {
+	t.Helper()
+
+	apiKey := os.Getenv("FIREBASE_WEB_API_KEY")
+	if apiKey == "" {
+		t.Skip("FIREBASE_WEB_API_KEY not set; skipping test that requires a real Firebase ID token")
+	}
+
+	testTokenOnce.Do(func() {
+		testTokenValue, testTokenErr = firebaseSignInOrSignUp(apiKey, testUserEmail, testUserPassword)
+	})
+	if testTokenErr != nil {
+		t.Fatalf("failed to obtain firebase test id token: %v", testTokenErr)
+	}
+	return testTokenValue
+}
+
+func firebaseSignInOrSignUp(apiKey, email, password string) (string, error) {
+	if token, err := identityToolkitRequest(apiKey, "accounts:signInWithPassword", email, password); err == nil {
+		return token, nil
+	}
+	return identityToolkitRequest(apiKey, "accounts:signUp", email, password)
+}
+
+func identityToolkitRequest(apiKey, endpoint, email, password string) (string, error) {
+	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/%s?key=%s", endpoint, apiKey)
+	payload, err := json.Marshal(map[string]interface{}{
+		"email":             email,
+		"password":          password,
+		"returnSecureToken": true,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewReader(payload))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var result struct {
+		IDToken string `json:"idToken"`
+		Error   struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(b, &result); err != nil {
+		return "", err
+	}
+	if result.IDToken == "" {
+		return "", fmt.Errorf("firebase auth request failed: %s", result.Error.Message)
+	}
+	return result.IDToken, nil
 }
 
 type testResponse struct {
@@ -35,7 +128,7 @@ func (r *testResponse) Header() http.Header {
 // Helper: doRequest
 // - logs request body and response body/status
 // =====================
-func doRequest(t *testing.T, method, path string, body interface{}) *testResponse {
+func doRequest(t *testing.T, method, path string, body interface{}, headers ...map[string]string) *testResponse {
 	var req *http.Request
 	url := apiBaseURL + path
 	client := &http.Client{Timeout: 5 * time.Second}
@@ -67,6 +160,12 @@ func doRequest(t *testing.T, method, path string, body interface{}) *testRespons
 		}
 		req = httpReq
 		t.Logf("REQ %s %s%s", method, apiBaseURL, path)
+	}
+
+	if len(headers) > 0 {
+		for k, v := range headers[0] {
+			req.Header.Set(k, v)
+		}
 	}
 
 	resp, err := client.Do(req)
@@ -185,12 +284,17 @@ func TestListReviews(t *testing.T) {
 
 // TestCreateReview - POST /api/v1/reviews
 func TestCreateReview(t *testing.T) {
+	token := getTestFirebaseIDToken(t)
+	// レビュー作成には DB 側ユーザーが必要なので、先に bootstrap しておく（冪等）
+	doRequest(t, "POST", "/api/v1/auth/bootstrap", dto.BootstrapUserRequest{DisplayName: "Test Suite User"}, authHeader(token))
+
 	body := dto.CreateReviewRequest{
 		OfferingID: 1,
-		Comment:    "This was a helpful course.",
+		Pros:       "Well-structured lectures.",
+		Cons:       "Homework load was heavy.",
 	}
 
-	w := doRequest(t, "POST", "/api/v1/reviews", body)
+	w := doRequest(t, "POST", "/api/v1/reviews", body, authHeader(token))
 
 	// OfferingID が存在しない場合はエラー (404) または作成成功 (201)
 	if w.Code != http.StatusNotFound && w.Code != http.StatusCreated {
@@ -206,11 +310,12 @@ func TestCreateReview(t *testing.T) {
 
 // TestBootstrapUser - POST /api/v1/auth/bootstrap
 func TestBootstrapUser(t *testing.T) {
+	token := getTestFirebaseIDToken(t)
 	body := dto.BootstrapUserRequest{
 		DisplayName: "Test User",
 	}
 
-	w := doRequest(t, "POST", "/api/v1/auth/bootstrap", body)
+	w := doRequest(t, "POST", "/api/v1/auth/bootstrap", body, authHeader(token))
 
 	// Handler returns 200 if user already exists, 201 if newly created
 	if w.Code != http.StatusCreated && w.Code != http.StatusOK {
@@ -236,7 +341,8 @@ func TestBootstrapUser(t *testing.T) {
 
 // TestBootstrapUser_InvalidRequest - リクエストボディが無効
 func TestBootstrapUser_InvalidRequest(t *testing.T) {
-	w := doRequest(t, "POST", "/api/v1/auth/bootstrap", `invalid json`)
+	token := getTestFirebaseIDToken(t)
+	w := doRequest(t, "POST", "/api/v1/auth/bootstrap", `invalid json`, authHeader(token))
 
 	assertStatusCode(t, w.Code, http.StatusBadRequest)
 }

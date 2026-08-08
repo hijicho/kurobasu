@@ -1,21 +1,43 @@
 import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import logoImage from '../assets/e52bb999d689900e37b9d134926cef87854ec798.png';
+import { useAuth } from '@/lib/auth-context';
 
 interface LoginPageProps {
   onLoginSuccess?: () => void;
 }
 
+function mapFirebaseAuthError(code: string): string {
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'このメールアドレスは既に登録されています';
+    case 'auth/invalid-email':
+      return '有効なメールアドレスを入力してください';
+    case 'auth/weak-password':
+      return 'パスワードは8文字以上で入力してください';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'メールアドレスまたはパスワードが正しくありません';
+    case 'auth/too-many-requests':
+      return 'ログイン試行回数が多すぎます。しばらくしてから再度お試しください';
+    default:
+      return 'エラーが発生しました。時間をおいて再度お試しください';
+  }
+}
+
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
+  const { signIn, signUp } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+  const [submitting, setSubmitting] = useState(false);
+
   const [loginData, setLoginData] = useState({
     email: '',
     password: '',
   });
-  
+
   const [registerData, setRegisterData] = useState({
     email: '',
     password: '',
@@ -24,59 +46,73 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
-    
+
     if (!loginData.email) {
       newErrors.email = 'メールアドレスを入力してください';
     } else if (!/\S+@\S+\.\S+/.test(loginData.email)) {
       newErrors.email = '有効なメールアドレスを入力してください';
     }
-    
+
     if (!loginData.password) {
       newErrors.password = 'パスワードを入力してください';
     }
-    
+
     setErrors(newErrors);
-    
-    if (Object.keys(newErrors).length === 0) {
-      console.log('ログイン:', loginData);
-      // ログイン処理成功
-      if (onLoginSuccess) {
-        onLoginSuccess();
-      }
+
+    if (Object.keys(newErrors).length !== 0) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await signIn(loginData.email, loginData.password);
+      onLoginSuccess?.();
+    } catch (err) {
+      const code = (err as { code?: string })?.code ?? '';
+      setErrors({ form: mapFirebaseAuthError(code) });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
-    
+
     if (!registerData.email) {
       newErrors.email = 'メールアドレスを入力してください';
     } else if (!/\S+@\S+\.\S+/.test(registerData.email)) {
       newErrors.email = '有効なメールアドレスを入力してください';
     }
-    
+
     if (!registerData.password) {
       newErrors.password = 'パスワードを入力してください';
     } else if (registerData.password.length < 8) {
       newErrors.password = 'パスワードは8文字以上で入力してください';
     }
-    
+
     if (registerData.password !== registerData.confirmPassword) {
       newErrors.confirmPassword = 'パスワードが一致しません';
     }
-    
+
     setErrors(newErrors);
-    
-    if (Object.keys(newErrors).length === 0) {
-      console.log('新規登録:', registerData);
-      // 登録処理成功
-      if (onLoginSuccess) {
-        onLoginSuccess();
-      }
+
+    if (Object.keys(newErrors).length !== 0) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await signUp(registerData.email, registerData.password, registerData.email);
+      onLoginSuccess?.();
+    } catch (err) {
+      const code = (err as { code?: string })?.code ?? '';
+      setErrors({ form: mapFirebaseAuthError(code) });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -131,6 +167,11 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <div className="p-6 md:p-8">
             {activeTab === 'login' ? (
               <form onSubmit={handleLogin} className="space-y-5">
+                {errors.form && (
+                  <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+                    {errors.form}
+                  </div>
+                )}
                 <div>
                   <label className="block mb-2">メールアドレス</label>
                   <div className="relative">
@@ -190,9 +231,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
                 <button
                   type="submit"
-                  className="btn-theme-primary w-full py-3 rounded-xl"
+                  disabled={submitting}
+                  className="btn-theme-primary w-full py-3 rounded-xl disabled:opacity-60"
                 >
-                  ログイン
+                  {submitting ? 'ログイン中...' : 'ログイン'}
                 </button>
 
                 <div className="relative my-6">
@@ -231,6 +273,11 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               </form>
             ) : (
               <form onSubmit={handleRegister} className="space-y-5">
+                {errors.form && (
+                  <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+                    {errors.form}
+                  </div>
+                )}
                 <div>
                   <label className="block mb-2">メールアドレス</label>
                   <div className="relative">
@@ -298,9 +345,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
                 <button
                   type="submit"
-                  className="btn-theme-primary w-full py-3 rounded-xl"
+                  disabled={submitting}
+                  className="btn-theme-primary w-full py-3 rounded-xl disabled:opacity-60"
                 >
-                  新規登録
+                  {submitting ? '登録中...' : '新規登録'}
                 </button>
               </form>
             )}

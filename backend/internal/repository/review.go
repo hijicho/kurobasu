@@ -19,7 +19,6 @@ var ErrOfferingNotFound = errors.New("offering not found")
 func (r *ReviewRepository) GetReviewsByOffering(offeringID int64) ([]models.UserReview, error) {
 	var reviews []models.UserReview
 	err := config.DB.
-		Preload("Offering").
 		Where("offering_id = ? AND status = ?", offeringID, string(models.UserReviewStatusApproved)).
 		Order("created_at DESC").
 		Find(&reviews).Error
@@ -52,21 +51,32 @@ func (r *ReviewRepository) GetReviewByIDForUser(userID, reviewID int64) (*models
 	return &review, err
 }
 
-// CreateReview creates a new review
-func (r *ReviewRepository) CreateReview(review *models.UserReview) error {
+// CreateReviews creates the rows (pros/cons/[others]) for a single review
+// submission atomically. All rows must reference the same offering.
+func (r *ReviewRepository) CreateReviews(reviews []*models.UserReview) error {
+	if len(reviews) == 0 {
+		return nil
+	}
+
 	// Ensure the referenced offering exists to avoid FK constraint errors
+	offeringID := reviews[0].OfferingID
 	var off models.Offering
-	if err := config.DB.First(&off, review.OfferingID).Error; err != nil {
+	if err := config.DB.First(&off, offeringID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("%w: %d", ErrOfferingNotFound, review.OfferingID)
+			return fmt.Errorf("%w: %d", ErrOfferingNotFound, offeringID)
 		}
 		return err
 	}
 
-	// Default status to pending if empty
-	if review.Status == "" {
-		review.Status = models.UserReviewStatusPending
-	}
-
-	return config.DB.Create(review).Error
+	return config.DB.Transaction(func(tx *gorm.DB) error {
+		for _, review := range reviews {
+			if review.Status == "" {
+				review.Status = models.UserReviewStatusPending
+			}
+			if err := tx.Create(review).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

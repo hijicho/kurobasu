@@ -45,12 +45,26 @@ async function fetchApi<T>(
       const errorData = await response.json().catch(() => ({}));
       throw new ApiError(
         response.status,
-        errorData.message || `HTTP Error: ${response.status}`,
+        errorData.message || errorData.error || `HTTP Error: ${response.status}`,
         errorData
       );
     }
 
-    return await response.json();
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    const text = await response.text();
+    if (!text) {
+      return undefined as T;
+    }
+
+    const parsed = JSON.parse(text);
+    // バックエンドは成功時のペイロードを {"data": ...} で包んで返すため、ここで剥がす
+    if (parsed && typeof parsed === 'object' && 'data' in parsed) {
+      return parsed.data as T;
+    }
+    return parsed as T;
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
@@ -164,6 +178,7 @@ export interface UserProfile {
   user_id: number;
   firebase_uid?: string;
   display_name: string;
+  role: string;
   created_at: string;
 }
 
@@ -198,5 +213,44 @@ export async function updateMe(
       Authorization: `Bearer ${idToken}`,
     },
     body: JSON.stringify({ display_name: displayName }),
+  });
+}
+
+export async function logout(idToken: string): Promise<void> {
+  return fetchApi<void>('/auth/logout', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+}
+
+// ============================
+// Admin API (admin ロールのみ)
+// ============================
+
+export interface ListAdminUsersResponse {
+  items: UserProfile[];
+}
+
+export async function listAdminUsers(idToken: string): Promise<ListAdminUsersResponse> {
+  return fetchApi<ListAdminUsersResponse>('/admin/users', {
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+}
+
+export async function updateUserRole(
+  idToken: string,
+  userId: number,
+  role: string
+): Promise<UserProfile> {
+  return fetchApi<UserProfile>(`/admin/users/${userId}/role`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({ role }),
   });
 }

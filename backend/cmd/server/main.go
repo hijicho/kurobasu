@@ -62,6 +62,15 @@ func main() {
 	}
 
 	// =====================
+	// Firebase Admin SDK の初期化
+	// =====================
+	// FIREBASE_SERVICE_ACCOUNT_KEY_PATH で指定したサービスアカウントJSONを読み込み、
+	// 以降のリクエストで Firebase ID トークンを検証できるようにする
+	if err := config.InitFirebase(); err != nil {
+		log.Fatalf("Failed to initialize Firebase: %v", err)
+	}
+
+	// =====================
 	// サーバーポートの設定
 	// =====================
 	port := os.Getenv("PORT")
