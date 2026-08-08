@@ -1,8 +1,9 @@
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Breadcrumb } from '@/components/Breadcrumb';
-import { ArrowLeft, Clock, MapPin, FileText, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { firstYearSeminarScheduleData } from '@/lib/firstYearSeminarScheduleData';
+import { ReviewSections } from '@/components/course-detail/ReviewSections';
 
 interface FirstYearSeminarDetailPageProps {
   courseId: string;
@@ -34,9 +35,6 @@ export function FirstYearSeminarDetailPage({ courseId, isAuthenticated, onBack }
   // デフォルトのレビュー情報（今後、実データで更新予定）
   const evaluationCriteria = ['レポート', '平常点'];
   const testAllowance = ['なし'];
-  const goodPoints: string[] = [];
-  const badPoints: string[] = [];
-  const otherInfo: string[] = [];
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -151,59 +149,7 @@ export function FirstYearSeminarDetailPage({ courseId, isAuthenticated, onBack }
           </div>
         </div>
 
-        {/* 良かったところ */}
-        {goodPoints.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h3 className="text-base font-medium text-gray-900 mb-3 flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-              良かったところ
-            </h3>
-            <ul className="space-y-2">
-              {goodPoints.map((point, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-600 mt-2 flex-shrink-0"></span>
-                  <span className="text-sm text-gray-700">{point}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* 悪かったところ */}
-        {badPoints.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h3 className="text-base font-medium text-gray-900 mb-3 flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-red-600" />
-              悪かったところ
-            </h3>
-            <ul className="space-y-2">
-              {badPoints.map((point, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-600 mt-2 flex-shrink-0"></span>
-                  <span className="text-sm text-gray-700">{point}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* その他 */}
-        {otherInfo.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-base font-medium text-gray-900 mb-3 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-gray-600" />
-              その他
-            </h3>
-            <ul className="space-y-2">
-              {otherInfo.map((info, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-600 mt-2 flex-shrink-0"></span>
-                  <span className="text-sm text-gray-700">{info}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <ReviewSections pros={[]} cons={[]} others={[]} />
       </main>
 
       <Footer />

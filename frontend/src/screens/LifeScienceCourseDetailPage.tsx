@@ -1,6 +1,7 @@
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { ReviewSections } from '../components/course-detail/ReviewSections';
 
 interface LifeScienceCourseDetailPageProps {
   courseId: string;
@@ -141,57 +142,11 @@ export function LifeScienceCourseDetailPage({ courseId, isAuthenticated = false 
               <p className="text-sm md:text-base text-gray-700 leading-relaxed">{course.testAllowance}</p>
             </div>
 
-            {/* 良かったところ */}
-            <div>
-              <h2 className="text-lg md:text-xl mb-3 pb-2 border-b border-gray-200">良かったところ</h2>
-              {course.pros.length > 0 ? (
-                <ul className="space-y-2">
-                  {course.pros.map((pro, index) => (
-                    <li key={index} className="text-sm md:text-base text-gray-700 leading-relaxed flex">
-                      <span className="mr-2">•</span>
-                      <span>{pro}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm md:text-base text-gray-500">(記載なし)</p>
-              )}
-            </div>
-
-            {/* 悪かったところ */}
-            <div>
-              <h2 className="text-lg md:text-xl mb-3 pb-2 border-b border-gray-200">悪かったところ</h2>
-              {course.cons.length > 0 ? (
-                <ul className="space-y-2">
-                  {course.cons.map((con, index) => (
-                    <li key={index} className="text-sm md:text-base text-gray-700 leading-relaxed flex">
-                      <span className="mr-2">•</span>
-                      <span>{con}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm md:text-base text-gray-500">(記載なし)</p>
-              )}
-            </div>
-
-            {/* その他 */}
-            <div>
-              <h2 className="text-lg md:text-xl mb-3 pb-2 border-b border-gray-200">その他</h2>
-              {course.other.length > 0 ? (
-                <ul className="space-y-2">
-                  {course.other.map((item, index) => (
-                    <li key={index} className="text-sm md:text-base text-gray-700 leading-relaxed flex">
-                      <span className="mr-2">•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm md:text-base text-gray-500">(記載なし)</p>
-              )}
-            </div>
           </div>
+        </div>
+
+        <div className="mb-6">
+          <ReviewSections pros={course.pros} cons={course.cons} others={course.other} />
         </div>
 
         {/* 戻るリンク */}
