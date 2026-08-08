@@ -4,6 +4,7 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { ArrowLeft, MapPin, Calendar, Users, BookOpen } from 'lucide-react';
 import { firstYearEducationCourses } from '../lib/firstYearEducationData';
 import { firstYearSeminarScheduleData } from '../lib/firstYearSeminarScheduleData';
+import { ReviewSections } from '../components/course-detail/ReviewSections';
 
 interface FirstYearEducationDetailPageProps {
   courseId: string;
@@ -137,20 +138,8 @@ export function FirstYearEducationDetailPage({ courseId, isAuthenticated, onNavi
             </div>
           </div>
 
-          {/* 良かった点 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h2 className="mb-4">授業の良かったところ</h2>
-            <p className="text-gray-500 text-sm">
-              この科目のレビューはまだ投稿されていません。
-            </p>
-          </div>
-
-          {/* 悪かった点 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h2 className="mb-4">授業の悪かったところ</h2>
-            <p className="text-gray-500 text-sm">
-              この科目のレビューはまだ投稿されていません。
-            </p>
+          <div className="mb-6">
+            <ReviewSections pros={[]} cons={[]} others={[]} />
           </div>
 
           {/* 注意事項 */}
@@ -275,57 +264,13 @@ export function FirstYearEducationDetailPage({ courseId, isAuthenticated, onNavi
           </div>
         </div>
 
-        {/* 良かった点 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="mb-4">授業の良かったところ</h2>
-          <div className="prose max-w-none">
-            {course.goodPoints && course.goodPoints.length > 0 ? (
-              <ul className="space-y-2">
-                {course.goodPoints.map((point, index) => (
-                  <li key={index} className="text-gray-700 leading-relaxed">
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500">記載なし</p>
-            )}
-          </div>
+        <div className="mb-6">
+          <ReviewSections
+            pros={course.goodPoints ?? []}
+            cons={course.badPoints ?? []}
+            others={course.otherInfo ?? []}
+          />
         </div>
-
-        {/* 悪かった点 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="mb-4">授業の悪かったところ</h2>
-          <div className="prose max-w-none">
-            {course.badPoints && course.badPoints.length > 0 ? (
-              <ul className="space-y-2">
-                {course.badPoints.map((point, index) => (
-                  <li key={index} className="text-gray-700 leading-relaxed">
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500">記載なし</p>
-            )}
-          </div>
-        </div>
-
-        {/* その他の情報 */}
-        {course.otherInfo && course.otherInfo.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h2 className="mb-4">その他の情報</h2>
-            <div className="prose max-w-none">
-              <ul className="space-y-2">
-                {course.otherInfo.map((info, index) => (
-                  <li key={index} className="text-gray-700 leading-relaxed">
-                    {info}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
 
         {/* 注意事項 */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">

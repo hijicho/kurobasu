@@ -1,7 +1,7 @@
-import { CheckCircle, XCircle, Info, FileText } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { ReviewSections } from '../components/course-detail/ReviewSections';
 import { getFoundationCourseData, FoundationCourseData } from '../lib/foundationEducationData';
 
 interface FoundationCourseDetailPageProps {
@@ -45,59 +45,7 @@ export function FoundationCourseDetailPage({ courseId = 'kaiseki-1-yamana', isAu
             </div>
           </div>
 
-          {/* 良かった点 */}
-          {course.pros.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-8">
-              <div className="flex items-center gap-3 mb-3 md:mb-4">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <h2 className="text-base md:text-xl">良かった点</h2>
-              </div>
-              <ul className="space-y-2 md:space-y-3">
-                {course.pros.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <span className="text-green-600 mt-1">•</span>
-                    <span className="text-gray-700 flex-1 text-sm md:text-base">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* 悪かった点 */}
-          {course.cons.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-8">
-              <div className="flex items-center gap-3 mb-3 md:mb-4">
-                <XCircle className="w-5 h-5 text-red-600" />
-                <h2 className="text-base md:text-xl">悪かった点</h2>
-              </div>
-              <ul className="space-y-2 md:space-y-3">
-                {course.cons.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <span className="text-red-600 mt-1">•</span>
-                    <span className="text-gray-700 flex-1 text-sm md:text-base">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* その他 */}
-          {course.others.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-8">
-              <div className="flex items-center gap-3 mb-3 md:mb-4">
-                <Info className="w-5 h-5 text-blue-600" />
-                <h2 className="text-base md:text-xl">その他</h2>
-              </div>
-              <ul className="space-y-2 md:space-y-3">
-                {course.others.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <span className="text-blue-600 mt-1">•</span>
-                    <span className="text-gray-700 flex-1 text-sm md:text-base">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <ReviewSections pros={course.pros} cons={course.cons} others={course.others} />
         </div>
       </main>
 

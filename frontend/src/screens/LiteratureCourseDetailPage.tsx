@@ -1,7 +1,7 @@
-import { CheckCircle, XCircle, Info } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { ReviewSections } from '../components/course-detail/ReviewSections';
 import { getCourseDataById } from '../data/literatureCourses';
 
 interface LiteratureCourseDetailPageProps {
@@ -43,55 +43,7 @@ export function LiteratureCourseDetailPage({ courseId = 'folklore-ono', isAuthen
           </div>
         </div>
 
-        {/* 良かったところ */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
-            <h2 className="text-lg md:text-xl font-bold">良かったところ</h2>
-          </div>
-          <ul className="space-y-2">
-            {courseData.pros.map((pro, index) => (
-              <li key={index} className="flex gap-2 text-sm md:text-base">
-                <span className="text-green-600 mt-1">•</span>
-                <span className="text-gray-700 flex-1">{pro}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* 悪かったところ */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <XCircle className="w-5 h-5 md:w-6 md:h-6 text-red-600" />
-            <h2 className="text-lg md:text-xl font-bold">悪かったところ</h2>
-          </div>
-          <ul className="space-y-2">
-            {courseData.cons.map((con, index) => (
-              <li key={index} className="flex gap-2 text-sm md:text-base">
-                <span className="text-red-600 mt-1">•</span>
-                <span className="text-gray-700 flex-1">{con}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* その他 */}
-        {courseData.others.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Info className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
-              <h2 className="text-lg md:text-xl font-bold">その他</h2>
-            </div>
-            <ul className="space-y-2">
-              {courseData.others.map((other, index) => (
-                <li key={index} className="flex gap-2 text-sm md:text-base">
-                  <span className="text-blue-600 mt-1">•</span>
-                  <span className="text-gray-700 flex-1">{other}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <ReviewSections pros={courseData.pros} cons={courseData.cons} others={courseData.others} />
       </main>
 
       <Footer />
