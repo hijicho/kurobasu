@@ -87,10 +87,17 @@ func (r *ReviewRepository) ListAdminReviews(status string) ([]AdminReviewRecord,
 
 func (r *ReviewRepository) getAdminReviewRecord(reviewID int64) (*AdminReviewRecord, error) {
 	var review AdminReviewRecord
-	err := r.adminReviewQuery().
+	result := r.adminReviewQuery().
 		Where("user_reviews.user_review_id = ?", reviewID).
-		First(&review).Error
-	return &review, err
+		Limit(1).
+		Find(&review)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &review, nil
 }
 
 func (r *ReviewRepository) adminReviewQuery() *gorm.DB {
