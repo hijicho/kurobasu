@@ -15,6 +15,7 @@ COPY . .
 # Build the application
 RUN go build -o server ./cmd/server
 RUN go build -o migrate ./cmd/migrate
+RUN go build -o seed ./cmd/seed
 
 # Final stage
 FROM alpine:latest
@@ -26,6 +27,7 @@ WORKDIR /root/
 # Copy binaries from builder
 COPY --from=builder /app/server .
 COPY --from=builder /app/migrate .
+COPY --from=builder /app/seed .
 
 # Copy .env if needed (or mount as volume)
 # COPY .env .env
