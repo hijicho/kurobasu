@@ -220,6 +220,7 @@ func saveAdUploadToSupabase(academicYear int16, term, filename string, file mult
 	req.Header.Set("Authorization", "Bearer "+serviceRoleKey)
 	req.Header.Set("apikey", serviceRoleKey)
 	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Cache-Control", "no-store, max-age=0")
 	req.Header.Set("x-upsert", "false")
 
 	resp, err := http.DefaultClient.Do(req)
