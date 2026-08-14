@@ -5,6 +5,7 @@ import (
 
 	"github.com/hageruto/kurobasu/config"
 	"github.com/hageruto/kurobasu/models"
+	"gorm.io/gorm"
 )
 
 type AdRepository struct{}
@@ -36,16 +37,21 @@ func (r *AdRepository) CreateAd(ad *models.AdImage) error {
 	return config.DB.Create(ad).Error
 }
 
-func (r *AdRepository) DeactivateAd(adID int64) (*models.AdImage, error) {
+func (r *AdRepository) GetAdByID(adID int64) (*models.AdImage, error) {
 	var ad models.AdImage
 	if err := config.DB.First(&ad, adID).Error; err != nil {
 		return nil, err
 	}
-
-	ad.IsActive = false
-	ad.UpdatedAt = time.Now()
-	if err := config.DB.Save(&ad).Error; err != nil {
-		return nil, err
-	}
 	return &ad, nil
+}
+
+func (r *AdRepository) DeleteAd(adID int64) error {
+	result := config.DB.Delete(&models.AdImage{}, adID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

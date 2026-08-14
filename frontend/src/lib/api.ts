@@ -365,8 +365,8 @@ export async function uploadAdminAd(
   });
 }
 
-export async function deleteAdminAd(idToken: string, adId: number): Promise<AdImage> {
-  return fetchApi<AdImage>(`/admin/ads/${adId}`, {
+export async function deleteAdminAd(idToken: string, adId: number): Promise<void> {
+  return fetchApi<void>(`/admin/ads/${adId}`, {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${idToken}`,

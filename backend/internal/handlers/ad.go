@@ -148,12 +148,20 @@ func UploadAdminAd(w http.ResponseWriter, r *http.Request) {
 func DeleteAdminAd(w http.ResponseWriter, r *http.Request) {
 	adID := extractID(r, "id")
 	adRepo := &repository.AdRepository{}
-	ad, err := adRepo.DeactivateAd(adID)
+	ad, err := adRepo.GetAdByID(adID)
 	if err != nil {
 		errorResponse(w, http.StatusNotFound, "Ad not found")
 		return
 	}
-	successResponse(w, toAdImageResponse(ad))
+	if err := deleteAdFromSupabase(ad.StoragePath); err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to delete ad image")
+		return
+	}
+	if err := adRepo.DeleteAd(adID); err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to delete ad")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func saveAdUpload(academicYear int16, term string, file multipart.File, header *multipart.FileHeader) (*models.AdImage, error) {
@@ -238,6 +246,39 @@ func saveAdUploadToSupabase(academicYear int16, term, filename string, file mult
 		FileSize:         int64(len(body)),
 		IsActive:         true,
 	}, nil
+}
+
+func deleteAdFromSupabase(storagePath string) error {
+	baseURL := config.SupabaseURL()
+	serviceRoleKey := config.SupabaseServiceRoleKey()
+	bucket := os.Getenv("SUPABASE_STORAGE_BUCKET")
+	if baseURL == "" || serviceRoleKey == "" || bucket == "" {
+		return fmt.Errorf("Supabase Storage is not configured")
+	}
+	if strings.TrimSpace(storagePath) == "" {
+		return fmt.Errorf("missing storage path")
+	}
+
+	url := baseURL + "/storage/v1/object/" + bucket + "/" + strings.TrimLeft(storagePath, "/")
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to prepare delete")
+	}
+	req.Header.Set("Authorization", "Bearer "+serviceRoleKey)
+	req.Header.Set("apikey", serviceRoleKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to delete image")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("failed to delete image")
+	}
+	return nil
 }
 
 func normalizeAdTerm(value string) string {

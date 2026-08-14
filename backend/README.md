@@ -260,12 +260,12 @@ curl -X POST http://localhost:8080/api/v1/admin/ads \
   -F "term=spring" \
   -F "image=@./ad-banner.png"
 
-# 広告画像を無効化
+# 広告画像を物理削除
 curl -X DELETE http://localhost:8080/api/v1/admin/ads/1 \
   -H "Authorization: Bearer <Supabase access token>"
 ```
 
-広告画像は Supabase Storage の `SUPABASE_STORAGE_BUCKET` に保存され、DB には公開 URL と object path を保存します。
+広告画像は Supabase Storage の `SUPABASE_STORAGE_BUCKET` に保存され、DB には公開 URL と object path を保存します。削除時は Storage object と DB 行の両方を削除します。
 
 詳細な API 仕様は [ARCHITECTURE.md](ARCHITECTURE.md) を参照。
 
