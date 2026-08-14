@@ -123,8 +123,22 @@ func (r *ReviewRepository) adminReviewQuery() *gorm.DB {
 		Joins("LEFT JOIN subjects ON subjects.subject_id = offerings.subject_id")
 }
 
-// UpdateReviewStatus changes a review's moderation status.
+// UpdateReviewStatus changes a review's moderation status. A deleted status
+// physically removes the row while returning the deleted review projection.
 func (r *ReviewRepository) UpdateReviewStatus(reviewID int64, status models.UserReviewStatus) (*AdminReviewRecord, error) {
+	if status == models.UserReviewStatusDeleted {
+		review, err := r.getAdminReviewRecord(reviewID)
+		if err != nil {
+			return nil, err
+		}
+		if err := config.DB.Delete(&models.UserReview{}, reviewID).Error; err != nil {
+			return nil, err
+		}
+		review.Status = string(models.UserReviewStatusDeleted)
+		review.UpdatedAt = time.Now()
+		return review, nil
+	}
+
 	var review models.UserReview
 	if err := config.DB.First(&review, reviewID).Error; err != nil {
 		return nil, err
