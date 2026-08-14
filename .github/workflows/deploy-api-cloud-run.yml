@@ -59,7 +59,6 @@ jobs:
           image: ${{ steps.image.outputs.image }}
           env_vars_update_strategy: overwrite
           env_vars: |
-            PORT=8080
             DB_HOST=${{ vars.DB_HOST }}
             DB_PORT=5432
             DB_USER=${{ vars.DB_USER }}
