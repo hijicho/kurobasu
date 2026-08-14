@@ -25,10 +25,10 @@ type NavigationItem = {
 
 const navigationItems: NavigationItem[] = [
   { href: '/admin', label: '使い方', icon: Sparkles, visibleRoles: ['admin', 'editor'] },
-  { href: '/reviews', label: '口コミ', icon: MessageSquareText, visibleRoles: ['admin', 'editor'] },
-  { href: '/ads', label: '広告', icon: Megaphone, visibleRoles: ['admin', 'editor'] },
-  { href: '/timetable', label: '時間割', icon: CalendarRange, visibleRoles: ['admin', 'editor'] },
-  { href: '/admin-management', label: '管理人', icon: ShieldUser, visibleRoles: ['admin'] },
+  { href: '/admin/reviews', label: '口コミ', icon: MessageSquareText, visibleRoles: ['admin', 'editor'] },
+  { href: '/admin/ads', label: '広告', icon: Megaphone, visibleRoles: ['admin', 'editor'] },
+  { href: '/admin/timetable', label: '時間割', icon: CalendarRange, visibleRoles: ['admin', 'editor'] },
+  { href: '/admin/users', label: '管理人', icon: ShieldUser, visibleRoles: ['admin'] },
   { href: '/logout', label: 'ログアウト', icon: LogOut, visibleRoles: ['admin', 'editor'] },
 ];
 
