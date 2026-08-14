@@ -5,7 +5,8 @@ import { Footer } from '../components/Footer';
 import { ExternalLinkButton } from '../components/ExternalLinkButton';
 import { Header } from '../components/Header';
 import { GlossaryModal } from '../components/GlossaryModal';
-import { getCategories, Category, USE_MOCK_DATA } from '../lib/api';
+import { PublicAdBanner } from '../components/PublicAdBanner';
+import { getCategories, Category } from '../lib/api';
 import hamubasuLogo from '../assets/59962a0286c10949e8d3fa57e1256b8b69b96d84.png';
 import bgPattern from '../assets/c00c039666ebe180d57a090c8744e0552d438ca4.png';
 import titleImage from '../assets/573ad896cd92b11ef07ccb64a98726dc7a7aab11.png';
@@ -21,45 +22,35 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // モックカテゴリデータ
-  const mockCategories: Category[] = [
-    { category_id: 1, slug: 'general', name: '般教' },
-    { category_id: 2, slug: 'second-language', name: '第二外国語' },
-    { category_id: 3, slug: 'foundation', name: '基礎教育科目' },
-    { category_id: 4, slug: 'first-year-seminar', name: '初年次教育科目（初ゼミ）' },
-    { category_id: 5, slug: 'health-sports', name: '健康・スポーツ科学' },
-    { category_id: 6, slug: 'english', name: '英語' },
-    { category_id: 7, slug: 'specialized', name: '専門科目' },
-  ];
-
   // カテゴリデータをAPIから取得
   useEffect(() => {
-    const fetchCategories = async () => {
-      // モックデータモードの場合はAPI呼び出しをスキップ
-      if (USE_MOCK_DATA) {
-        setCategories(mockCategories);
-        setLoading(false);
-        return;
-      }
+    let cancelled = false;
 
+    const fetchCategories = async () => {
       try {
         setLoading(true);
         const response = await getCategories();
-        setCategories(response.items);
-        setError(null);
+        if (!cancelled) {
+          setCategories(response.items);
+          setError(null);
+        }
       } catch (err) {
         console.error('Failed to fetch categories:', err);
-        console.warn('バックエンドAPIに接続できません。モックデータを使用します。');
-        
-        // モックデータを使用（API接続失敗時のフォールバック）
-        setCategories(mockCategories);
-        setError(null); // エラーは非表示にする（モックデータで動作）
+        if (!cancelled) {
+          setCategories([]);
+          setError('カテゴリを取得できませんでした。');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchCategories();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const quickLinks = [
@@ -138,6 +129,8 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
             </button>
           </div>
 
+          <PublicAdBanner />
+
           {/* カテゴリボタン＆専門科目セクション - 統一背景 */}
           <div 
             className="relative rounded-2xl overflow-hidden mb-6 p-6"
@@ -209,6 +202,30 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
               )}
             </div>
           </div>
+
+          {(categories.length > 0 || error) && (
+            <section className="mb-6 bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h2 className="text-base font-bold">登録済みカテゴリ</h2>
+                {loading && <span className="text-xs text-gray-500">読み込み中</span>}
+              </div>
+              {error ? (
+                <p className="text-xs text-red-700">{error}</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {categories.map((category) => (
+                    <Link
+                      key={category.category_id}
+                      href={`/courses/${category.slug}`}
+                      className="px-3 py-2 bg-gray-50 rounded-lg hover:bg-theme-primary-light transition-colors text-center text-xs md:text-sm"
+                    >
+                      {category.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* 外部リンク */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">

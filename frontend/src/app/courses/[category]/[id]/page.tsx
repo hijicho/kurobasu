@@ -1,9 +1,13 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { CategoryPage } from '@/screens/CategoryPage';
+import { ApiCourseDetailPage } from '@/screens/ApiCourseDetailPage';
 
 const categoryNames: Record<string, string> = {
+  science: 'Science',
+  mathematics: 'Mathematics',
+  languages: 'Languages',
+  arts: 'Arts',
   general: '総合教養科目（般教）',
   'second-language': '第二外国語',
   foundation: '基礎教育科目',
@@ -11,23 +15,18 @@ const categoryNames: Record<string, string> = {
   'health-sports': '健康・スポーツ科学',
   english: '英語',
   specialized: '専門科目',
-  science: 'Science',
-  mathematics: 'Mathematics',
-  languages: 'Languages',
-  arts: 'Arts',
 };
 
 export default function Page() {
-  const params = useParams<{ category: string }>();
+  const params = useParams<{ category: string; id: string }>();
   const router = useRouter();
-  const categoryId = params.category;
+  const offeringId = Number(params.id);
 
   return (
-    <CategoryPage
-      categoryName={categoryNames[categoryId] ?? categoryId}
-      categoryId={categoryId}
-      onNavigateBack={() => router.push('/')}
-      onCourseClick={(id) => router.push(`/courses/${categoryId}/${id}`)}
+    <ApiCourseDetailPage
+      offeringId={offeringId}
+      categoryName={categoryNames[params.category] ?? params.category}
+      onNavigateToList={() => router.push(`/courses/${params.category}`)}
     />
   );
 }

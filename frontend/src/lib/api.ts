@@ -1,13 +1,9 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1';
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1$/, '');
 
-// 開発モード設定
-// バックエンドが未起動の場合、この値をtrueにするとモックデータのみ使用します
-export const USE_MOCK_DATA = true;
-
 // CORS対策:
 // バックエンド側で以下の設定が必要です
-// - Access-Control-Allow-Origin: http://localhost:5173 (開発環境のURL)
+// - Access-Control-Allow-Origin: フロントエンドのOrigin
 // - Access-Control-Allow-Methods: GET, POST, PATCH, DELETE
 // - Access-Control-Allow-Headers: Content-Type, Authorization
 
@@ -141,6 +137,10 @@ export async function getOfferings(
   return fetchApi<OfferingsResponse>(
     `/categories/${categorySlug}/offerings?academic_year=${academicYear}&term=${term}`
   );
+}
+
+export async function getOffering(offeringId: number): Promise<Offering> {
+  return fetchApi<Offering>(`/offerings/${offeringId}`);
 }
 
 export interface ReviewsResponse {
@@ -372,4 +372,16 @@ export async function deleteAdminAd(idToken: string, adId: number): Promise<void
       Authorization: `Bearer ${idToken}`,
     },
   });
+}
+
+export async function listAds(academicYear?: number, term?: string): Promise<ListAdImagesResponse> {
+  const params = new URLSearchParams();
+  if (academicYear !== undefined) {
+    params.set('academic_year', String(academicYear));
+  }
+  if (term) {
+    params.set('term', term);
+  }
+  const query = params.toString();
+  return fetchApi<ListAdImagesResponse>(`/ads${query ? `?${query}` : ''}`);
 }
