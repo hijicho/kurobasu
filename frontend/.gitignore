@@ -5,3 +5,4 @@ dist/
 *.tsbuildinfo
 .env*.local
 frontend_dev_log.txt
+.vercel
