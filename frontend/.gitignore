@@ -4,5 +4,6 @@ next-env.d.ts
 dist/
 *.tsbuildinfo
 .env*.local
+.env
 frontend_dev_log.txt
 .vercel

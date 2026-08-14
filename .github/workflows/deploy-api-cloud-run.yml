@@ -49,6 +49,26 @@ jobs:
           docker push "${IMAGE}"
           echo "image=${IMAGE}" >> "${GITHUB_OUTPUT}"
 
+      - name: Run database migrations
+        run: |
+          gcloud run jobs deploy "${SERVICE}-migrate" \
+            --image "${{ steps.image.outputs.image }}" \
+            --region "${REGION}" \
+            --project "${PROJECT_ID}" \
+            --command ./migrate \
+            --set-env-vars DB_HOST=${{ vars.DB_HOST }},DB_PORT=5432,DB_USER=${{ vars.DB_USER }},DB_NAME=${{ vars.DB_NAME }},DB_SSLMODE=require \
+            --set-secrets DB_PASSWORD=${{ vars.DB_PASSWORD_SECRET_NAME }}:latest \
+            --service-account=${{ vars.CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT }} \
+            --memory=512Mi \
+            --cpu=1 \
+            --tasks=1 \
+            --max-retries=0 \
+            --quiet
+          gcloud run jobs execute "${SERVICE}-migrate" \
+            --region "${REGION}" \
+            --project "${PROJECT_ID}" \
+            --wait
+
       - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v3
