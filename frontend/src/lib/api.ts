@@ -274,7 +274,7 @@ export interface AdminReview {
   term: string;
   comment: string;
   type: 'pros' | 'cons' | 'others';
-  status: 'pending' | 'approved' | 'deleted';
+  status: 'pending' | 'approved';
   created_at: string;
   updated_at: string;
 }
@@ -307,6 +307,15 @@ export async function updateReviewStatus(
       Authorization: `Bearer ${idToken}`,
     },
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function deleteAdminReview(idToken: string, reviewId: number): Promise<void> {
+  return fetchApi<void>(`/admin/reviews/${reviewId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
   });
 }
 

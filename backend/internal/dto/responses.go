@@ -104,7 +104,7 @@ type ListAdminReviewsResponse struct {
 	Count int                   `json:"count"`
 }
 
-// UpdateReviewStatusRequest はレビューの承認・削除リクエストです
+// UpdateReviewStatusRequest はレビューの承認・未確認戻しリクエストです
 type UpdateReviewStatusRequest struct {
 	Status string `json:"status"`
 }

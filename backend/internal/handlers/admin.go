@@ -18,7 +18,6 @@ var validUserRoles = map[string]struct{}{
 var validReviewStatuses = map[string]models.UserReviewStatus{
 	"pending":  models.UserReviewStatusPending,
 	"approved": models.UserReviewStatusApproved,
-	"deleted":  models.UserReviewStatusDeleted,
 }
 
 func toAdminReviewResponse(review *repository.AdminReviewRecord) dto.AdminReviewResponse {
@@ -96,7 +95,7 @@ func ListAdminReviews(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	if status != "" {
 		if _, ok := validReviewStatuses[status]; !ok {
-			errorResponse(w, http.StatusBadRequest, "status must be one of: pending, approved, deleted")
+			errorResponse(w, http.StatusBadRequest, "status must be one of: pending, approved")
 			return
 		}
 	}
@@ -127,7 +126,7 @@ func UpdateReviewStatus(w http.ResponseWriter, r *http.Request) {
 
 	status, ok := validReviewStatuses[req.Status]
 	if !ok {
-		errorResponse(w, http.StatusBadRequest, "status must be one of: pending, approved, deleted")
+		errorResponse(w, http.StatusBadRequest, "status must be one of: pending, approved")
 		return
 	}
 
@@ -140,4 +139,17 @@ func UpdateReviewStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	successResponse(w, toAdminReviewResponse(review))
+}
+
+// DeleteAdminReview - DELETE /api/v1/admin/reviews/{id}
+// admin/editor ロールのみアクセス可能。レビュー行を物理削除する。
+func DeleteAdminReview(w http.ResponseWriter, r *http.Request) {
+	reviewID := extractID(r, "id")
+	revRepo := &repository.ReviewRepository{}
+	if err := revRepo.DeleteReview(reviewID); err != nil {
+		errorResponse(w, http.StatusNotFound, "Review not found")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

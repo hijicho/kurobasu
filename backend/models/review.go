@@ -8,7 +8,6 @@ type UserReviewStatus string
 const (
 	UserReviewStatusPending  UserReviewStatus = "pending"
 	UserReviewStatusApproved UserReviewStatus = "approved"
-	UserReviewStatusDeleted  UserReviewStatus = "deleted"
 )
 
 // UserReviewType は1行が良い点・悪い点・その他のどれかを表します

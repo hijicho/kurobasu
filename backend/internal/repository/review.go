@@ -77,8 +77,6 @@ func (r *ReviewRepository) ListAdminReviews(status string) ([]AdminReviewRecord,
 
 	if status != "" {
 		query = query.Where("user_reviews.status = ?", status)
-	} else {
-		query = query.Where("user_reviews.status <> ?", string(models.UserReviewStatusDeleted))
 	}
 
 	err := query.Find(&reviews).Error
@@ -123,22 +121,8 @@ func (r *ReviewRepository) adminReviewQuery() *gorm.DB {
 		Joins("LEFT JOIN subjects ON subjects.subject_id = offerings.subject_id")
 }
 
-// UpdateReviewStatus changes a review's moderation status. A deleted status
-// physically removes the row while returning the deleted review projection.
+// UpdateReviewStatus changes a review's moderation status.
 func (r *ReviewRepository) UpdateReviewStatus(reviewID int64, status models.UserReviewStatus) (*AdminReviewRecord, error) {
-	if status == models.UserReviewStatusDeleted {
-		review, err := r.getAdminReviewRecord(reviewID)
-		if err != nil {
-			return nil, err
-		}
-		if err := config.DB.Delete(&models.UserReview{}, reviewID).Error; err != nil {
-			return nil, err
-		}
-		review.Status = string(models.UserReviewStatusDeleted)
-		review.UpdatedAt = time.Now()
-		return review, nil
-	}
-
 	var review models.UserReview
 	if err := config.DB.First(&review, reviewID).Error; err != nil {
 		return nil, err
@@ -150,6 +134,18 @@ func (r *ReviewRepository) UpdateReviewStatus(reviewID int64, status models.User
 	}
 
 	return r.getAdminReviewRecord(reviewID)
+}
+
+// DeleteReview physically removes a review row.
+func (r *ReviewRepository) DeleteReview(reviewID int64) error {
+	result := config.DB.Delete(&models.UserReview{}, reviewID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // CreateReviews creates the rows (pros/cons/[others]) for a single review

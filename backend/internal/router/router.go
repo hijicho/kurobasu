@@ -87,8 +87,11 @@ func SetupRoutes() http.Handler {
 	// 効果：口コミ一覧を取得（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/reviews", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodGet, handlers.ListAdminReviews))))
 	// PATCH /api/v1/admin/reviews/{id}/status
-	// 効果：口コミを承認・削除する（admin/editor ロール）
+	// 効果：口コミの状態を承認・未確認に変更する（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/reviews/{id}/status", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPatch, handlers.UpdateReviewStatus))))
+	// DELETE /api/v1/admin/reviews/{id}
+	// 効果：口コミを物理削除する（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/reviews/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodDelete, handlers.DeleteAdminReview))))
 	// GET/POST /api/v1/admin/ads
 	// 効果：広告画像一覧の取得・アップロード（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/ads", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminAdsHandler())))

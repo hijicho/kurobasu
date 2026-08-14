@@ -3,12 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAuth } from '@/lib/auth-context';
-import { listAdminReviews, updateReviewStatus, type AdminReview } from '@/lib/api';
+import { deleteAdminReview, listAdminReviews, updateReviewStatus, type AdminReview } from '@/lib/api';
 
 const statusLabels: Record<AdminReview['status'], string> = {
   pending: '未確認',
   approved: '承認済み',
-  deleted: '削除済み',
 };
 
 const typeLabels: Record<AdminReview['type'], string> = {
@@ -62,7 +61,7 @@ export default function ReviewsPage() {
         acc[review.status] += 1;
         return acc;
       },
-      { pending: 0, approved: 0, deleted: 0 } satisfies Record<AdminReview['status'], number>
+      { pending: 0, approved: 0 } satisfies Record<AdminReview['status'], number>
     );
   }, [reviews]);
 
@@ -78,6 +77,23 @@ export default function ReviewsPage() {
       await loadReviews();
     } catch {
       setError('口コミステータスの更新に失敗しました。');
+    } finally {
+      setUpdatingReviewId(null);
+    }
+  };
+
+  const handleDelete = async (reviewId: number) => {
+    setUpdatingReviewId(reviewId);
+    setError(null);
+    try {
+      const idToken = await getIdToken();
+      if (!idToken) {
+        throw new Error('not authenticated');
+      }
+      await deleteAdminReview(idToken, reviewId);
+      await loadReviews();
+    } catch {
+      setError('口コミの削除に失敗しました。');
     } finally {
       setUpdatingReviewId(null);
     }
@@ -162,8 +178,8 @@ export default function ReviewsPage() {
                     </button>
                     <button
                       type="button"
-                      disabled={updatingReviewId === item.review_id || item.status === 'deleted'}
-                      onClick={() => handleStatusChange(item.review_id, 'deleted')}
+                      disabled={updatingReviewId === item.review_id}
+                      onClick={() => handleDelete(item.review_id)}
                       className="rounded-full bg-black px-6 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       削除
