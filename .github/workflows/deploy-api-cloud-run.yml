@@ -68,7 +68,6 @@ jobs:
             SUPABASE_URL=${{ vars.SUPABASE_URL }}
             SUPABASE_ANON_KEY=${{ vars.SUPABASE_ANON_KEY }}
             SUPABASE_STORAGE_BUCKET=${{ vars.SUPABASE_STORAGE_BUCKET }}
-            SUPABASE_STORAGE_PUBLIC_BASE_URL=${{ vars.SUPABASE_STORAGE_PUBLIC_BASE_URL }}
             CORS_ALLOWED_ORIGINS=${{ vars.CORS_ALLOWED_ORIGINS }}
           secrets_update_strategy: overwrite
           secrets: |

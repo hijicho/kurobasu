@@ -148,7 +148,6 @@ SUPABASE_URL=https://bklngnttcequmywufkvf.supabase.co
 SUPABASE_ANON_KEY=sb_publishable_...
 SUPABASE_SERVICE_ROLE_KEY_SECRET_NAME=kurobasu-supabase-service-role-key
 SUPABASE_STORAGE_BUCKET=ads
-SUPABASE_STORAGE_PUBLIC_BASE_URL=
 CORS_ALLOWED_ORIGINS=https://<frontend-domain>
 ```
 
