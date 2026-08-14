@@ -7,7 +7,7 @@ type Meeting struct {
 	Period     int16 `gorm:"column:period;not null;check:period>=1 AND period<=10" json:"period"`
 
 	// リレーション (no FK constraint, only for eager loading)
-	Offering *Offering `gorm:"foreignKey:OfferingID;references:OfferingID;-:all" json:"offering,omitempty"`
+	Offering *Offering `gorm:"foreignKey:OfferingID;references:OfferingID" json:"offering,omitempty"`
 }
 
 func (Meeting) TableName() string {

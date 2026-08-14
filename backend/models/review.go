@@ -35,8 +35,8 @@ type UserReview struct {
 	UpdatedAt time.Time        `gorm:"column:updated_at;not null;default:current_timestamp" json:"updated_at"`
 
 	// リレーション用（オプション）
-	User     *User     `gorm:"foreignKey:UserID;references:UserID;-:all" json:"user,omitempty"`
-	Offering *Offering `gorm:"foreignKey:OfferingID;references:OfferingID;-:all" json:"offering,omitempty"`
+	User     *User     `gorm:"foreignKey:UserID;references:UserID" json:"user,omitempty"`
+	Offering *Offering `gorm:"foreignKey:OfferingID;references:OfferingID" json:"offering,omitempty"`
 }
 
 func (UserReview) TableName() string {

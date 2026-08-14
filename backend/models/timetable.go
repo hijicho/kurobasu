@@ -12,11 +12,10 @@ type Timetable struct {
 	CreatedAt   time.Time `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
 
 	// リレーション (no FK constraint, only for eager loading)
-	User  *User            `gorm:"foreignKey:UserID;references:UserID;-:all" json:"user,omitempty"`
-	Items []TimetableItem  `gorm:"foreignKey:TimetableID;references:TimetableID;-:all" json:"items,omitempty"`
+	User  *User            `gorm:"foreignKey:UserID;references:UserID" json:"user,omitempty"`
+	Items []TimetableItem  `gorm:"foreignKey:TimetableID;references:TimetableID" json:"items,omitempty"`
 }
 
 func (Timetable) TableName() string {
 	return "timetables"
 }
-

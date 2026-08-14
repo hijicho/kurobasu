@@ -11,8 +11,8 @@ type TimetableItem struct {
 	CreatedAt   time.Time `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
 
 	// リレーション (no FK constraint, only for eager loading)
-	Timetable *Timetable `gorm:"foreignKey:TimetableID;references:TimetableID;-:all" json:"timetable,omitempty"`
-	Offering  *Offering  `gorm:"foreignKey:OfferingID;references:OfferingID;-:all" json:"offering,omitempty"`
+	Timetable *Timetable `gorm:"foreignKey:TimetableID;references:TimetableID" json:"timetable,omitempty"`
+	Offering  *Offering  `gorm:"foreignKey:OfferingID;references:OfferingID" json:"offering,omitempty"`
 }
 
 func (TimetableItem) TableName() string {

@@ -45,7 +45,7 @@ type Offering struct {
 	CreatedAt       time.Time      `gorm:"column:created_at;not null;default:current_timestamp" json:"created_at"`
 
 	// リレーション (no FK constraint, only for eager loading)
-	Subject *Subject `gorm:"foreignKey:SubjectID;references:SubjectID;-:all" json:"subject,omitempty"`
+	Subject *Subject `gorm:"foreignKey:SubjectID;references:SubjectID" json:"subject,omitempty"`
 }
 
 func (Offering) TableName() string {

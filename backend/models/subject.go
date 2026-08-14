@@ -10,7 +10,7 @@ type Subject struct {
 	UpdatedAt  time.Time `gorm:"column:updated_at;not null;default:current_timestamp" json:"updated_at"`
 
 	// リレーション (no FK constraint, only for eager loading)
-	Category *Category `gorm:"foreignKey:CategoryID;references:CategoryID;-:all" json:"category,omitempty"`
+	Category *Category `gorm:"foreignKey:CategoryID;references:CategoryID" json:"category,omitempty"`
 }
 
 func (Subject) TableName() string {

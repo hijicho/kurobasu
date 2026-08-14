@@ -29,7 +29,9 @@ func InitDB(dsn string) error {
 	// gorm.Open: GORM を使用してデータベースに接続
 	// postgres.Open(dsn): DSN 文字列を指定して PostgreSQL ドライバーを初期化
 	// &gorm.Config{}: GORM の設定オプション（ここではデフォルト）
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+	})
 	if err != nil {
 		return err
 	}
@@ -37,4 +39,3 @@ func InitDB(dsn string) error {
 	log.Println("Database connected successfully")
 	return nil
 }
-
