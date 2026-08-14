@@ -5,15 +5,15 @@ import { Mail } from 'lucide-react';
 import logoImage from '../assets/e52bb999d689900e37b9d134926cef87854ec798.png';
 import { useAuth } from '@/lib/auth-context';
 
-function mapFirebaseAuthError(code: string): string {
-  switch (code) {
-    case 'auth/invalid-email':
-      return '有効なメールアドレスを入力してください';
-    case 'auth/too-many-requests':
-      return 'リクエストが多すぎます。しばらくしてから再度お試しください';
-    default:
-      return 'エラーが発生しました。時間をおいて再度お試しください';
+function mapAuthError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('invalid email')) {
+    return '有効なメールアドレスを入力してください';
   }
+  if (lower.includes('rate limit') || lower.includes('too many')) {
+    return 'リクエストが多すぎます。しばらくしてから再度お試しください';
+  }
+  return 'エラーが発生しました。時間をおいて再度お試しください';
 }
 
 export function ForgotPasswordPage() {
@@ -41,13 +41,8 @@ export function ForgotPasswordPage() {
       await resetPassword(email);
       setSent(true);
     } catch (err) {
-      const code = (err as { code?: string })?.code ?? '';
-      // メール送信の成否でアカウントの有無が推測できないよう、user-not-found も成功扱いにする
-      if (code === 'auth/user-not-found') {
-        setSent(true);
-      } else {
-        setError(mapFirebaseAuthError(code));
-      }
+      const message = (err as { message?: string })?.message ?? '';
+      setError(mapAuthError(message));
     } finally {
       setSubmitting(false);
     }

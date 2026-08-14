@@ -34,8 +34,8 @@ type SubjectResponse struct {
 // MeetingResponse: 授業時間割情報のレスポーンス
 // =====================
 type MeetingResponse struct {
-	Day    int16 `json:"day"`      // 曜日 (1=月, 2=火, ..., 7=日)
-	Period int16 `json:"period"`   // 時限 (1-10)
+	Day    int16 `json:"day"`    // 曜日 (1=月, 2=火, ..., 7=日)
+	Period int16 `json:"period"` // 時限 (1-10)
 }
 
 // =====================
@@ -45,7 +45,7 @@ type OfferingResponse struct {
 	OfferingID      int64             `json:"offering_id"`
 	Subject         SubjectResponse   `json:"subject"`
 	AcademicYear    int16             `json:"academic_year"`
-	Term            string            `json:"term"` // spring, fall, intensive, year
+	Term            string            `json:"term"`     // spring, fall, intensive, year
 	Modality        string            `json:"modality"` // onsite, online, hybrid, unknown
 	InstructorNames []string          `json:"instructor_names"`
 	Meetings        []MeetingResponse `json:"meetings"` // この開講の授業時間割
@@ -81,10 +81,56 @@ type ListUserReviewsResponse struct {
 	Count   int                  `json:"count"`
 }
 
+// AdminReviewResponse は管理画面でレビューを確認するための情報です
+type AdminReviewResponse struct {
+	ReviewID        int64     `json:"review_id"`
+	UserID          int64     `json:"user_id"`
+	UserDisplayName string    `json:"user_display_name"`
+	OfferingID      int64     `json:"offering_id"`
+	SubjectTitle    string    `json:"subject_title"`
+	InstructorNames []string  `json:"instructor_names"`
+	AcademicYear    int16     `json:"academic_year"`
+	Term            string    `json:"term"`
+	Comment         string    `json:"comment"`
+	Type            string    `json:"type"`
+	Status          string    `json:"status"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// ListAdminReviewsResponse は管理画面のレビュー一覧レスポンスです
+type ListAdminReviewsResponse struct {
+	Items []AdminReviewResponse `json:"items"`
+	Count int                   `json:"count"`
+}
+
+// UpdateReviewStatusRequest はレビューの承認・削除リクエストです
+type UpdateReviewStatusRequest struct {
+	Status string `json:"status"`
+}
+
+// AdImageResponse は広告画像の管理・公開レスポンスです
+type AdImageResponse struct {
+	AdID             int64     `json:"ad_id"`
+	InstrumentKey    string    `json:"instrument_key"`
+	ImageURL         string    `json:"image_url"`
+	OriginalFilename string    `json:"original_filename"`
+	ContentType      string    `json:"content_type"`
+	FileSize         int64     `json:"file_size"`
+	IsActive         bool      `json:"is_active"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type ListAdImagesResponse struct {
+	Items []AdImageResponse `json:"items"`
+	Count int               `json:"count"`
+}
+
 // User Response
 type UserResponse struct {
 	UserID      int64     `json:"user_id"`
-	FirebaseUID string    `json:"firebase_uid"`
+	AuthUID     string    `json:"auth_uid"`
 	DisplayName string    `json:"display_name"`
 	Role        string    `json:"role"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -102,14 +148,14 @@ type UpdateUserRoleRequest struct {
 
 // Timetable Response
 type TimetableResponse struct {
-	TimetableID int64                    `json:"timetable_id"`
-	UserID      int64                    `json:"user_id"`
-	Title       string                   `json:"title"`
-	Year        int16                    `json:"year"`
-	Term        string                   `json:"term"`
-	IsPublic    bool                     `json:"is_public"`
-	CreatedAt   time.Time                `json:"created_at"`
-	Items       []TimetableItemResponse  `json:"items,omitempty"`
+	TimetableID int64                   `json:"timetable_id"`
+	UserID      int64                   `json:"user_id"`
+	Title       string                  `json:"title"`
+	Year        int16                   `json:"year"`
+	Term        string                  `json:"term"`
+	IsPublic    bool                    `json:"is_public"`
+	CreatedAt   time.Time               `json:"created_at"`
+	Items       []TimetableItemResponse `json:"items,omitempty"`
 }
 
 // TimetableItem Response
@@ -153,10 +199,10 @@ type UpdateTimetableRequest struct {
 	Title    *string `json:"title"`
 	IsPublic *bool   `json:"is_public"`
 	Items    []struct {
-		OfferingID int64 `json:"offering_id"`
+		OfferingID int64  `json:"offering_id"`
 		DayOfWeek  *int16 `json:"day_of_week"`
 		Period     *int16 `json:"period"`
-		IsSelected bool  `json:"is_selected"`
+		IsSelected bool   `json:"is_selected"`
 	} `json:"items"`
 }
 

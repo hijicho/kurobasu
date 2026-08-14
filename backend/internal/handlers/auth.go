@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hageruto/kurobasu/config"
 	"github.com/hageruto/kurobasu/internal/dto"
 	"github.com/hageruto/kurobasu/internal/middleware"
 	"github.com/hageruto/kurobasu/internal/repository"
@@ -18,7 +17,7 @@ import (
 func toUserResponse(user *models.User) dto.UserResponse {
 	return dto.UserResponse{
 		UserID:      user.UserID,
-		FirebaseUID: user.FirebaseUID,
+		AuthUID:     user.AuthUID,
 		DisplayName: user.DisplayName,
 		Role:        user.Role,
 		CreatedAt:   user.CreatedAt,
@@ -26,7 +25,7 @@ func toUserResponse(user *models.User) dto.UserResponse {
 }
 
 // BootstrapUser - POST /api/v1/auth/bootstrap
-// Requires a valid Firebase ID token (see middleware.RequireFirebaseToken).
+// Requires a valid Supabase access token.
 // Creates the DB user profile on first call; idempotent on subsequent calls.
 func BootstrapUser(w http.ResponseWriter, r *http.Request) {
 	var req dto.BootstrapUserRequest
@@ -35,14 +34,14 @@ func BootstrapUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, ok := middleware.FirebaseToken(r)
+	authUser, ok := middleware.SupabaseUser(r)
 	if !ok {
 		errorResponse(w, http.StatusUnauthorized, "Authorization header required")
 		return
 	}
 
 	userRepo := &repository.UserRepository{}
-	existingUser, err := userRepo.GetUserByFirebaseUID(token.UID)
+	existingUser, err := userRepo.GetUserByAuthUID(authUser.ID)
 	if err == nil {
 		successResponse(w, toUserResponse(existingUser))
 		return
@@ -54,8 +53,8 @@ func BootstrapUser(w http.ResponseWriter, r *http.Request) {
 
 	displayName := strings.TrimSpace(req.DisplayName)
 	if displayName == "" {
-		if email, ok := token.Claims["email"].(string); ok && email != "" {
-			displayName = email
+		if authUser.Email != "" {
+			displayName = authUser.Email
 		} else {
 			displayName = "User"
 		}
@@ -63,7 +62,7 @@ func BootstrapUser(w http.ResponseWriter, r *http.Request) {
 
 	user := &models.User{
 		DisplayName: displayName,
-		FirebaseUID: token.UID,
+		AuthUID:     authUser.ID,
 		CreatedAt:   time.Now(),
 	}
 
@@ -78,24 +77,10 @@ func BootstrapUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // LogoutUser - POST /api/v1/auth/logout
-// Revokes the user's Firebase refresh tokens so previously issued ID tokens
-// can no longer be refreshed. The frontend should also call Firebase
-// signOut() to clear local session state.
+// Supabase session invalidation is handled by the frontend's signOut call.
 func LogoutUser(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.CurrentUser(r)
-	if !ok {
+	if _, ok := middleware.CurrentUser(r); !ok {
 		errorResponse(w, http.StatusUnauthorized, "Authorization header required")
-		return
-	}
-
-	authClient, err := config.FirebaseAuthClient()
-	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, "Authentication service unavailable")
-		return
-	}
-
-	if err := authClient.RevokeRefreshTokens(r.Context(), user.FirebaseUID); err != nil {
-		errorResponse(w, http.StatusInternalServerError, "Failed to revoke tokens")
 		return
 	}
 

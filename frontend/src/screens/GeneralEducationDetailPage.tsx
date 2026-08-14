@@ -4,6 +4,7 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { ArrowLeft, MapPin, Calendar, Clock, Users, BookOpen } from 'lucide-react';
 import { getCourseById, generalEducationCourses } from '../lib/generalEducationData';
 import { scheduleCoursesData } from '../lib/generalEducationScheduleData';
+import { findOfferingIdByCourse } from '../lib/offeringLookup';
 import { ReviewSections } from '../components/course-detail/ReviewSections';
 
 interface GeneralEducationDetailPageProps {
@@ -50,6 +51,12 @@ export function GeneralEducationDetailPage({ courseId, isAuthenticated, onNaviga
 
   // 時間割データの場合で、詳細データが見つからなかった場合のみモック表示
   if (scheduleCourse && !course) {
+    const offeringId = findOfferingIdByCourse(
+      scheduleCourse.courseCode,
+      scheduleCourse.courseName.replace(' /全_森', '').replace(' /全(商以外)_森', '').replace(' /全_遠隔', ''),
+      scheduleCourse.instructor
+    );
+
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
@@ -135,7 +142,7 @@ export function GeneralEducationDetailPage({ courseId, isAuthenticated, onNaviga
           </div>
 
           <div className="mb-6">
-            <ReviewSections pros={[]} cons={[]} others={[]} />
+            <ReviewSections pros={[]} cons={[]} others={[]} offeringId={offeringId} />
           </div>
 
           {/* 注意事項 */}
@@ -156,6 +163,8 @@ export function GeneralEducationDetailPage({ courseId, isAuthenticated, onNaviga
   if (!course) {
     return null;
   }
+
+  const offeringId = findOfferingIdByCourse(course.courseCode, course.courseName, course.instructor);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -250,6 +259,7 @@ export function GeneralEducationDetailPage({ courseId, isAuthenticated, onNaviga
             pros={course.goodPoints ?? []}
             cons={course.badPoints ?? []}
             others={course.otherInfo ?? []}
+            offeringId={offeringId}
           />
         </div>
 

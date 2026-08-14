@@ -10,32 +10,37 @@
 - **ポート**: 8080（API）
 - **デプロイ**: Docker Compose
 
-## クイックスタート
+## 本番起動
 
 ### 前提条件
 
 - [Docker](https://docs.docker.com/get-docker/) (23.0.0 以上)
 - [Docker Compose](https://docs.docker.com/compose/install/) (1.29.0 以上)
+- Supabase project（Postgres / Auth / Storage）
 
-### セットアップ・起動（推奨：Docker Compose）
+### セットアップ・起動
 
 ```bash
 cd /home/hageruto/Projects/kurobasu
 
-# イメージをビルドしてサービス起動
-sudo docker-compose up --build
+# 本番用 env を設定
+cp .env.example .env
+
+# イメージをビルドして API を起動
+docker compose --env-file .env up --build -d
 ```
 
 このコマンドで以下が自動実行されます：
-1. PostgreSQL 16 がポート 5432 で起動
+1. Supabase Postgres に接続
 2. テーブル作成・FK 制約追加（マイグレーション）
-3. サンプルデータ投入（シード）
-4. Go サーバーがポート 8080 で起動
+3. Go サーバーがポート 8080 で起動
+
+本番起動では seed は実行しません。初期データ投入が必要な場合は、投入内容を確認したうえで別ジョブとして `./seed` を一度だけ実行してください。
 
 **起動確認：**
 
 ```bash
-curl http://localhost:8080/api/v1/categories
+curl https://your-api-domain.example/api/v1/categories
 ```
 
 カテゴリの JSON が返ってくれば成功です。
@@ -46,62 +51,57 @@ curl http://localhost:8080/api/v1/categories
 
 ```bash
 # サービス起動
-sudo docker-compose up --build
-
-# バックグラウンド起動
-sudo docker-compose up -d --build
+docker compose --env-file .env up --build -d
 
 # ステータス確認
-sudo docker-compose ps
+docker compose ps
 
 # ログ確認
-sudo docker-compose logs          # すべてのサービス
-sudo docker-compose logs app      # アプリケーションのみ
-sudo docker-compose logs db       # DB のみ
+docker compose logs      # すべてのサービス
+docker compose logs app  # API のみ
 
 # サービス停止（データ保持）
-sudo docker-compose down
-
-# サービス停止・データ削除
-sudo docker-compose down -v
-
-# 完全リセット（イメージ・キャッシュも削除）
-sudo docker-compose down -v
-sudo docker system prune -f
-sudo docker-compose up --build
+docker compose down
 ```
 
 ---
 
-## ローカル開発（Docker なし）
+## サーバー単体起動
 
-### 前提条件
-
-- Go 1.22 以上
-- PostgreSQL 16 がローカルで起動中
-
-### セットアップ
+Docker を使わずに起動する場合も、Supabase の本番環境変数を設定してから実行します。
 
 ```bash
 cd /home/hageruto/Projects/kurobasu
 
-# 依存パッケージをInstall
 go mod download
-
-# 環境変数を設定
 cp .env.example .env
-
-# マイグレーション実行
 go run ./cmd/migrate/main.go
-
-# シード実行
-go run ./cmd/seed/main.go
-
-# サーバー起動
 go run ./cmd/server/main.go
 ```
 
-サーバーがポート 8000 で起動します（ローカル開発用のデフォルト）。
+### 認証
+
+認証が必要な API は、Supabase Auth の access token を検証します。ユーザー ID をそのまま `Authorization: Bearer ...` に入れる開発用バイパスはありません。
+
+Supabase Auth ではメール/パスワード認証に加えて、匿名サインインを有効にしてください。ゲストログインは Supabase Auth の匿名ユーザーとして作成されます。
+
+バックエンドの `.env` には以下を設定します。
+
+```bash
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_ANON_KEY=<Supabase anon key>
+SUPABASE_SERVICE_ROLE_KEY=<Supabase service_role key>
+```
+
+フロントエンドの `.env.local` には以下を設定します。
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase anon key>
+NEXT_PUBLIC_API_BASE_URL=https://your-api-domain.example/api/v1
+```
+
+service role key はバックエンド専用です。フロントエンドに露出させないでください。
 
 ---
 
@@ -143,13 +143,14 @@ curl http://localhost:8080/api/v1/meta/default-academic-year
 # ユーザーをBootstrap
 curl -X POST http://localhost:8080/api/v1/auth/bootstrap \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <Supabase access token>" \
   -d '{"display_name": "Student Name"}'
 ```
 
-`/api/v1/me` と `/api/v1/reviews` の作成系エンドポイントは `Authorization` ヘッダが必要です。開発用実装では Firebase UID をそのままトークンとして扱っているため、次のように指定します。
+`/api/v1/me` と `/api/v1/reviews` の作成系エンドポイントは `Authorization` ヘッダが必要です。値には Supabase Auth が発行した access token を指定します。
 
 ```bash
-curl -H "Authorization: Bearer seed_user_alice" http://localhost:8080/api/v1/me
+curl -H "Authorization: Bearer <Supabase access token>" http://localhost:8080/api/v1/me
 ```
 
 **レスポンス例（`GET /api/v1/me`）:**
@@ -173,9 +174,12 @@ curl http://localhost:8080/api/v1/offerings/1/reviews
 # 評価を作成
 curl -X POST http://localhost:8080/api/v1/reviews \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <Supabase access token>" \
   -d '{
     "offering_id": 1,
-    "comment": "この授業はわかりやすかったです。"
+    "pros": "説明がわかりやすかったです。",
+    "cons": "課題量はやや多めでした。",
+    "others": "初学者にもおすすめです。"
   }'
 ```
 
@@ -183,11 +187,11 @@ curl -X POST http://localhost:8080/api/v1/reviews \
 
 ```bash
 # 自分のレビュー一覧を取得
-curl -H "Authorization: Bearer seed_user_alice" \
+curl -H "Authorization: Bearer <Supabase access token>" \
   http://localhost:8080/api/v1/me/reviews
 
 # 自分のレビュー詳細を取得
-curl -H "Authorization: Bearer seed_user_alice" \
+curl -H "Authorization: Bearer <Supabase access token>" \
   http://localhost:8080/api/v1/me/reviews/1
 ```
 
@@ -225,6 +229,44 @@ curl -H "Authorization: Bearer seed_user_alice" \
   }
 }
 ```
+
+### Admin（管理画面）
+
+管理画面 API は Supabase access token が必要です。`/admin/users` は `admin` ロールのみ、`/admin/reviews` と `/admin/ads` は `admin` / `editor` ロールで利用できます。
+
+```bash
+# 口コミ一覧
+curl -H "Authorization: Bearer <Supabase access token>" \
+  "http://localhost:8080/api/v1/admin/reviews?status=pending"
+
+# 口コミを承認
+curl -X PATCH http://localhost:8080/api/v1/admin/reviews/1/status \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <Supabase access token>" \
+  -d '{"status": "approved"}'
+
+# 口コミを削除扱いにする
+curl -X PATCH http://localhost:8080/api/v1/admin/reviews/1/status \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <Supabase access token>" \
+  -d '{"status": "deleted"}'
+
+# 広告画像一覧
+curl -H "Authorization: Bearer <Supabase access token>" \
+  http://localhost:8080/api/v1/admin/ads
+
+# 広告画像をアップロード
+curl -X POST http://localhost:8080/api/v1/admin/ads \
+  -H "Authorization: Bearer <Supabase access token>" \
+  -F "instrument_key=guitar" \
+  -F "image=@./ad-banner.png"
+
+# 広告画像を無効化
+curl -X DELETE http://localhost:8080/api/v1/admin/ads/1 \
+  -H "Authorization: Bearer <Supabase access token>"
+```
+
+広告画像は Supabase Storage の `SUPABASE_STORAGE_BUCKET` に保存され、DB には公開 URL と object path を保存します。
 
 詳細な API 仕様は [ARCHITECTURE.md](ARCHITECTURE.md) を参照。
 
@@ -278,15 +320,24 @@ go test ./tests -v
 
 ```env
 # データベース
-DB_HOST=localhost        # PostgreSQL ホスト
+DB_HOST=db.<project-ref>.supabase.co
 DB_PORT=5432             # PostgreSQL ポート
 DB_USER=postgres         # PostgreSQL ユーザー
-DB_PASSWORD=password     # PostgreSQL パスワード
-DB_NAME=kurobasu         # DB 名
-DB_SSLMODE=disable       # SSL モード
+DB_PASSWORD=             # PostgreSQL パスワード
+DB_NAME=postgres         # DB 名
+DB_SSLMODE=require       # SSL モード
 
 # サーバー
 PORT=8000                # サーバーポート（Docker では 8080 に上書き）
+
+# Supabase
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_ANON_KEY=       # access token 検証用
+SUPABASE_SERVICE_ROLE_KEY= # Storage アップロード用。バックエンド専用
+
+# 広告画像
+SUPABASE_STORAGE_BUCKET=ads
+SUPABASE_STORAGE_PUBLIC_BASE_URL=
 ```
 
 ---
@@ -303,6 +354,7 @@ PORT=8000                # サーバーポート（Docker では 8080 に上書�
 - **timetables** - 学生の時間割
 - **timetable_items** - 時間割の授業
 - **reviews** - 授業の評価・感想
+- **ad_images** - 楽器別の広告画像
 
 ### 外部キー制約
 
@@ -319,23 +371,12 @@ PORT=8000                # サーバーポート（Docker では 8080 に上書�
 
 ## トラブルシューティング
 
-### ポート 5432 が既に使用中
-
-```bash
-# ローカル PostgreSQL を停止
-sudo systemctl stop postgresql
-
-# Docker Compose を再起動
-sudo docker-compose down -v
-sudo docker-compose up --build
-```
-
 ### サーバーが 8080 で起動しない
 
 Docker Compose ログで確認：
 
 ```bash
-sudo docker-compose logs app
+docker compose logs app
 ```
 
 ポート 8080 が既に使用中の場合、`docker-compose.yml` を編集：

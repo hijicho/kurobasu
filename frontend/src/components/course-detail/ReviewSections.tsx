@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Info, Clock } from 'lucide-react';
 import { User } from 'lucide-react';
+import { createReview, getReviews } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 import { ReviewItem } from './ReviewItem';
 import { ReviewForm, ReviewCategory } from './ReviewForm';
 
 interface SubmittedReview {
-  text: string;
-  category: ReviewCategory;
+  pros: string;
+  cons: string;
+  others: string;
   approved: boolean;
 }
 
@@ -14,6 +17,7 @@ interface ReviewSectionsProps {
   pros: string[];
   cons: string[];
   others: string[];
+  offeringId?: number;
 }
 
 const CATEGORY_LABELS: Record<ReviewCategory, string> = {
@@ -22,55 +26,120 @@ const CATEGORY_LABELS: Record<ReviewCategory, string> = {
   others: 'その他の情報',
 };
 
-export function ReviewSections({ pros, cons, others }: ReviewSectionsProps) {
+export function ReviewSections({ pros, cons, others, offeringId }: ReviewSectionsProps) {
+  const { isAuthenticated, getIdToken } = useAuth();
   const [submitted, setSubmitted] = useState<SubmittedReview[]>([]);
+  const [apiReviews, setApiReviews] = useState<{ pros: string[]; cons: string[]; others: string[] } | null>(null);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
-  const handleSubmit = (text: string, category: ReviewCategory) => {
-    setSubmitted((prev) => [...prev, { text, category, approved: false }]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadReviews() {
+      if (!offeringId) {
+        setApiReviews(null);
+        return;
+      }
+
+      setLoadingReviews(true);
+      try {
+        const response = await getReviews(offeringId);
+        if (!cancelled) {
+          setApiReviews({
+            pros: response.pros ?? [],
+            cons: response.cons ?? [],
+            others: response.others ?? [],
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setApiReviews(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingReviews(false);
+        }
+      }
+    }
+
+    loadReviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [offeringId]);
+
+  const handleSubmit = async (review: { pros: string; cons: string; others: string }) => {
+    if (!offeringId || !isAuthenticated) {
+      throw new Error('review submission is not available');
+    }
+
+    const idToken = await getIdToken();
+    if (!idToken) {
+      throw new Error('missing id token');
+    }
+
+    await createReview(idToken, offeringId, review);
+    setSubmitted((prev) => [...prev, { ...review, approved: false }]);
   };
 
+  const displayPros = apiReviews?.pros ?? pros;
+  const displayCons = apiReviews?.cons ?? cons;
+  const displayOthers = apiReviews?.others ?? others;
   const pendingList = submitted.filter((r) => !r.approved);
   const approvedList = submitted.filter((r) => r.approved);
   const hasSubmitted = submitted.length > 0;
+  const formDisabled = !offeringId || !isAuthenticated;
+  const disabledMessage = !offeringId
+    ? 'この授業はまだ投稿 API と紐づいていません。'
+    : !isAuthenticated
+      ? '口コミを投稿するにはログインしてください。'
+      : undefined;
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {pros.length > 0 && (
+      {loadingReviews && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 text-sm text-gray-500">
+          口コミを読み込んでいます。
+        </div>
+      )}
+
+      {displayPros.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
             <h2 className="text-base md:text-xl">良かったところ</h2>
           </div>
           <div className="divide-y divide-gray-100">
-            {pros.map((text, i) => (
+            {displayPros.map((text, i) => (
               <ReviewItem key={i} text={text} />
             ))}
           </div>
         </div>
       )}
 
-      {cons.length > 0 && (
+      {displayCons.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
           <div className="flex items-center gap-2 mb-3">
             <XCircle className="w-5 h-5 text-red-600 shrink-0" />
             <h2 className="text-base md:text-xl">悪かったところ</h2>
           </div>
           <div className="divide-y divide-gray-100">
-            {cons.map((text, i) => (
+            {displayCons.map((text, i) => (
               <ReviewItem key={i} text={text} />
             ))}
           </div>
         </div>
       )}
 
-      {others.length > 0 && (
+      {displayOthers.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
           <div className="flex items-center gap-2 mb-3">
             <Info className="w-5 h-5 text-blue-600 shrink-0" />
             <h2 className="text-base md:text-xl">その他の情報</h2>
           </div>
           <div className="divide-y divide-gray-100">
-            {others.map((text, i) => (
+            {displayOthers.map((text, i) => (
               <ReviewItem key={i} text={text} />
             ))}
           </div>
@@ -92,20 +161,28 @@ export function ReviewSections({ pros, cons, others }: ReviewSectionsProps) {
               </p>
               <div className="space-y-3">
                 {pendingList.map((review, i) => (
-                  <div key={i} className="bg-white border border-blue-200 rounded-xl p-3 md:p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                        <User className="w-3 h-3 text-blue-400" />
+                  <div key={i} className="bg-white border border-blue-200 rounded-xl p-3 md:p-4 space-y-3">
+                    {([
+                      ['pros', review.pros],
+                      ['cons', review.cons],
+                      ['others', review.others],
+                    ] as [ReviewCategory, string][]).filter(([, text]) => text).map(([category, text]) => (
+                      <div key={category}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                            <User className="w-3 h-3 text-blue-400" />
+                          </div>
+                          <span className="text-xs text-blue-600 shrink-0">
+                            {CATEGORY_LABELS[category]}
+                          </span>
+                          <span className="ml-auto flex items-center gap-1 text-xs text-blue-400 shrink-0">
+                            <Clock className="w-3 h-3" />
+                            承認待ち
+                          </span>
+                        </div>
+                        <p className="text-gray-500 text-sm leading-relaxed pl-7">{text}</p>
                       </div>
-                      <span className="text-xs text-blue-600 shrink-0">
-                        {CATEGORY_LABELS[review.category]}
-                      </span>
-                      <span className="ml-auto flex items-center gap-1 text-xs text-blue-400 shrink-0">
-                        <Clock className="w-3 h-3" />
-                        承認待ち
-                      </span>
-                    </div>
-                    <p className="text-gray-500 text-sm leading-relaxed pl-7">{review.text}</p>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -125,20 +202,28 @@ export function ReviewSections({ pros, cons, others }: ReviewSectionsProps) {
               </p>
               <div className="space-y-3">
                 {approvedList.map((review, i) => (
-                  <div key={i} className="bg-white border border-blue-100 rounded-xl p-3 md:p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                        <User className="w-3 h-3 text-[#2B4DCA]" />
+                  <div key={i} className="bg-white border border-blue-100 rounded-xl p-3 md:p-4 space-y-3">
+                    {([
+                      ['pros', review.pros],
+                      ['cons', review.cons],
+                      ['others', review.others],
+                    ] as [ReviewCategory, string][]).filter(([, text]) => text).map(([category, text]) => (
+                      <div key={category}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                            <User className="w-3 h-3 text-[#2B4DCA]" />
+                          </div>
+                          <span className="text-xs text-[#2B4DCA] shrink-0">
+                            {CATEGORY_LABELS[category]}
+                          </span>
+                          <span className="ml-auto flex items-center gap-1 text-xs text-[#2B4DCA] shrink-0">
+                            <CheckCircle className="w-3 h-3" />
+                            掲載中
+                          </span>
+                        </div>
+                        <p className="text-gray-700 text-sm leading-relaxed pl-7">{text}</p>
                       </div>
-                      <span className="text-xs text-[#2B4DCA] shrink-0">
-                        {CATEGORY_LABELS[review.category]}
-                      </span>
-                      <span className="ml-auto flex items-center gap-1 text-xs text-[#2B4DCA] shrink-0">
-                        <CheckCircle className="w-3 h-3" />
-                        掲載中
-                      </span>
-                    </div>
-                    <p className="text-gray-700 text-sm leading-relaxed pl-7">{review.text}</p>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -147,7 +232,7 @@ export function ReviewSections({ pros, cons, others }: ReviewSectionsProps) {
         </div>
       )}
 
-      <ReviewForm onSubmit={handleSubmit} />
+      <ReviewForm onSubmit={handleSubmit} disabled={formDisabled} disabledMessage={disabledMessage} />
     </div>
   );
 }

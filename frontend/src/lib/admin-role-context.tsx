@@ -7,7 +7,7 @@ import { getMe } from './api';
 type Role = 'user' | 'editor' | 'admin';
 
 type AdminRoleContextValue = {
-  // role は Firebase ログイン中ユーザーの DB 上の役割。
+  // role は Supabase ログイン中ユーザーの DB 上の役割。
   // バックエンドの /me が真実の情報源で、フロントからは変更できない。
   role: Role | null;
   loading: boolean;

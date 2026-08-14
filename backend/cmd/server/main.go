@@ -12,9 +12,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/joho/godotenv"           // .envファイルの読み込み
-	"github.com/hageruto/kurobasu/config" // DB初期化
+	"github.com/hageruto/kurobasu/config"          // DB初期化
 	"github.com/hageruto/kurobasu/internal/router" // ルーティング設定
+	"github.com/joho/godotenv"                     // .envファイルの読み込み
 )
 
 func main() {
@@ -24,37 +24,28 @@ func main() {
 		log.Println("Warning: .env file not found, using environment variables")
 	}
 
-	// =====================
-	// データベース接続情報の読み込み
-	// =====================
-	// 環境変数から取得、なければデフォルト値を使用
-	
-	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "localhost" // デフォルト: ローカルマシン
-	}
+	dbHost := requiredEnv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 	if dbPort == "" {
-		dbPort = "5432" // デフォルト: PostgreSQLのデフォルトポート
+		dbPort = "5432"
 	}
-	dbUser := os.Getenv("DB_USER")
-	if dbUser == "" {
-		dbUser = "postgres" // デフォルト: PostgreSQLのデフォルトユーザー
+	dbUser := requiredEnv("DB_USER")
+	dbPassword := requiredEnv("DB_PASSWORD")
+	dbName := requiredEnv("DB_NAME")
+	dbSSLMode := os.Getenv("DB_SSLMODE")
+	if dbSSLMode == "" {
+		dbSSLMode = "require"
 	}
-	dbPassword := os.Getenv("DB_PASSWORD")
-	if dbPassword == "" {
-		dbPassword = "postgres" // デフォルト: 開発環境用パスワード
-	}
-	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		dbName = "kurobasu" // デフォルト: kurobasu用のDB名
-	}
+	requiredEnv("SUPABASE_URL")
+	requiredEnv("SUPABASE_ANON_KEY")
+	requiredEnv("SUPABASE_SERVICE_ROLE_KEY")
+	requiredEnv("CORS_ALLOWED_ORIGINS")
 
 	// PostgreSQL接続文字列を構築
 	// DSN = Data Source Name: DBに接続するための文字列
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPassword, dbName)
-	
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
+
 	// config.InitDB()がconfig/database.goで定義されている
 	// グローバル変数 config.DB に GORM DB インスタンスを設定
 	if err := config.InitDB(dsn); err != nil {
@@ -62,20 +53,11 @@ func main() {
 	}
 
 	// =====================
-	// Firebase Admin SDK の初期化
-	// =====================
-	// FIREBASE_SERVICE_ACCOUNT_KEY_PATH で指定したサービスアカウントJSONを読み込み、
-	// 以降のリクエストで Firebase ID トークンを検証できるようにする
-	if err := config.InitFirebase(); err != nil {
-		log.Fatalf("Failed to initialize Firebase: %v", err)
-	}
-
-	// =====================
 	// サーバーポートの設定
 	// =====================
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8000" // デフォルト: ポート8000
+		port = "8080"
 	}
 
 	// =====================
@@ -96,3 +78,10 @@ func main() {
 	}
 }
 
+func requiredEnv(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("%s is required", key)
+	}
+	return value
+}

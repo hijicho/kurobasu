@@ -105,28 +105,28 @@
 - 授業詳細（評価一覧）：`GET /offerings/{id}/reviews`
 
 
-# 追加：ユーザー登録（Firebase Authentication 方針）
+# 追加：ユーザー登録（Supabase Auth 方針）
 
-このプロジェクトでは、**登録/ログインは Firebase Authentication**（フロント側）で行い、API/DB側は **Firebase IDトークンの検証**と**自前DBユーザー（profiles）の作成**のみを担当します。
+このプロジェクトでは、**登録/ログインは Supabase Auth**（フロント側）で行い、API/DB側は **Supabase access tokenの検証**と**自前DBユーザー（profiles）の作成**のみを担当します。
 
 ## 認証ヘッダー
 ログインが必要なAPIでは、以下のヘッダーを付与します。
 
-- `Authorization: Bearer <firebase_id_token>`
+- `Authorization: Bearer <supabase_access_token>`
 
-> ※IDトークンはサーバ側で Firebase Admin SDK により検証します。
+> ※IDトークンはサーバ側で Supabase Auth API により検証します。
 
 ---
 
 ## 画面：初回セットアップ（ユーザー登録完了後のプロファイル作成）
 
-Firebaseでユーザー作成（またはログイン）した直後に、**1回だけ**（ただし冪等なので何度叩いてもOK）APIを叩いてDB側ユーザーを作ります。
+Supabase Authでユーザー作成（またはログイン）した直後に、**1回だけ**（ただし冪等なので何度叩いてもOK）APIを叩いてDB側ユーザーを作ります。
 
 ### 叩くAPI
 - **POST** `/api/v1/auth/bootstrap`
 
 Headers:
-- `Authorization: Bearer <firebase_id_token>`
+- `Authorization: Bearer <supabase_access_token>`
 
 Request（最小）:
 ```json
@@ -139,7 +139,7 @@ Response（作成でも既存でも同じ形式）:
 ```json
 {
   "user_id": 42,
-  "firebase_uid": "firebase_uid_here",
+  "auth_uid": "supabase_user_id_here",
   "display_name": "Alice",
   "created_at": "2026-02-18T00:00:00Z"
 }
@@ -153,7 +153,7 @@ Response（作成でも既存でも同じ形式）:
 - **GET** `/api/v1/me`
 
 Headers:
-- `Authorization: Bearer <firebase_id_token>`
+- `Authorization: Bearer <supabase_access_token>`
 
 Response:
 ```json
@@ -175,7 +175,7 @@ Response:
 - **PATCH** `/api/v1/me`
 
 Headers:
-- `Authorization: Bearer <firebase_id_token>`
+- `Authorization: Bearer <supabase_access_token>`
 
 Request:
 ```json

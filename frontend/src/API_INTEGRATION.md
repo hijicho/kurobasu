@@ -42,7 +42,7 @@ apidesign.mdに基づいて、バックエンドAPIとの連携を実装しま�
 - **GET /me** - ログインユーザー情報取得
 - **PATCH /me** - ユーザー情報更新
   - 使用箇所: `MyPage.tsx`（モック実装）
-  - 注意: Firebase Authenticationとの連携が必要
+  - 注意: Supabase Authとの連携が必要
 
 ### 3. データ変換
 
@@ -119,21 +119,17 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 
 ## 今後の実装予定
 
-### 1. Firebase Authentication連携
-現在、認証APIはモック実装です。実際のFirebase連携には以下が必要：
+### 1. Supabase Auth連携
+認証は Supabase Auth で行い、API には Supabase access token を渡します。
 
 ```typescript
-// Firebase初期化
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { supabase } from './lib/supabase';
 
-// IDトークン取得
-const auth = getAuth();
-const user = auth.currentUser;
-const idToken = await user?.getIdToken();
+const { data } = await supabase.auth.getSession();
+const accessToken = data.session?.access_token;
 
 // API呼び出し
-const profile = await getMe(idToken);
+const profile = accessToken ? await getMe(accessToken) : null;
 ```
 
 ### 2. レビュー表示機能
@@ -146,7 +142,7 @@ CourseDetailPageでレビューデータを実際に表示する。
 開発環境と本番環境でBase URLを切り替え：
 
 ```typescript
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1';
 ```
 
 ## テスト方法

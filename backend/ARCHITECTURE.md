@@ -61,7 +61,7 @@ kurobasu/                                # ルートディレクトリ
 │   ├── offering.go         ────────────> 開講情報（学期ごと、講師情報）
 │   ├── meeting.go          ────────────> 授業時間割（曜日・時限）
 │   ├── review.go           ────────────> 授業評価・クチコミ
-│   ├── user.go             ────────────> ユーザー（Firebase 認証、role 付き）
+│   ├── user.go             ────────────> ユーザー（Supabase Auth、role 付き）
 │   ├── timetable.go        ────────────> 時間割
 │   └── timetable_item.go   ────────────> 時間割項目（どの授業を登録したか）
 │
@@ -139,7 +139,7 @@ $ go run ./cmd/server
     ├─ router.SetupRoutes() が /api/v1/me/reviews をマッチング
     │
     ├─ middleware.RequireAuth() が Authorization ヘッダを確認
-    │  └─ Bearer トークン（開発環境では Firebase UID を想定）から users を解決
+    │  └─ Supabase access token を検証し、Supabase user id から users を解決
     │
     ├─ authenticated user を request context に格納
     │
@@ -827,7 +827,7 @@ type Category struct {
 3. **Offering** - 開講情報（ある学期の特定の講師との開講）
 4. **Meeting** - 授業時間割（月3限など）
 5. **Review** - 授業評価クチコミ
-6. **User** - ユーザー（Firebase 認証）
+6. **User** - ユーザー（Supabase Auth）
 7. **Timetable** - 時間割（ユーザーが作成した自分の時間割）
 8. **TimetableItem** - 時間割項目（どの授業を時間割に登録したか）
 

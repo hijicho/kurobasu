@@ -45,16 +45,14 @@ func main() {
 	// DSN = Data Source Name
 	// PostgreSQL 接続に必要な情報を組み立てる
 	//
-	// 例：host=localhost port=5432 user=postgres password=postgres dbname=kurobasu sslmode=disable
-	//
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		os.Getenv("DB_HOST"),      // DB サーバーアドレス（デフォルト: localhost）
-		os.Getenv("DB_PORT"),      // ポート番号（デフォルト: 5432）
-		os.Getenv("DB_USER"),      // ユーザー名（デフォルト: postgres）
-		os.Getenv("DB_PASSWORD"),  // パスワード（デフォルト: postgres）
-		os.Getenv("DB_NAME"),      // データベース名（デフォルト: kurobasu）
-		os.Getenv("DB_SSLMODE"),   // SSL 接続設定（デフォルト: disable）
+		requiredEnv("DB_HOST"),
+		envWithDefault("DB_PORT", "5432"),
+		requiredEnv("DB_USER"),
+		requiredEnv("DB_PASSWORD"),
+		requiredEnv("DB_NAME"),
+		envWithDefault("DB_SSLMODE", "require"),
 	)
 
 	// =====================
@@ -90,3 +88,18 @@ func main() {
 	// このメッセージが表示されたら、DB スキーマセットアップ完了！
 }
 
+func requiredEnv(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("%s is required", key)
+	}
+	return value
+}
+
+func envWithDefault(key, fallback string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	return value
+}

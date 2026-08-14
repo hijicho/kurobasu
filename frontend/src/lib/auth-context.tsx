@@ -1,15 +1,8 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail,
-  type User,
-} from 'firebase/auth';
-import { auth } from './firebase';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from './supabase';
 import { bootstrap, logout } from './api';
 
 interface AuthContextValue {
@@ -18,6 +11,7 @@ interface AuthContextValue {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  signInAsGuest: () => Promise<void>;
   signOutUser: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   getIdToken: (forceRefresh?: boolean) => Promise<string | null>;
@@ -30,44 +24,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
       setLoading(false);
     });
-    return unsubscribe;
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+    return () => data.subscription.unsubscribe();
   }, []);
 
   // ログイン後、DB側のユーザープロファイルが未作成なら作成する（冪等なので毎回叩いてOK）
   const signIn = async (email: string, password: string) => {
-    const credential = await signInWithEmailAndPassword(auth, email, password);
-    const idToken = await credential.user.getIdToken();
-    await bootstrap(idToken, credential.user.displayName || email);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      throw error;
+    }
+    if (data.session?.access_token) {
+      await bootstrap(data.session.access_token, data.user?.email || email);
+    }
   };
 
   const signUp = async (email: string, password: string, displayName: string) => {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    const idToken = await credential.user.getIdToken();
-    await bootstrap(idToken, displayName || email);
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      throw error;
+    }
+    if (data.session?.access_token) {
+      await bootstrap(data.session.access_token, displayName || email);
+    }
+  };
+
+  const signInAsGuest = async () => {
+    const { data, error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      throw error;
+    }
+    if (data.session?.access_token) {
+      await bootstrap(data.session.access_token, 'ゲスト');
+    }
   };
 
   const signOutUser = async () => {
-    const idToken = await auth.currentUser?.getIdToken().catch(() => null);
-    await signOut(auth);
+    const idToken = await getIdToken();
+    await supabase.auth.signOut();
     if (idToken) {
-      // サーバー側でリフレッシュトークンを失効させる（失敗してもクライアント側のログアウトは完了させる）
       await logout(idToken).catch(() => undefined);
     }
   };
 
   const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(auth, email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) {
+      throw error;
+    }
   };
 
-  const getIdToken = async (forceRefresh = false) => {
-    if (!auth.currentUser) {
+  const getIdToken = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
       return null;
     }
-    return auth.currentUser.getIdToken(forceRefresh);
+    return data.session.access_token;
   };
 
   return (
@@ -78,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         signIn,
         signUp,
+        signInAsGuest,
         signOutUser,
         resetPassword,
         getIdToken,

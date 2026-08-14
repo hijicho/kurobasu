@@ -8,10 +8,10 @@ import (
 // UserRepository handles user data access
 type UserRepository struct{}
 
-// GetUserByFirebaseUID returns a user by Firebase UID
-func (r *UserRepository) GetUserByFirebaseUID(firebaseUID string) (*models.User, error) {
+// GetUserByAuthUID returns a user by external Auth UID.
+func (r *UserRepository) GetUserByAuthUID(authUID string) (*models.User, error) {
 	var user models.User
-	err := config.DB.Where("firebase_uid = ?", firebaseUID).First(&user).Error
+	err := config.DB.Where("auth_uid = ?", authUID).First(&user).Error
 	return &user, err
 }
 

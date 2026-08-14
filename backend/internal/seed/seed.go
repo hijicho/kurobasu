@@ -54,7 +54,7 @@ func seedCategories() []models.Category {
 		{Slug: "languages", Name: "Languages", SortOrder: 3},
 		{Slug: "arts", Name: "Arts", SortOrder: 4},
 	}
-for i := range categories {
+	for i := range categories {
 		if err := config.DB.Where(models.Category{Slug: categories[i].Slug}).FirstOrCreate(&categories[i]).Error; err != nil {
 			log.Printf("Error seeding category %s: %v", categories[i].Slug, err)
 			return nil
@@ -181,7 +181,7 @@ func seedUsers() []models.User {
 
 	userData := []struct {
 		displayName string
-		firebaseUID string
+		authUID     string
 	}{
 		{"Alice Johnson", "seed_user_alice"},
 		{"Bob Smith", "seed_user_bob"},
@@ -192,10 +192,10 @@ func seedUsers() []models.User {
 	for _, data := range userData {
 		user := models.User{
 			DisplayName: data.displayName,
-			FirebaseUID: data.firebaseUID,
+			AuthUID:     data.authUID,
 			CreatedAt:   time.Now(),
 		}
-		if err := config.DB.Where(models.User{FirebaseUID: user.FirebaseUID}).FirstOrCreate(&user).Error; err != nil {
+		if err := config.DB.Where(models.User{AuthUID: user.AuthUID}).FirstOrCreate(&user).Error; err != nil {
 			log.Printf("Error seeding user %s: %v", user.DisplayName, err)
 			continue
 		}

@@ -4,6 +4,7 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { ArrowLeft, MapPin, Calendar, Users, BookOpen } from 'lucide-react';
 import { firstYearEducationCourses } from '../lib/firstYearEducationData';
 import { firstYearSeminarScheduleData } from '../lib/firstYearSeminarScheduleData';
+import { findOfferingIdByCourse } from '../lib/offeringLookup';
 import { ReviewSections } from '../components/course-detail/ReviewSections';
 
 interface FirstYearEducationDetailPageProps {
@@ -50,6 +51,12 @@ export function FirstYearEducationDetailPage({ courseId, isAuthenticated, onNavi
 
   // 時間割データの場合で、詳細データが見つからなかった場合のみモック表示
   if (scheduleCourse && !course) {
+    const offeringId = findOfferingIdByCourse(
+      scheduleCourse.courseCode,
+      scheduleCourse.courseName,
+      scheduleCourse.instructor
+    );
+
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
@@ -139,7 +146,7 @@ export function FirstYearEducationDetailPage({ courseId, isAuthenticated, onNavi
           </div>
 
           <div className="mb-6">
-            <ReviewSections pros={[]} cons={[]} others={[]} />
+            <ReviewSections pros={[]} cons={[]} others={[]} offeringId={offeringId} />
           </div>
 
           {/* 注意事項 */}
@@ -159,6 +166,8 @@ export function FirstYearEducationDetailPage({ courseId, isAuthenticated, onNavi
   if (!course) {
     return null;
   }
+
+  const offeringId = findOfferingIdByCourse(course.courseCode, course.courseName, course.instructor);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -269,6 +278,7 @@ export function FirstYearEducationDetailPage({ courseId, isAuthenticated, onNavi
             pros={course.goodPoints ?? []}
             cons={course.badPoints ?? []}
             others={course.otherInfo ?? []}
+            offeringId={offeringId}
           />
         </div>
 

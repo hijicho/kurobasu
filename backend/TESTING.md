@@ -69,13 +69,17 @@ tests/
 
 ### 認証ヘッダ
 
-`/api/v1/me`、`/api/v1/reviews`、`/api/v1/me/reviews` 系のエンドポイントは `Authorization` ヘッダが必要です。開発環境では Firebase UID をそのままトークンとして扱うため、以下のように指定します。
+`/api/v1/me`、`/api/v1/reviews`、`/api/v1/me/reviews` 系のエンドポイントは `Authorization` ヘッダが必要です。開発環境でも Supabase Auth の access token を検証します。ユーザー ID をそのまま bearer token として渡すことはできません。
+
+ローカルで安全に認証系 API を試す場合は、Supabase CLI を起動し、バックエンドに以下を設定してください。
 
 ```bash
-curl -H "Authorization: Bearer seed_user_alice" http://localhost:8080/api/v1/me
+SUPABASE_URL=http://localhost:54321
+SUPABASE_ANON_KEY=<supabase start の anon key>
+SUPABASE_SERVICE_ROLE_KEY=<supabase start の service_role key>
 ```
 
-自分のレビューの `status` を確認するテストを追加する場合は、`seed_user_alice` などの既存ユーザー UID を使って認証付きで叩きます。
+テストで認証が必要な API を叩く場合は、Supabase Auth で作成したテストユーザーまたは匿名ユーザーの access token を `Authorization: Bearer ...` に渡します。
 
 ### 時間割 API
 - `TestCreateTimetable` - POST /api/v1/timetables
@@ -103,6 +107,9 @@ curl -H "Authorization: Bearer seed_user_alice" http://localhost:8080/api/v1/me
    DB_PASSWORD=postgres
    DB_NAME=kurobasu
    DB_SSLMODE=disable
+   SUPABASE_URL=http://localhost:54321
+   SUPABASE_ANON_KEY=<supabase start の anon key>
+   SUPABASE_SERVICE_ROLE_KEY=<supabase start の service_role key>
    ```
 3. データベースと テーブルが初期化されていること
    ```bash
@@ -192,7 +199,7 @@ Go 1.22 の http.ServeMux では、`{id}` のようなパス パラメータ マ
 - DB 初期化のみで、テストデータは挿入されません
 - 存在しないデータへのアクセスは 404 エラーを返します
 - 外部キー制約により、関連データがないリソースの作成は失敗します
-- 認証が必要な API をテストする場合は、`Authorization: Bearer <firebase_uid>` を付与するか、認証ミドルウェアをモックしてください
+- 認証が必要な API をテストする場合は、`Authorization: Bearer <Supabase access token>` を付与するか、認証ミドルウェアをモックしてください
 
 ## トラブルシューティング
 

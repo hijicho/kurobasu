@@ -1,7 +1,5 @@
-// API Base URL
-// 開発環境: http://localhost:8000/api/v1
-// 本番環境: 環境変数などで切り替える
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1';
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1$/, '');
 
 // 開発モード設定
 // バックエンドが未起動の場合、この値をtrueにするとモックデータのみ使用します
@@ -36,7 +34,7 @@ async function fetchApi<T>(
     const response = await fetch(url, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         ...options?.headers,
       },
     });
@@ -145,38 +143,48 @@ export async function getOfferings(
   );
 }
 
-// ============================
-// Reviews API (保留)
-// ============================
-
-export interface ReviewAuthor {
-  user_id: number;
-  display_name: string;
-}
-
-export interface Review {
-  review_id: number;
-  md_url: string;
-  status: string;
-  author: ReviewAuthor;
-  created_at: string;
-}
-
 export interface ReviewsResponse {
-  items: Review[];
+  pros: string[];
+  cons: string[];
+  others: string[];
+  count: number;
 }
 
 export async function getReviews(offeringId: number): Promise<ReviewsResponse> {
   return fetchApi<ReviewsResponse>(`/offerings/${offeringId}/reviews`);
 }
 
+export interface CreateReviewResponse {
+  review_ids: number[];
+  status: string;
+}
+
+export async function createReview(
+  idToken: string,
+  offeringId: number,
+  review: { pros: string; cons: string; others?: string }
+): Promise<CreateReviewResponse> {
+  return fetchApi<CreateReviewResponse>('/reviews', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({
+      offering_id: offeringId,
+      pros: review.pros,
+      cons: review.cons,
+      others: review.others,
+    }),
+  });
+}
+
 // ============================
-// Auth API (Firebase Authentication)
+// Auth API (Supabase Auth)
 // ============================
 
 export interface UserProfile {
   user_id: number;
-  firebase_uid?: string;
+  auth_uid?: string;
   display_name: string;
   role: string;
   created_at: string;
@@ -252,5 +260,104 @@ export async function updateUserRole(
       Authorization: `Bearer ${idToken}`,
     },
     body: JSON.stringify({ role }),
+  });
+}
+
+export interface AdminReview {
+  review_id: number;
+  user_id: number;
+  user_display_name: string;
+  offering_id: number;
+  subject_title: string;
+  instructor_names: string[];
+  academic_year: number;
+  term: string;
+  comment: string;
+  type: 'pros' | 'cons' | 'others';
+  status: 'pending' | 'approved' | 'deleted';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListAdminReviewsResponse {
+  items: AdminReview[];
+  count: number;
+}
+
+export async function listAdminReviews(
+  idToken: string,
+  status?: AdminReview['status']
+): Promise<ListAdminReviewsResponse> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  return fetchApi<ListAdminReviewsResponse>(`/admin/reviews${query}`, {
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+}
+
+export async function updateReviewStatus(
+  idToken: string,
+  reviewId: number,
+  status: AdminReview['status']
+): Promise<AdminReview> {
+  return fetchApi<AdminReview>(`/admin/reviews/${reviewId}/status`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+}
+
+export interface AdImage {
+  ad_id: number;
+  instrument_key: string;
+  image_url: string;
+  original_filename: string;
+  content_type: string;
+  file_size: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListAdImagesResponse {
+  items: AdImage[];
+  count: number;
+}
+
+export async function listAdminAds(idToken: string): Promise<ListAdImagesResponse> {
+  return fetchApi<ListAdImagesResponse>('/admin/ads', {
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+}
+
+export async function uploadAdminAd(
+  idToken: string,
+  instrumentKey: string,
+  image: File
+): Promise<AdImage> {
+  const formData = new FormData();
+  formData.append('instrument_key', instrumentKey);
+  formData.append('image', image);
+
+  return fetchApi<AdImage>('/admin/ads', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: formData,
+  });
+}
+
+export async function deleteAdminAd(idToken: string, adId: number): Promise<AdImage> {
+  return fetchApi<AdImage>(`/admin/ads/${adId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
   });
 }

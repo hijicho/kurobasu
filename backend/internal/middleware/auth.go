@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	firebaseauth "firebase.google.com/go/v4/auth"
 	"github.com/hageruto/kurobasu/config"
 	"github.com/hageruto/kurobasu/internal/repository"
 	"github.com/hageruto/kurobasu/models"
@@ -15,39 +14,37 @@ import (
 )
 
 type currentUserKey struct{}
-type firebaseTokenKey struct{}
+type supabaseUserKey struct{}
 
-// RequireFirebaseToken verifies the Firebase ID token in the Authorization
-// header and stores it in the request context. Unlike RequireAuth, it does
-// not require a corresponding DB user to exist yet, so it's suitable for
-// endpoints like /auth/bootstrap that create the DB user record.
-func RequireFirebaseToken(next http.HandlerFunc) http.HandlerFunc {
+// RequireSupabaseToken verifies the Supabase access token in the Authorization
+// header and stores it in the request context. Unlike RequireAuth, it does not
+// require a corresponding DB user to exist yet.
+func RequireSupabaseToken(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token, err := verifyFirebaseToken(r)
+		authUser, err := verifySupabaseToken(r)
 		if err != nil {
 			writeAuthError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), firebaseTokenKey{}, token)
+		ctx := context.WithValue(r.Context(), supabaseUserKey{}, authUser)
 		next(w, r.WithContext(ctx))
 	}
 }
 
-// RequireAuth verifies the Firebase ID token and resolves the corresponding
-// DB user, storing both in the request context before calling the next
-// handler. If the token is valid but no DB user has been bootstrapped yet,
-// it responds 404 so the frontend can redirect to POST /auth/bootstrap.
+// RequireAuth verifies the Supabase access token and resolves the corresponding
+// DB user. If the token is valid but no DB user exists yet, it responds 404 so
+// the frontend can call POST /auth/bootstrap.
 func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token, err := verifyFirebaseToken(r)
+		authUser, err := verifySupabaseToken(r)
 		if err != nil {
 			writeAuthError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
 		userRepo := &repository.UserRepository{}
-		user, err := userRepo.GetUserByFirebaseUID(token.UID)
+		user, err := userRepo.GetUserByAuthUID(authUser.ID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				writeAuthError(w, http.StatusNotFound, "User not bootstrapped; call POST /auth/bootstrap first")
@@ -57,16 +54,12 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), firebaseTokenKey{}, token)
+		ctx := context.WithValue(r.Context(), supabaseUserKey{}, authUser)
 		ctx = context.WithValue(ctx, currentUserKey{}, user)
 		next(w, r.WithContext(ctx))
 	}
 }
 
-// RequireRole wraps a RequireAuth-protected handler with a role check. It
-// must be applied inside RequireAuth so CurrentUser is already populated:
-//
-//	mux.HandleFunc("/api/v1/admin/x", middleware.RequireAuth(middleware.RequireRole("admin")(handler)))
 func RequireRole(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	allowed := make(map[string]struct{}, len(roles))
 	for _, role := range roles {
@@ -89,49 +82,40 @@ func RequireRole(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// CurrentUser returns the authenticated user from request context.
 func CurrentUser(r *http.Request) (*models.User, bool) {
 	user, ok := r.Context().Value(currentUserKey{}).(*models.User)
 	return user, ok
 }
 
-// FirebaseToken returns the verified Firebase ID token from request context.
-func FirebaseToken(r *http.Request) (*firebaseauth.Token, bool) {
-	token, ok := r.Context().Value(firebaseTokenKey{}).(*firebaseauth.Token)
-	return token, ok
+func SupabaseUser(r *http.Request) (*config.SupabaseUser, bool) {
+	user, ok := r.Context().Value(supabaseUserKey{}).(*config.SupabaseUser)
+	return user, ok
 }
 
-func verifyFirebaseToken(r *http.Request) (*firebaseauth.Token, error) {
+func verifySupabaseToken(r *http.Request) (*config.SupabaseUser, error) {
 	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
 	if authHeader == "" {
 		return nil, errAuthHeaderRequired
 	}
 
-	idToken := authHeader
+	accessToken := authHeader
 	if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
-		idToken = strings.TrimSpace(authHeader[7:])
+		accessToken = strings.TrimSpace(authHeader[7:])
 	}
-	if idToken == "" {
+	if accessToken == "" {
 		return nil, errAuthHeaderRequired
 	}
 
-	authClient, err := config.FirebaseAuthClient()
-	if err != nil {
-		return nil, errAuthServiceUnavailable
-	}
-
-	token, err := authClient.VerifyIDToken(r.Context(), idToken)
+	user, err := config.VerifySupabaseAccessToken(r.Context(), accessToken)
 	if err != nil {
 		return nil, errInvalidAuthToken
 	}
-
-	return token, nil
+	return user, nil
 }
 
 var (
-	errAuthHeaderRequired     = &authError{message: "Authorization header required"}
-	errInvalidAuthToken       = &authError{message: "Invalid or expired authorization token"}
-	errAuthServiceUnavailable = &authError{message: "Authentication service unavailable"}
+	errAuthHeaderRequired = &authError{message: "Authorization header required"}
+	errInvalidAuthToken   = &authError{message: "Invalid or expired authorization token"}
 )
 
 type authError struct {

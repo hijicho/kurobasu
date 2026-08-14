@@ -3,14 +3,33 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hageruto/kurobasu/config"
 	"github.com/hageruto/kurobasu/models"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
 // ReviewRepository handles review data access
 type ReviewRepository struct{}
+
+// AdminReviewRecord is the joined projection used by the moderation UI.
+type AdminReviewRecord struct {
+	ReviewID        int64
+	UserID          int64
+	UserDisplayName string
+	OfferingID      int64
+	SubjectTitle    string
+	InstructorNames pq.StringArray `gorm:"type:text[]"`
+	AcademicYear    int16
+	Term            string
+	Comment         string
+	Type            string
+	Status          string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
 
 // ErrOfferingNotFound is returned when the referenced offering does not exist
 var ErrOfferingNotFound = errors.New("offering not found")
@@ -49,6 +68,67 @@ func (r *ReviewRepository) GetReviewByIDForUser(userID, reviewID int64) (*models
 		Where("user_id = ?", userID).
 		First(&review, reviewID).Error
 	return &review, err
+}
+
+// ListAdminReviews returns reviews with enough joined context for moderation.
+func (r *ReviewRepository) ListAdminReviews(status string) ([]AdminReviewRecord, error) {
+	var reviews []AdminReviewRecord
+	query := r.adminReviewQuery().Order("user_reviews.created_at DESC")
+
+	if status != "" {
+		query = query.Where("user_reviews.status = ?", status)
+	} else {
+		query = query.Where("user_reviews.status <> ?", string(models.UserReviewStatusDeleted))
+	}
+
+	err := query.Find(&reviews).Error
+	return reviews, err
+}
+
+func (r *ReviewRepository) getAdminReviewRecord(reviewID int64) (*AdminReviewRecord, error) {
+	var review AdminReviewRecord
+	err := r.adminReviewQuery().
+		Where("user_reviews.user_review_id = ?", reviewID).
+		First(&review).Error
+	return &review, err
+}
+
+func (r *ReviewRepository) adminReviewQuery() *gorm.DB {
+	return config.DB.
+		Table("user_reviews").
+		Select(`
+			user_reviews.user_review_id AS review_id,
+			user_reviews.user_id,
+			users.display_name AS user_display_name,
+			user_reviews.offering_id,
+			subjects.title AS subject_title,
+			offerings.instructor_names,
+			offerings.academic_year,
+			offerings.term,
+			user_reviews.comment,
+			user_reviews.type,
+			user_reviews.status,
+			user_reviews.created_at,
+			user_reviews.updated_at
+		`).
+		Joins("LEFT JOIN users ON users.user_id = user_reviews.user_id").
+		Joins("LEFT JOIN offerings ON offerings.offering_id = user_reviews.offering_id").
+		Joins("LEFT JOIN subjects ON subjects.subject_id = offerings.subject_id")
+}
+
+// UpdateReviewStatus changes a review's moderation status.
+func (r *ReviewRepository) UpdateReviewStatus(reviewID int64, status models.UserReviewStatus) (*AdminReviewRecord, error) {
+	var review models.UserReview
+	if err := config.DB.First(&review, reviewID).Error; err != nil {
+		return nil, err
+	}
+
+	review.Status = status
+	if err := config.DB.Save(&review).Error; err != nil {
+		return nil, err
+	}
+
+	return r.getAdminReviewRecord(reviewID)
 }
 
 // CreateReviews creates the rows (pros/cons/[others]) for a single review

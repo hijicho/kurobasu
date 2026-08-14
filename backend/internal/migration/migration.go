@@ -19,6 +19,10 @@ import (
 //   - Using raw SQL gives us explicit control over constraint names and ON DELETE CASCADE behavior
 //   - ON DELETE CASCADE: If parent row deleted, all child rows are automatically deleted too
 func RunMigrations() error {
+	if err := renameLegacyAuthUIDColumn(); err != nil {
+		return err
+	}
+
 	// Create tables using GORM's AutoMigrate feature
 	// AutoMigrate idempotently creates tables (doesn't fail if tables already exist)
 	// Tables are created in the order listed here (parent tables first to avoid FK issues)
@@ -31,6 +35,7 @@ func RunMigrations() error {
 		&models.User{},
 		&models.Timetable{},
 		&models.TimetableItem{},
+		&models.AdImage{},
 	)
 	if err != nil {
 		return err
@@ -172,6 +177,34 @@ func RunMigrations() error {
 
 	// All migrations completed successfully
 	// Database schema is now ready for application use
+	return nil
+}
+
+func renameLegacyAuthUIDColumn() error {
+	sql := `
+		DO $$
+		BEGIN
+			IF to_regclass('users') IS NOT NULL
+				AND EXISTS (
+					SELECT 1 FROM information_schema.columns
+					WHERE table_schema = current_schema()
+					  AND table_name = 'users'
+					  AND column_name = 'firebase_uid'
+				)
+				AND NOT EXISTS (
+					SELECT 1 FROM information_schema.columns
+					WHERE table_schema = current_schema()
+					  AND table_name = 'users'
+					  AND column_name = 'auth_uid'
+				)
+			THEN
+				ALTER TABLE users RENAME COLUMN firebase_uid TO auth_uid;
+			END IF;
+		END $$;
+	`
+	if err := config.DB.Exec(sql).Error; err != nil {
+		return fmt.Errorf("failed renaming legacy users auth uid column: %w", err)
+	}
 	return nil
 }
 

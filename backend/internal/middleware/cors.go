@@ -6,12 +6,10 @@ import (
 	"strings"
 )
 
-// CORS wraps a handler with CORS headers so the frontend (running on a
-// different origin in development, e.g. http://localhost:3000) can call the
-// API with credentials such as the Authorization header.
+// CORS wraps a handler with CORS headers so the frontend can call the API with
+// credentials such as the Authorization header.
 //
-// Allowed origins are read from the CORS_ALLOWED_ORIGINS env var (comma
-// separated). If unset, it defaults to the local Next.js dev server origin.
+// Allowed origins are read from the CORS_ALLOWED_ORIGINS env var.
 func CORS(next http.Handler) http.Handler {
 	allowedOrigins := parseAllowedOrigins()
 
@@ -36,7 +34,7 @@ func CORS(next http.Handler) http.Handler {
 func parseAllowedOrigins() []string {
 	raw := os.Getenv("CORS_ALLOWED_ORIGINS")
 	if strings.TrimSpace(raw) == "" {
-		return []string{"http://localhost:3000"}
+		return nil
 	}
 
 	var origins []string

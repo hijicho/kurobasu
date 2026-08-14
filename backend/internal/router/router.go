@@ -10,9 +10,10 @@ import (
 // SetupRoutes: すべてのAPIルートを登録する
 // =====================
 // 役割を学ぶ：
-//   1. HTTP メソッド (GET, POST, PATCH) を構成
-//   2. エンドポイント URL パターンを登録
-//   3. 該当するハンドラー関数を关連付け
+//  1. HTTP メソッド (GET, POST, PATCH) を構成
+//  2. エンドポイント URL パターンを登録
+//  3. 該当するハンドラー関数を关連付け
+//
 // 戴返り値：*http.ServeMux (ルーターインスタンス)
 func SetupRoutes() http.Handler {
 	// http.ServeMux: Goの標準 HTTP ルーター
@@ -38,6 +39,9 @@ func SetupRoutes() http.Handler {
 	// GET /api/v1/offerings/{id}/reviews
 	// 効果：特定の開講に尊するして国を一覧取得
 	mux.HandleFunc("/api/v1/offerings/{id}/reviews", methodHandler(http.MethodGet, handlers.ListReviews))
+	// GET /api/v1/ads
+	// 効果：有効な広告画像を取得
+	mux.HandleFunc("/api/v1/ads", methodHandler(http.MethodGet, handlers.ListAds))
 
 	// =====================
 	// 講義詳詳情報 (Reviews) API
@@ -58,10 +62,10 @@ func SetupRoutes() http.Handler {
 	// 認護 (Auth) API
 	// =====================
 	// POST /api/v1/auth/bootstrap
-	// 効果：初回接箏時に新しいユーザーを作成。有効な Firebase ID トークンが必要
-	mux.HandleFunc("/api/v1/auth/bootstrap", middleware.RequireFirebaseToken(methodHandler(http.MethodPost, handlers.BootstrapUser)))
+	// 効果：初回接続時に新しいユーザーを作成。有効な Supabase access token が必要
+	mux.HandleFunc("/api/v1/auth/bootstrap", middleware.RequireSupabaseToken(methodHandler(http.MethodPost, handlers.BootstrapUser)))
 	// POST /api/v1/auth/logout
-	// 効果：Firebase のリフレッシュトークンを失効させる（サーバー側ログアウト）
+	// 効果：ログアウト後の API 呼び出しを受け付ける。セッション破棄はフロントエンドで行う
 	mux.HandleFunc("/api/v1/auth/logout", middleware.RequireAuth(methodHandler(http.MethodPost, handlers.LogoutUser)))
 	// meHandler() を使用して同一うる URL で複数の HTTP メソッドを处理
 	// GET /api/v1/me
@@ -79,6 +83,18 @@ func SetupRoutes() http.Handler {
 	// PATCH /api/v1/admin/users/{id}/role
 	// 効果：ユーザーのロールを変更（admin ロールのみ）
 	mux.HandleFunc("/api/v1/admin/users/{id}/role", middleware.RequireAuth(middleware.RequireRole("admin")(methodHandler(http.MethodPatch, handlers.UpdateUserRole))))
+	// GET /api/v1/admin/reviews
+	// 効果：口コミ一覧を取得（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/reviews", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodGet, handlers.ListAdminReviews))))
+	// PATCH /api/v1/admin/reviews/{id}/status
+	// 効果：口コミを承認・削除する（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/reviews/{id}/status", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPatch, handlers.UpdateReviewStatus))))
+	// GET/POST /api/v1/admin/ads
+	// 効果：広告画像一覧の取得・アップロード（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/ads", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminAdsHandler())))
+	// DELETE /api/v1/admin/ads/{id}
+	// 効果：広告画像を無効化（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/ads/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodDelete, handlers.DeleteAdminAd))))
 
 	// =====================
 	// 時間割 (Timetables) API
@@ -109,6 +125,7 @@ func SetupRoutes() http.Handler {
 // 入力：
 //   - method: 許积する HTTP メソッド ("GET", "POST" など)
 //   - handler: 実行したいハンドラー関数
+//
 // 戴返り値： http.HandlerFunc
 // 役割：セキュリティの為かのため、正しい HTTP メソッドのリクエストだけは処理を下す
 func methodHandler(method string, handler http.HandlerFunc) http.HandlerFunc {
@@ -151,6 +168,19 @@ func timetableHandler() http.HandlerFunc {
 			handlers.UpdateTimetable(w, r)
 		default:
 			// その他のメソッドは 405 Method Not Allowed
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func adminAdsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.ListAdminAds(w, r)
+		case http.MethodPost:
+			handlers.UploadAdminAd(w, r)
+		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}
 	}

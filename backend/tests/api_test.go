@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -30,13 +31,11 @@ func getAPIBaseURL() string {
 }
 
 // =====================
-// Firebase test helpers
+// Supabase test helpers
 // =====================
-// Some endpoints now require a real, verifiable Firebase ID token (see
-// middleware.RequireAuth / RequireFirebaseToken). Tests obtain one via the
-// Identity Toolkit REST API using a dedicated test account, driven by the
-// FIREBASE_WEB_API_KEY env var (the same public "apiKey" from the frontend's
-// Firebase config). Tests that need it are skipped if it's not set.
+// Some endpoints require a real, verifiable Supabase access token. Tests obtain
+// one via the Supabase Auth REST API using a dedicated test account. Tests that
+// need it are skipped if SUPABASE_URL or SUPABASE_ANON_KEY is not set.
 
 const (
 	testUserEmail    = "kurobasu.test.suite@example.com"
@@ -53,42 +52,48 @@ func authHeader(token string) map[string]string {
 	return map[string]string{"Authorization": "Bearer " + token}
 }
 
-func getTestFirebaseIDToken(t *testing.T) string {
+func getTestSupabaseAccessToken(t *testing.T) string {
 	t.Helper()
 
-	apiKey := os.Getenv("FIREBASE_WEB_API_KEY")
-	if apiKey == "" {
-		t.Skip("FIREBASE_WEB_API_KEY not set; skipping test that requires a real Firebase ID token")
+	baseURL := strings.TrimRight(os.Getenv("SUPABASE_URL"), "/")
+	anonKey := os.Getenv("SUPABASE_ANON_KEY")
+	if baseURL == "" || anonKey == "" {
+		t.Skip("SUPABASE_URL or SUPABASE_ANON_KEY not set; skipping test that requires a real Supabase access token")
 	}
 
 	testTokenOnce.Do(func() {
-		testTokenValue, testTokenErr = firebaseSignInOrSignUp(apiKey, testUserEmail, testUserPassword)
+		testTokenValue, testTokenErr = supabaseSignInOrSignUp(baseURL, anonKey, testUserEmail, testUserPassword)
 	})
 	if testTokenErr != nil {
-		t.Fatalf("failed to obtain firebase test id token: %v", testTokenErr)
+		t.Fatalf("failed to obtain supabase test access token: %v", testTokenErr)
 	}
 	return testTokenValue
 }
 
-func firebaseSignInOrSignUp(apiKey, email, password string) (string, error) {
-	if token, err := identityToolkitRequest(apiKey, "accounts:signInWithPassword", email, password); err == nil {
+func supabaseSignInOrSignUp(baseURL, anonKey, email, password string) (string, error) {
+	if token, err := supabaseAuthRequest(baseURL, anonKey, "/auth/v1/token?grant_type=password", email, password); err == nil {
 		return token, nil
 	}
-	return identityToolkitRequest(apiKey, "accounts:signUp", email, password)
+	return supabaseAuthRequest(baseURL, anonKey, "/auth/v1/signup", email, password)
 }
 
-func identityToolkitRequest(apiKey, endpoint, email, password string) (string, error) {
-	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/%s?key=%s", endpoint, apiKey)
+func supabaseAuthRequest(baseURL, anonKey, endpoint, email, password string) (string, error) {
 	payload, err := json.Marshal(map[string]interface{}{
-		"email":             email,
-		"password":          password,
-		"returnSecureToken": true,
+		"email":    email,
+		"password": password,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewReader(payload))
+	req, err := http.NewRequest(http.MethodPost, baseURL+endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("apikey", anonKey)
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -100,18 +105,23 @@ func identityToolkitRequest(apiKey, endpoint, email, password string) (string, e
 	}
 
 	var result struct {
-		IDToken string `json:"idToken"`
-		Error   struct {
+		AccessToken string `json:"access_token"`
+		Error       struct {
 			Message string `json:"message"`
 		} `json:"error"`
+		Message string `json:"msg"`
 	}
 	if err := json.Unmarshal(b, &result); err != nil {
 		return "", err
 	}
-	if result.IDToken == "" {
-		return "", fmt.Errorf("firebase auth request failed: %s", result.Error.Message)
+	if result.AccessToken == "" {
+		message := result.Error.Message
+		if message == "" {
+			message = result.Message
+		}
+		return "", fmt.Errorf("supabase auth request failed: %s", message)
 	}
-	return result.IDToken, nil
+	return result.AccessToken, nil
 }
 
 type testResponse struct {
@@ -284,7 +294,7 @@ func TestListReviews(t *testing.T) {
 
 // TestCreateReview - POST /api/v1/reviews
 func TestCreateReview(t *testing.T) {
-	token := getTestFirebaseIDToken(t)
+	token := getTestSupabaseAccessToken(t)
 	// レビュー作成には DB 側ユーザーが必要なので、先に bootstrap しておく（冪等）
 	doRequest(t, "POST", "/api/v1/auth/bootstrap", dto.BootstrapUserRequest{DisplayName: "Test Suite User"}, authHeader(token))
 
@@ -310,7 +320,7 @@ func TestCreateReview(t *testing.T) {
 
 // TestBootstrapUser - POST /api/v1/auth/bootstrap
 func TestBootstrapUser(t *testing.T) {
-	token := getTestFirebaseIDToken(t)
+	token := getTestSupabaseAccessToken(t)
 	body := dto.BootstrapUserRequest{
 		DisplayName: "Test User",
 	}
@@ -341,7 +351,7 @@ func TestBootstrapUser(t *testing.T) {
 
 // TestBootstrapUser_InvalidRequest - リクエストボディが無効
 func TestBootstrapUser_InvalidRequest(t *testing.T) {
-	token := getTestFirebaseIDToken(t)
+	token := getTestSupabaseAccessToken(t)
 	w := doRequest(t, "POST", "/api/v1/auth/bootstrap", `invalid json`, authHeader(token))
 
 	assertStatusCode(t, w.Code, http.StatusBadRequest)
