@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -18,7 +17,6 @@ import (
 	"github.com/hageruto/kurobasu/internal/dto"
 	"github.com/hageruto/kurobasu/internal/repository"
 	"github.com/hageruto/kurobasu/models"
-	"gorm.io/gorm"
 )
 
 const maxAdImageBytes = 5 << 20
@@ -62,16 +60,16 @@ func ListAds(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, http.StatusBadRequest, "academic_year and term are required")
 			return
 		}
-		ad, err := adRepo.GetActiveAd(academicYear, term)
+		ads, err := adRepo.ListActiveAdsByTerm(academicYear, term)
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				successResponse(w, dto.ListAdImagesResponse{Items: []dto.AdImageResponse{}, Count: 0})
-				return
-			}
-			errorResponse(w, http.StatusInternalServerError, "Failed to fetch ad")
+			errorResponse(w, http.StatusInternalServerError, "Failed to fetch ads")
 			return
 		}
-		successResponse(w, dto.ListAdImagesResponse{Items: []dto.AdImageResponse{toAdImageResponse(ad)}, Count: 1})
+		items := make([]dto.AdImageResponse, len(ads))
+		for i := range ads {
+			items[i] = toAdImageResponse(&ads[i])
+		}
+		successResponse(w, dto.ListAdImagesResponse{Items: items, Count: len(items)})
 		return
 	}
 
@@ -138,7 +136,7 @@ func UploadAdminAd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	adRepo := &repository.AdRepository{}
-	if err := adRepo.ReplaceActiveAd(ad); err != nil {
+	if err := adRepo.CreateAd(ad); err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Failed to save ad")
 		return
 	}

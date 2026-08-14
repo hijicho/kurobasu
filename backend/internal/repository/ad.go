@@ -5,7 +5,6 @@ import (
 
 	"github.com/hageruto/kurobasu/config"
 	"github.com/hageruto/kurobasu/models"
-	"gorm.io/gorm"
 )
 
 type AdRepository struct{}
@@ -20,29 +19,21 @@ func (r *AdRepository) ListAds(includeInactive bool) ([]models.AdImage, error) {
 	return ads, err
 }
 
-func (r *AdRepository) GetActiveAd(academicYear int16, term string) (*models.AdImage, error) {
-	var ad models.AdImage
+func (r *AdRepository) ListActiveAdsByTerm(academicYear int16, term string) ([]models.AdImage, error) {
+	var ads []models.AdImage
 	err := config.DB.
 		Where("academic_year = ? AND term = ? AND is_active = ?", academicYear, term, true).
 		Order("created_at desc").
-		First(&ad).Error
-	return &ad, err
+		Find(&ads).Error
+	return ads, err
 }
 
-func (r *AdRepository) ReplaceActiveAd(ad *models.AdImage) error {
+func (r *AdRepository) CreateAd(ad *models.AdImage) error {
 	now := time.Now()
-	return config.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&models.AdImage{}).
-			Where("academic_year = ? AND term = ? AND is_active = ?", ad.AcademicYear, ad.Term, true).
-			Updates(map[string]interface{}{"is_active": false, "updated_at": now}).Error; err != nil {
-			return err
-		}
-
-		ad.IsActive = true
-		ad.CreatedAt = now
-		ad.UpdatedAt = now
-		return tx.Create(ad).Error
-	})
+	ad.IsActive = true
+	ad.CreatedAt = now
+	ad.UpdatedAt = now
+	return config.DB.Create(ad).Error
 }
 
 func (r *AdRepository) DeactivateAd(adID int64) (*models.AdImage, error) {

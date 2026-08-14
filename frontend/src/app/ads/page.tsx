@@ -207,7 +207,7 @@ export default function AdsPage() {
   const ratioText = ratio !== null ? ratio.toFixed(2) : '-';
 
   return (
-    <AdminLayout currentPath="/ads" title="広告" subtitle="広告画像を学期ごとにアップロードして差し替えできます。">
+    <AdminLayout currentPath="/ads" title="広告" subtitle="広告画像を学期ごとにアップロードできます。">
       <div className="space-y-6">
         <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 shadow-sm">
           <div className="mb-5 grid gap-4 md:grid-cols-[160px_220px_1fr]">
@@ -240,7 +240,7 @@ export default function AdsPage() {
 
             {currentAd ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                <p className="font-semibold text-slate-900">現在の広告</p>
+                <p className="font-semibold text-slate-900">選択中の学期の最新広告</p>
                 <p className="mt-1 text-slate-500">{currentAd.original_filename}</p>
                 <img src={getImageSrc(currentAd.image_url)} alt="現在の広告" className="mt-3 h-24 w-full rounded-xl object-contain" />
               </div>
@@ -345,7 +345,7 @@ export default function AdsPage() {
                     onClick={openFileDialog}
                     className="rounded-full border border-slate-300 bg-white px-6 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
                   >
-                    差し替え
+                    画像を変更
                   </button>
                   <button
                     type="button"
