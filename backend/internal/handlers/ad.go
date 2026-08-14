@@ -47,6 +47,11 @@ func toAdImageResponse(ad *models.AdImage) dto.AdImageResponse {
 
 // ListAds - GET /api/v1/ads?academic_year=2026&term=spring
 func ListAds(w http.ResponseWriter, r *http.Request) {
+	if strings.TrimSpace(r.URL.Query().Get("instrument_key")) != "" {
+		errorResponse(w, http.StatusBadRequest, "instrument_key is no longer supported; use academic_year and term")
+		return
+	}
+
 	academicYearStr := strings.TrimSpace(r.URL.Query().Get("academic_year"))
 	term := normalizeAdTerm(r.URL.Query().Get("term"))
 	adRepo := &repository.AdRepository{}
