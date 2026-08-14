@@ -245,11 +245,9 @@ curl -X PATCH http://localhost:8080/api/v1/admin/reviews/1/status \
   -H "Authorization: Bearer <Supabase access token>" \
   -d '{"status": "approved"}'
 
-# 口コミを削除扱いにする
-curl -X PATCH http://localhost:8080/api/v1/admin/reviews/1/status \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <Supabase access token>" \
-  -d '{"status": "deleted"}'
+# 口コミを物理削除する
+curl -X DELETE http://localhost:8080/api/v1/admin/reviews/1 \
+  -H "Authorization: Bearer <Supabase access token>"
 
 # 広告画像一覧
 curl -H "Authorization: Bearer <Supabase access token>" \
@@ -258,7 +256,8 @@ curl -H "Authorization: Bearer <Supabase access token>" \
 # 広告画像をアップロード
 curl -X POST http://localhost:8080/api/v1/admin/ads \
   -H "Authorization: Bearer <Supabase access token>" \
-  -F "instrument_key=guitar" \
+  -F "academic_year=2026" \
+  -F "term=spring" \
   -F "image=@./ad-banner.png"
 
 # 広告画像を無効化

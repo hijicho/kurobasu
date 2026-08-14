@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/hageruto/kurobasu/config"
@@ -32,7 +33,8 @@ var allowedAdContentTypes = map[string]string{
 func toAdImageResponse(ad *models.AdImage) dto.AdImageResponse {
 	return dto.AdImageResponse{
 		AdID:             ad.AdID,
-		InstrumentKey:    ad.InstrumentKey,
+		AcademicYear:     ad.AcademicYear,
+		Term:             ad.Term,
 		ImageURL:         ad.ImageURL,
 		OriginalFilename: ad.OriginalFilename,
 		ContentType:      ad.ContentType,
@@ -43,13 +45,19 @@ func toAdImageResponse(ad *models.AdImage) dto.AdImageResponse {
 	}
 }
 
-// ListAds - GET /api/v1/ads?instrument_key=x
+// ListAds - GET /api/v1/ads?academic_year=2026&term=spring
 func ListAds(w http.ResponseWriter, r *http.Request) {
-	instrumentKey := strings.TrimSpace(r.URL.Query().Get("instrument_key"))
+	academicYearStr := strings.TrimSpace(r.URL.Query().Get("academic_year"))
+	term := normalizeAdTerm(r.URL.Query().Get("term"))
 	adRepo := &repository.AdRepository{}
 
-	if instrumentKey != "" {
-		ad, err := adRepo.GetActiveAd(instrumentKey)
+	if academicYearStr != "" || term != "" {
+		academicYear, err := parseAdAcademicYear(academicYearStr)
+		if err != nil || term == "" {
+			errorResponse(w, http.StatusBadRequest, "academic_year and term are required")
+			return
+		}
+		ad, err := adRepo.GetActiveAd(academicYear, term)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				successResponse(w, dto.ListAdImagesResponse{Items: []dto.AdImageResponse{}, Count: 0})
@@ -99,9 +107,15 @@ func UploadAdminAd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	instrumentKey := sanitizeInstrumentKey(r.FormValue("instrument_key"))
-	if instrumentKey == "" {
-		errorResponse(w, http.StatusBadRequest, "instrument_key is required")
+	academicYear, err := parseAdAcademicYear(r.FormValue("academic_year"))
+	if err != nil {
+		errorResponse(w, http.StatusBadRequest, "academic_year is required")
+		return
+	}
+
+	term := normalizeAdTerm(r.FormValue("term"))
+	if term == "" {
+		errorResponse(w, http.StatusBadRequest, "term is required")
 		return
 	}
 
@@ -112,7 +126,7 @@ func UploadAdminAd(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	ad, err := saveAdUpload(instrumentKey, file, header)
+	ad, err := saveAdUpload(academicYear, term, file, header)
 	if err != nil {
 		errorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -139,7 +153,7 @@ func DeleteAdminAd(w http.ResponseWriter, r *http.Request) {
 	successResponse(w, toAdImageResponse(ad))
 }
 
-func saveAdUpload(instrumentKey string, file multipart.File, header *multipart.FileHeader) (*models.AdImage, error) {
+func saveAdUpload(academicYear int16, term string, file multipart.File, header *multipart.FileHeader) (*models.AdImage, error) {
 	if header.Size <= 0 || header.Size > maxAdImageBytes {
 		return nil, fmt.Errorf("image must be 5MB or smaller")
 	}
@@ -166,11 +180,11 @@ func saveAdUpload(instrumentKey string, file multipart.File, header *multipart.F
 		return nil, fmt.Errorf("failed to prepare image")
 	}
 
-	filename := instrumentKey + "-" + token + ext
-	return saveAdUploadToSupabase(instrumentKey, filename, file, header, contentType)
+	filename := fmt.Sprintf("%d-%s-%s%s", academicYear, term, token, ext)
+	return saveAdUploadToSupabase(academicYear, term, filename, file, header, contentType)
 }
 
-func saveAdUploadToSupabase(instrumentKey, filename string, file multipart.File, header *multipart.FileHeader, contentType string) (*models.AdImage, error) {
+func saveAdUploadToSupabase(academicYear int16, term, filename string, file multipart.File, header *multipart.FileHeader, contentType string) (*models.AdImage, error) {
 	body, err := io.ReadAll(io.LimitReader(file, maxAdImageBytes+1))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read image")
@@ -186,7 +200,7 @@ func saveAdUploadToSupabase(instrumentKey, filename string, file multipart.File,
 		return nil, fmt.Errorf("Supabase Storage is not configured")
 	}
 
-	objectPath := "ads/" + instrumentKey + "/" + filename
+	objectPath := fmt.Sprintf("ads/%d/%s/%s", academicYear, term, filename)
 	url := baseURL + "/storage/v1/object/" + bucket + "/" + objectPath
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
@@ -212,7 +226,8 @@ func saveAdUploadToSupabase(instrumentKey, filename string, file multipart.File,
 	}
 
 	return &models.AdImage{
-		InstrumentKey:    instrumentKey,
+		AcademicYear:     academicYear,
+		Term:             term,
 		ImageURL:         publicBaseURL + "/" + objectPath,
 		StoragePath:      objectPath,
 		OriginalFilename: filepath.Base(header.Filename),
@@ -222,15 +237,22 @@ func saveAdUploadToSupabase(instrumentKey, filename string, file multipart.File,
 	}, nil
 }
 
-func sanitizeInstrumentKey(value string) string {
+func normalizeAdTerm(value string) string {
 	value = strings.ToLower(strings.TrimSpace(value))
-	var b strings.Builder
-	for _, r := range value {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
-			b.WriteRune(r)
-		}
+	switch value {
+	case "spring", "fall", "intensive", "year":
+		return value
+	default:
+		return ""
 	}
-	return b.String()
+}
+
+func parseAdAcademicYear(value string) (int16, error) {
+	year, err := strconv.ParseInt(strings.TrimSpace(value), 10, 16)
+	if err != nil || year < 2000 || year > 2100 {
+		return 0, fmt.Errorf("invalid academic_year")
+	}
+	return int16(year), nil
 }
 
 func randomHex(bytesLen int) (string, error) {

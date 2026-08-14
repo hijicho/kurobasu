@@ -112,7 +112,8 @@ type UpdateReviewStatusRequest struct {
 // AdImageResponse は広告画像の管理・公開レスポンスです
 type AdImageResponse struct {
 	AdID             int64     `json:"ad_id"`
-	InstrumentKey    string    `json:"instrument_key"`
+	AcademicYear     int16     `json:"academic_year"`
+	Term             string    `json:"term"`
 	ImageURL         string    `json:"image_url"`
 	OriginalFilename string    `json:"original_filename"`
 	ContentType      string    `json:"content_type"`

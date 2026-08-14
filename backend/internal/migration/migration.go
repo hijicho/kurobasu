@@ -22,6 +22,9 @@ func RunMigrations() error {
 	if err := renameLegacyAuthUIDColumn(); err != nil {
 		return err
 	}
+	if err := migrateAdImagesTermTarget(); err != nil {
+		return err
+	}
 
 	// Create tables using GORM's AutoMigrate feature
 	// AutoMigrate idempotently creates tables (doesn't fail if tables already exist)
@@ -204,6 +207,46 @@ func renameLegacyAuthUIDColumn() error {
 	`
 	if err := config.DB.Exec(sql).Error; err != nil {
 		return fmt.Errorf("failed renaming legacy users auth uid column: %w", err)
+	}
+	return nil
+}
+
+func migrateAdImagesTermTarget() error {
+	sql := `
+		DO $$
+		BEGIN
+			IF to_regclass('ad_images') IS NOT NULL THEN
+				IF EXISTS (
+					SELECT 1 FROM information_schema.columns
+					WHERE table_schema = current_schema()
+					  AND table_name = 'ad_images'
+					  AND column_name = 'instrument_key'
+				)
+				AND NOT EXISTS (
+					SELECT 1 FROM information_schema.columns
+					WHERE table_schema = current_schema()
+					  AND table_name = 'ad_images'
+					  AND column_name = 'term'
+				)
+				THEN
+					ALTER TABLE ad_images RENAME COLUMN instrument_key TO term;
+				END IF;
+
+				ALTER TABLE ad_images
+					ADD COLUMN IF NOT EXISTS academic_year smallint NOT NULL DEFAULT (EXTRACT(YEAR FROM CURRENT_DATE)::smallint);
+
+				ALTER TABLE ad_images
+					ADD COLUMN IF NOT EXISTS term varchar(20) NOT NULL DEFAULT 'spring';
+
+				UPDATE ad_images
+				SET term = 'spring'
+				WHERE term IS NULL
+				   OR term NOT IN ('spring', 'fall', 'intensive', 'year');
+			END IF;
+		END $$;
+	`
+	if err := config.DB.Exec(sql).Error; err != nil {
+		return fmt.Errorf("failed migrating ad_images term target: %w", err)
 	}
 	return nil
 }

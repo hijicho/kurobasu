@@ -2,20 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { API_ORIGIN, deleteAdminAd, listAdminAds, uploadAdminAd, type AdImage } from '@/lib/api';
+import { API_ORIGIN, deleteAdminAd, getDefaultAcademicYear, listAdminAds, uploadAdminAd, type AdImage } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 const acceptableRatio = 1 / 5;
 const tolerance = 0.05;
 
-const adTargets = [
-  { key: 'all', label: '共通' },
-  { key: 'guitar', label: 'ギター' },
-  { key: 'bass', label: 'ベース' },
-  { key: 'drums', label: 'ドラム' },
-  { key: 'keyboard', label: 'キーボード' },
-  { key: 'vocal', label: 'ボーカル' },
-  { key: 'other', label: 'その他' },
+const adTerms = [
+  { key: 'spring', label: '前期' },
+  { key: 'fall', label: '後期' },
+  { key: 'intensive', label: '集中' },
+  { key: 'year', label: '通年' },
 ];
 
 const getImageSrc = (imageUrl: string) => {
@@ -28,7 +25,8 @@ const getImageSrc = (imageUrl: string) => {
 export default function AdsPage() {
   const { getIdToken } = useAuth();
   const [ads, setAds] = useState<AdImage[]>([]);
-  const [selectedTarget, setSelectedTarget] = useState(adTargets[0].key);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<number>(new Date().getFullYear());
+  const [selectedTerm, setSelectedTerm] = useState(adTerms[0].key);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -43,7 +41,7 @@ export default function AdsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeAds = useMemo(() => ads.filter((ad) => ad.is_active), [ads]);
-  const currentAd = activeAds.find((ad) => ad.instrument_key === selectedTarget);
+  const currentAd = activeAds.find((ad) => ad.academic_year === selectedAcademicYear && ad.term === selectedTerm);
 
   const loadAds = useCallback(async () => {
     setLoading(true);
@@ -65,6 +63,12 @@ export default function AdsPage() {
   useEffect(() => {
     loadAds();
   }, [loadAds]);
+
+  useEffect(() => {
+    getDefaultAcademicYear()
+      .then((res) => setSelectedAcademicYear(res.academic_year))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -163,7 +167,7 @@ export default function AdsPage() {
       if (!idToken) {
         throw new Error('not authenticated');
       }
-      await uploadAdminAd(idToken, selectedTarget, selectedFile);
+      await uploadAdminAd(idToken, selectedAcademicYear, selectedTerm, selectedFile);
       setSuccessMessage('広告画像を保存しました。');
       resetSelection();
       await loadAds();
@@ -203,20 +207,32 @@ export default function AdsPage() {
   const ratioText = ratio !== null ? ratio.toFixed(2) : '-';
 
   return (
-    <AdminLayout currentPath="/ads" title="広告" subtitle="広告画像を枠ごとにアップロードして差し替えできます。">
+    <AdminLayout currentPath="/ads" title="広告" subtitle="広告画像を学期ごとにアップロードして差し替えできます。">
       <div className="space-y-6">
         <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 shadow-sm">
-          <div className="mb-5 grid gap-4 md:grid-cols-[240px_1fr]">
+          <div className="mb-5 grid gap-4 md:grid-cols-[160px_220px_1fr]">
             <label className="block text-sm font-semibold text-slate-700">
-              広告枠
+              年度
+              <input
+                type="number"
+                min={2000}
+                max={2100}
+                value={selectedAcademicYear}
+                onChange={(event) => setSelectedAcademicYear(Number(event.target.value))}
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#2b4dca] focus:outline-none"
+              />
+            </label>
+
+            <label className="block text-sm font-semibold text-slate-700">
+              学期
               <select
-                value={selectedTarget}
-                onChange={(event) => setSelectedTarget(event.target.value)}
+                value={selectedTerm}
+                onChange={(event) => setSelectedTerm(event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:border-[#2b4dca] focus:outline-none"
               >
-                {adTargets.map((target) => (
-                  <option key={target.key} value={target.key}>
-                    {target.label}
+                {adTerms.map((term) => (
+                  <option key={term.key} value={term.key}>
+                    {term.label}
                   </option>
                 ))}
               </select>
@@ -230,7 +246,7 @@ export default function AdsPage() {
               </div>
             ) : (
               <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-                この広告枠にはまだ画像が設定されていません。
+                この学期にはまだ画像が設定されていません。
               </div>
             )}
           </div>
@@ -353,12 +369,14 @@ export default function AdsPage() {
           ) : (
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               {activeAds.map((ad) => {
-                const label = adTargets.find((target) => target.key === ad.instrument_key)?.label ?? ad.instrument_key;
+                const label = adTerms.find((term) => term.key === ad.term)?.label ?? ad.term;
                 return (
                   <div key={ad.ad_id} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-semibold text-slate-900">{label}</p>
+                        <p className="font-semibold text-slate-900">
+                          {ad.academic_year}年度 {label}
+                        </p>
                         <p className="mt-1 text-sm text-slate-500">{ad.original_filename}</p>
                       </div>
                       <button
@@ -370,7 +388,7 @@ export default function AdsPage() {
                         削除
                       </button>
                     </div>
-                    <img src={getImageSrc(ad.image_url)} alt={`${label} 広告`} className="mt-4 h-28 w-full rounded-xl object-contain" />
+                    <img src={getImageSrc(ad.image_url)} alt={`${ad.academic_year}年度 ${label} 広告`} className="mt-4 h-28 w-full rounded-xl object-contain" />
                     <p className="mt-3 text-xs text-slate-400">
                       更新: {new Date(ad.updated_at).toLocaleString('ja-JP', { hour12: false })}
                     </p>

@@ -77,19 +77,20 @@
 
 ---
 
-## 5) reviews（評価）
+## 5) user_reviews（評価）
 
 前提：
 - **検索はしない**
-- `status` は **公開/非公開/削除** のまま
+- `status` は **pending/approved**。削除は status ではなく物理削除
 
 | カラム | 型 | 制約/補足 |
 |---|---|---|
-| review_id | BIGSERIAL | PK |
+| user_review_id | BIGSERIAL | PK |
+| user_id | BIGINT | NOT NULL, FK → users(user_id), ON DELETE CASCADE |
 | offering_id | BIGINT | NOT NULL, FK → offerings(offering_id), ON DELETE CASCADE |
-| md_url | TEXT | NOT NULL（Markdownの保存先URLなど） |
-| review_count | BIGINT
-| status | review_status_enum | NOT NULL, DEFAULT 'public'（public/private/deleted） |
+| comment | TEXT | NOT NULL |
+| type | TEXT | NOT NULL（pros/cons/others） |
+| status | review_status_enum | NOT NULL, DEFAULT 'pending'（pending/approved） |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now()（推奨） |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now()（推奨） |
 
@@ -167,7 +168,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE TYPE review_status_enum AS ENUM ('public', 'private', 'deleted');
+  CREATE TYPE review_status_enum AS ENUM ('pending', 'approved');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- 1) categories
@@ -282,4 +283,3 @@ docker compose up --build
 ```
 
 - シードに初期管理者を追加したい場合は、`internal/seed/seed.go` を編集して特定ユーザーの `Role` を `'admin'` に設定してください。
-

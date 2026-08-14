@@ -2,12 +2,11 @@ package models
 
 import "time"
 
-// AdImage stores the currently configured ad image for a target bucket.
-// instrument_key is intentionally generic because the frontend can decide
-// whether the target represents an instrument, department, page, or campaign.
+// AdImage stores the currently configured ad image for an academic term.
 type AdImage struct {
 	AdID             int64     `gorm:"primaryKey;column:ad_id" json:"ad_id"`
-	InstrumentKey    string    `gorm:"column:instrument_key;type:varchar(80);not null;index" json:"instrument_key"`
+	AcademicYear     int16     `gorm:"column:academic_year;not null;index:idx_ad_images_term" json:"academic_year"`
+	Term             string    `gorm:"column:term;type:varchar(20);not null;index:idx_ad_images_term" json:"term"`
 	ImageURL         string    `gorm:"column:image_url;type:text;not null" json:"image_url"`
 	StoragePath      string    `gorm:"column:storage_path;type:text;not null" json:"storage_path"`
 	OriginalFilename string    `gorm:"column:original_filename;type:text;not null" json:"original_filename"`

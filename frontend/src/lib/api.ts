@@ -95,7 +95,7 @@ export async function getCategories(): Promise<CategoriesResponse> {
 // ============================
 
 export interface DefaultAcademicYearResponse {
-  academic_year: string;
+  academic_year: number;
 }
 
 export async function getDefaultAcademicYear(): Promise<DefaultAcademicYearResponse> {
@@ -321,7 +321,8 @@ export async function deleteAdminReview(idToken: string, reviewId: number): Prom
 
 export interface AdImage {
   ad_id: number;
-  instrument_key: string;
+  academic_year: number;
+  term: string;
   image_url: string;
   original_filename: string;
   content_type: string;
@@ -346,11 +347,13 @@ export async function listAdminAds(idToken: string): Promise<ListAdImagesRespons
 
 export async function uploadAdminAd(
   idToken: string,
-  instrumentKey: string,
+  academicYear: number,
+  term: string,
   image: File
 ): Promise<AdImage> {
   const formData = new FormData();
-  formData.append('instrument_key', instrumentKey);
+  formData.append('academic_year', String(academicYear));
+  formData.append('term', term);
   formData.append('image', image);
 
   return fetchApi<AdImage>('/admin/ads', {

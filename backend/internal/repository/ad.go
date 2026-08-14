@@ -12,7 +12,7 @@ type AdRepository struct{}
 
 func (r *AdRepository) ListAds(includeInactive bool) ([]models.AdImage, error) {
 	var ads []models.AdImage
-	query := config.DB.Order("instrument_key asc, created_at desc")
+	query := config.DB.Order("academic_year desc, term asc, created_at desc")
 	if !includeInactive {
 		query = query.Where("is_active = ?", true)
 	}
@@ -20,10 +20,10 @@ func (r *AdRepository) ListAds(includeInactive bool) ([]models.AdImage, error) {
 	return ads, err
 }
 
-func (r *AdRepository) GetActiveAd(instrumentKey string) (*models.AdImage, error) {
+func (r *AdRepository) GetActiveAd(academicYear int16, term string) (*models.AdImage, error) {
 	var ad models.AdImage
 	err := config.DB.
-		Where("instrument_key = ? AND is_active = ?", instrumentKey, true).
+		Where("academic_year = ? AND term = ? AND is_active = ?", academicYear, term, true).
 		Order("created_at desc").
 		First(&ad).Error
 	return &ad, err
@@ -33,7 +33,7 @@ func (r *AdRepository) ReplaceActiveAd(ad *models.AdImage) error {
 	now := time.Now()
 	return config.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.AdImage{}).
-			Where("instrument_key = ? AND is_active = ?", ad.InstrumentKey, true).
+			Where("academic_year = ? AND term = ? AND is_active = ?", ad.AcademicYear, ad.Term, true).
 			Updates(map[string]interface{}{"is_active": false, "updated_at": now}).Error; err != nil {
 			return err
 		}
