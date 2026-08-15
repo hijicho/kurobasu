@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/hageruto/kurobasu/internal/dto"
 	"github.com/hageruto/kurobasu/internal/repository"
@@ -46,10 +47,24 @@ func toAdminReviewResponse(review *repository.AdminReviewRecord) dto.AdminReview
 // ListUsers - GET /api/v1/admin/users
 // admin ロールのみアクセス可能（middleware.RequireAuth + middleware.RequireRole("admin")）
 func ListUsers(w http.ResponseWriter, r *http.Request) {
+	role := strings.TrimSpace(r.URL.Query().Get("role"))
+	if role != "" {
+		if _, ok := validUserRoles[role]; !ok {
+			errorResponse(w, http.StatusBadRequest, "role must be one of: user, editor, admin")
+			return
+		}
+	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+
 	userRepo := &repository.UserRepository{}
-	users, err := userRepo.ListUsers()
+	users, err := userRepo.ListUsers(role, query)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Failed to fetch users")
+		return
+	}
+	roleCounts64, err := userRepo.CountUsersByRole(query)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to count users")
 		return
 	}
 
@@ -57,7 +72,11 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	for i := range users {
 		items[i] = toUserResponse(&users[i])
 	}
-	successResponse(w, dto.ListUsersResponse{Items: items})
+	roleCounts := make(map[string]int, len(roleCounts64))
+	for key, value := range roleCounts64 {
+		roleCounts[key] = int(value)
+	}
+	successResponse(w, dto.ListUsersResponse{Items: items, Count: len(items), RoleCounts: roleCounts})
 }
 
 // UpdateUserRole - PATCH /api/v1/admin/users/{id}/role

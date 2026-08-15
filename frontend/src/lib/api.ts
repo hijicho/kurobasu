@@ -261,10 +261,23 @@ export async function logout(idToken: string): Promise<void> {
 
 export interface ListAdminUsersResponse {
   items: UserProfile[];
+  count: number;
+  role_counts: Record<string, number>;
 }
 
-export async function listAdminUsers(idToken: string | null | undefined): Promise<ListAdminUsersResponse> {
-  return fetchApi<ListAdminUsersResponse>('/admin/users', {
+export async function listAdminUsers(
+  idToken: string | null | undefined,
+  filters?: { role?: string; query?: string }
+): Promise<ListAdminUsersResponse> {
+  const params = new URLSearchParams();
+  if (filters?.role) {
+    params.set('role', filters.role);
+  }
+  if (filters?.query) {
+    params.set('q', filters.query);
+  }
+  const query = params.toString();
+  return fetchApi<ListAdminUsersResponse>(`/admin/users${query ? `?${query}` : ''}`, {
     headers: authHeaders(idToken),
   });
 }

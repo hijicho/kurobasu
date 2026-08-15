@@ -144,7 +144,9 @@ type UserResponse struct {
 
 // ListUsersResponse は管理者向けの全ユーザー一覧レスポンス
 type ListUsersResponse struct {
-	Items []UserResponse `json:"items"`
+	Items      []UserResponse `json:"items"`
+	Count      int            `json:"count"`
+	RoleCounts map[string]int `json:"role_counts"`
 }
 
 // UpdateUserRoleRequest はユーザーのロール変更リクエスト
