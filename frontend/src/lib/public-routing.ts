@@ -27,6 +27,11 @@ export const categoryNames: Record<string, string> = {
   law: '法学部',
   economics: '経済学部',
   commerce: '商学部',
+  chinese: '第二外国語（中国語）',
+  korean: '第二外国語（朝鮮語）',
+  russian: '第二外国語（ロシア語）',
+  german: '第二外国語（ドイツ語）',
+  french: '第二外国語（フランス語）',
 };
 
 export function publicTopPath(year: number | string, term: string) {

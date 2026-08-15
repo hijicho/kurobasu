@@ -253,7 +253,12 @@ func syncUICategories() error {
 					('literature', '文学部', 16),
 					('law', '法学部', 17),
 					('economics', '経済学部', 18),
-					('commerce', '商学部', 19);
+					('commerce', '商学部', 19),
+					('chinese', '第二外国語（中国語）', 20),
+					('korean', '第二外国語（朝鮮語）', 21),
+					('russian', '第二外国語（ロシア語）', 22),
+					('german', '第二外国語（ドイツ語）', 23),
+					('french', '第二外国語（フランス語）', 24);
 
 			CREATE TEMP TABLE legacy_category_slugs (
 				old_slug text PRIMARY KEY,

@@ -94,6 +94,11 @@ func seedCategories() []models.Category {
 		{Slug: "law", Name: "法学部", SortOrder: 17},
 		{Slug: "economics", Name: "経済学部", SortOrder: 18},
 		{Slug: "commerce", Name: "商学部", SortOrder: 19},
+		{Slug: "chinese", Name: "第二外国語（中国語）", SortOrder: 20},
+		{Slug: "korean", Name: "第二外国語（朝鮮語）", SortOrder: 21},
+		{Slug: "russian", Name: "第二外国語（ロシア語）", SortOrder: 22},
+		{Slug: "german", Name: "第二外国語（ドイツ語）", SortOrder: 23},
+		{Slug: "french", Name: "第二外国語（フランス語）", SortOrder: 24},
 	}
 
 	for i := range categories {
