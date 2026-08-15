@@ -233,6 +233,12 @@ export async function updateMe(
   });
 }
 
+export async function getMe(idToken: string | null | undefined): Promise<UserProfile> {
+  return fetchApi<UserProfile>('/me', {
+    headers: authHeaders(idToken),
+  });
+}
+
 export async function logout(idToken: string): Promise<void> {
   return fetchApi<void>('/auth/logout', {
     method: 'POST',

@@ -1,7 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarRange, ChevronRight, LogOut, Megaphone, MessageSquareText, ShieldUser, Sparkles } from 'lucide-react';
+import { CalendarRange, ChevronRight, LogOut, Megaphone, MessageSquareText, ShieldUser, Sparkles, UserRound } from 'lucide-react';
+import { getApiErrorMessage, getMe, type UserProfile } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 type AdminLayoutProps = {
   children: React.ReactNode;
@@ -25,7 +28,43 @@ const navigationItems: NavigationItem[] = [
   { href: '/logout', label: 'ログアウト', icon: LogOut },
 ];
 
+const roleLabels: Record<string, string> = {
+  admin: '管理人',
+  editor: '編集委員',
+  user: '一般ユーザー',
+};
+
 export default function AdminLayout({ children, currentPath, title, subtitle }: AdminLayoutProps) {
+  const { getIdToken } = useAuth();
+  const [me, setMe] = useState<UserProfile | null>(null);
+  const [meError, setMeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMe() {
+      setMeError(null);
+      try {
+        const idToken = await getIdToken();
+        const profile = await getMe(idToken);
+        if (!cancelled) {
+          setMe(profile);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setMe(null);
+          setMeError(getApiErrorMessage(err, 'ユーザー情報を取得できませんでした。'));
+        }
+      }
+    }
+
+    loadMe();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getIdToken]);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6 lg:flex-row lg:p-8">
@@ -62,6 +101,27 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
               );
             })}
           </nav>
+
+          <div className="mt-8 rounded-[20px] border border-white/15 bg-white/10 p-4">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+              <UserRound className="h-4 w-4" />
+              ログイン中
+            </div>
+            {me ? (
+              <div className="space-y-2 text-sm">
+                <p className="truncate font-semibold text-white">{me.display_name || '名前未設定'}</p>
+                <div className="flex items-center justify-between gap-3 text-blue-100">
+                  <span>ロール</span>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#2b4dca]">
+                    {roleLabels[me.role] ?? me.role}
+                  </span>
+                </div>
+                <p className="text-xs text-blue-100">User ID: {me.user_id}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-blue-100">{meError ?? 'ユーザー情報を読み込んでいます。'}</p>
+            )}
+          </div>
         </aside>
 
         <main className="flex-1 rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
