@@ -36,7 +36,7 @@ function mapAuthError(message: string, action: AuthAction): string {
 }
 
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
-  const { signIn, signUp, isAuthenticated } = useAuth();
+  const { signIn, signUp } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -91,12 +91,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       setRegisterSuccessMessage('メール確認が完了しました。ログインできます。');
     }
   }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      onLoginSuccess?.();
-    }
-  }, [isAuthenticated, onLoginSuccess]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
