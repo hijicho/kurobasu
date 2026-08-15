@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, UserRound } from 'lucide-react';
 import logoImage from '../assets/e52bb999d689900e37b9d134926cef87854ec798.png';
 import { useAuth } from '@/lib/auth-context';
@@ -7,7 +7,14 @@ interface LoginPageProps {
   onLoginSuccess?: () => void;
 }
 
-function mapAuthError(message: string): string {
+type AuthAction = 'login' | 'register' | 'guest';
+
+function isRateLimitError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes('rate limit') || lower.includes('too many');
+}
+
+function mapAuthError(message: string, action: AuthAction): string {
   const lower = message.toLowerCase();
   if (lower.includes('already')) {
       return 'このメールアドレスは既に登録されています';
@@ -21,8 +28,9 @@ function mapAuthError(message: string): string {
   if (lower.includes('invalid login') || lower.includes('invalid credentials')) {
       return 'メールアドレスまたはパスワードが正しくありません';
   }
-  if (lower.includes('rate limit') || lower.includes('too many')) {
-      return 'ログイン試行回数が多すぎます。しばらくしてから再度お試しください';
+  if (isRateLimitError(message)) {
+      const actionLabel = action === 'guest' ? 'ゲストログイン' : action === 'register' ? '新規登録' : 'ログイン';
+      return `${actionLabel}のリクエストが短時間に多すぎます。1分ほど待ってから再度お試しください。`;
   }
   return 'エラーが発生しました。時間をおいて再度お試しください';
 }
@@ -34,6 +42,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [registerSuccessMessage, setRegisterSuccessMessage] = useState<string | null>(null);
+  const [authCooldownUntil, setAuthCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const [loginData, setLoginData] = useState({
     email: '',
@@ -47,9 +57,38 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const cooldownSeconds = authCooldownUntil ? Math.max(0, Math.ceil((authCooldownUntil - now) / 1000)) : 0;
+  const authDisabled = submitting || cooldownSeconds > 0;
+
+  useEffect(() => {
+    if (!authCooldownUntil) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= authCooldownUntil) {
+        setAuthCooldownUntil(null);
+      }
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [authCooldownUntil]);
+
+  const handleAuthError = (err: unknown, action: AuthAction) => {
+    const message = (err as { message?: string })?.message ?? '';
+    if (isRateLimitError(message)) {
+      setAuthCooldownUntil(Date.now() + 60_000);
+    }
+    setErrors({ form: mapAuthError(message, action) });
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authDisabled) {
+      return;
+    }
     const newErrors: Record<string, string> = {};
 
     if (!loginData.email) {
@@ -74,8 +113,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       await signIn(loginData.email, loginData.password);
       onLoginSuccess?.();
     } catch (err) {
-      const message = (err as { message?: string })?.message ?? '';
-      setErrors({ form: mapAuthError(message) });
+      handleAuthError(err, 'login');
     } finally {
       setSubmitting(false);
     }
@@ -83,6 +121,9 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authDisabled) {
+      return;
+    }
     const newErrors: Record<string, string> = {};
 
     if (!registerData.email) {
@@ -119,22 +160,23 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       }
       onLoginSuccess?.();
     } catch (err) {
-      const message = (err as { message?: string })?.message ?? '';
-      setErrors({ form: mapAuthError(message) });
+      handleAuthError(err, 'register');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleGuestLogin = async () => {
+    if (authDisabled) {
+      return;
+    }
     setSubmitting(true);
     setErrors({});
     try {
       await signInAsGuest();
       onLoginSuccess?.();
     } catch (err) {
-      const message = (err as { message?: string })?.message ?? '';
-      setErrors({ form: mapAuthError(message) });
+      handleAuthError(err, 'guest');
     } finally {
       setSubmitting(false);
     }
@@ -201,6 +243,9 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 {errors.form && (
                   <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                     {errors.form}
+                    {cooldownSeconds > 0 ? (
+                      <span className="mt-1 block text-red-500">再試行まで約{cooldownSeconds}秒です。</span>
+                    ) : null}
                   </div>
                 )}
                 <div>
@@ -262,7 +307,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={authDisabled}
                   className="btn-theme-primary w-full py-3 rounded-xl disabled:opacity-60"
                 >
                   {submitting ? 'ログイン中...' : 'ログイン'}
@@ -280,7 +325,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 <button
                   type="button"
                   onClick={handleGuestLogin}
-                  disabled={submitting}
+                  disabled={authDisabled}
                   className="w-full py-3 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                 >
                   <UserRound className="w-5 h-5 text-gray-500" />
@@ -292,6 +337,9 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 {errors.form && (
                   <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                     {errors.form}
+                    {cooldownSeconds > 0 ? (
+                      <span className="mt-1 block text-red-500">再試行まで約{cooldownSeconds}秒です。</span>
+                    ) : null}
                   </div>
                 )}
                 <div>
@@ -361,7 +409,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={authDisabled}
                   className="btn-theme-primary w-full py-3 rounded-xl disabled:opacity-60"
                 >
                   {submitting ? '登録中...' : '新規登録'}
