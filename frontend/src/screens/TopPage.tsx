@@ -8,7 +8,7 @@ import { PublicAdBanner } from '../components/PublicAdBanner';
 import { getCategories, Category } from '../lib/api';
 import hamubasuLogo from '../assets/59962a0286c10949e8d3fa57e1256b8b69b96d84.png';
 import bgPattern from '../assets/c00c039666ebe180d57a090c8744e0552d438ca4.png';
-import titleImage from '../assets/573ad896cd92b11ef07ccb64a98726dc7a7aab11.png';
+import titleImage from '../assets/image-1786800393446.png';
 
 interface TopPageProps {
   isAuthenticated?: boolean;
