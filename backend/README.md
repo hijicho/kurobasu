@@ -131,9 +131,6 @@ curl http://localhost:8080/api/v1/categories
 ### Meta（メタ情報）
 
 ```bash
-# デフォルト学年度取得（互換用。学期も返します）
-curl http://localhost:8080/api/v1/meta/default-academic-year
-
 # 公開画面のデフォルト年度・学期取得
 curl http://localhost:8080/api/v1/meta/site-settings
 ```

@@ -107,15 +107,6 @@ export async function getCategories(): Promise<CategoriesResponse> {
 // Meta API
 // ============================
 
-export interface DefaultAcademicYearResponse {
-  academic_year: number;
-  term?: string;
-}
-
-export async function getDefaultAcademicYear(): Promise<DefaultAcademicYearResponse> {
-  return fetchApi<DefaultAcademicYearResponse>('/meta/default-academic-year');
-}
-
 export interface SiteSettings {
   default_academic_year: number;
   default_term: string;

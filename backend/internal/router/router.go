@@ -132,9 +132,6 @@ func SetupRoutes() http.Handler {
 	// =====================
 	// メタデータ API
 	// =====================
-	// GET /api/v1/meta/default-academic-year
-	// 効果：現在年度のデフォルト値を取得 (例：2026)
-	mux.HandleFunc("/api/v1/meta/default-academic-year", methodHandler(http.MethodGet, handlers.GetDefaultAcademicYear))
 	// GET /api/v1/meta/site-settings
 	// 効果：公開画面のデフォルト年度・学期を取得
 	mux.HandleFunc("/api/v1/meta/site-settings", methodHandler(http.MethodGet, handlers.GetSiteSettings))

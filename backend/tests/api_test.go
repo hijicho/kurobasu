@@ -415,9 +415,9 @@ func TestUpdateTimetable(t *testing.T) {
 // Meta Tests
 // =====================
 
-// TestGetDefaultAcademicYear - GET /api/v1/meta/default-academic-year
-func TestGetDefaultAcademicYear(t *testing.T) {
-	w := doRequest(t, "GET", "/api/v1/meta/default-academic-year", nil)
+// TestGetSiteSettings - GET /api/v1/meta/site-settings
+func TestGetSiteSettings(t *testing.T) {
+	w := doRequest(t, "GET", "/api/v1/meta/site-settings", nil)
 
 	assertStatusCode(t, w.Code, http.StatusOK)
 	assertJSONResponse(t, w.Body.String())
@@ -428,8 +428,11 @@ func TestGetDefaultAcademicYear(t *testing.T) {
 
 	if data, ok := result["data"]; ok {
 		meta := data.(map[string]interface{})
-		if _, ok := meta["academic_year"]; !ok {
-			t.Error("Response missing 'academic_year' field")
+		if _, ok := meta["default_academic_year"]; !ok {
+			t.Error("Response missing 'default_academic_year' field")
+		}
+		if _, ok := meta["default_term"]; !ok {
+			t.Error("Response missing 'default_term' field")
 		}
 	}
 }
@@ -457,10 +460,10 @@ func TestResponseContentType(t *testing.T) {
 	endpoints := []struct {
 		method string
 		path   string
-	}{
-		{"GET", "/api/v1/categories"},
-		{"GET", "/api/v1/meta/default-academic-year"},
-	}
+		}{
+			{"GET", "/api/v1/categories"},
+			{"GET", "/api/v1/meta/site-settings"},
+		}
 
 	for _, ep := range endpoints {
 		w := doRequest(t, ep.method, ep.path, nil)

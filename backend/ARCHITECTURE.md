@@ -714,7 +714,7 @@ handlers.ListCategories(w, r)  ← ここで処理
 - 「授業評価}: ListReviews, CreateReview, GetReview
 - 「認証}: BootstrapUser, GetCurrentUser, UpdateCurrentUser
 - 「時間割}: CreateTimetable, GetTimetable, UpdateTimetable
-- 「メタ}: GetDefaultAcademicYear
+- 「メタ}: GetSiteSettings, UpdateSiteSettings
 
 #### **`internal/repository/` - データアクセス層**
 

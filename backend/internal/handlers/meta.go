@@ -87,16 +87,3 @@ func UpdateSiteSettings(w http.ResponseWriter, r *http.Request) {
 
 	successResponse(w, toSiteSettingsResponse(settings))
 }
-
-// GetDefaultAcademicYear - GET /api/v1/meta/default-academic-year
-func GetDefaultAcademicYear(w http.ResponseWriter, r *http.Request) {
-	settings, err := getSiteSettingsModel()
-	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, "Failed to fetch site settings")
-		return
-	}
-	successResponse(w, map[string]interface{}{
-		"academic_year": settings.DefaultAcademicYear,
-		"term":          settings.DefaultTerm,
-	})
-}
