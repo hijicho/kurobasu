@@ -51,7 +51,7 @@ func ListAds(w http.ResponseWriter, r *http.Request) {
 	}
 
 	academicYearStr := strings.TrimSpace(r.URL.Query().Get("academic_year"))
-	term := normalizeAdTerm(r.URL.Query().Get("term"))
+	term := normalizeSemesterTerm(r.URL.Query().Get("term"))
 	adRepo := &repository.AdRepository{}
 
 	if academicYearStr != "" || term != "" {
@@ -116,7 +116,7 @@ func UploadAdminAd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	term := normalizeAdTerm(r.FormValue("term"))
+	term := normalizeSemesterTerm(r.FormValue("term"))
 	if term == "" {
 		errorResponse(w, http.StatusBadRequest, "term is required")
 		return
@@ -280,16 +280,6 @@ func deleteAdFromSupabase(storagePath string) error {
 		return fmt.Errorf("failed to delete image")
 	}
 	return nil
-}
-
-func normalizeAdTerm(value string) string {
-	value = strings.ToLower(strings.TrimSpace(value))
-	switch value {
-	case "spring", "fall", "intensive", "year":
-		return value
-	default:
-		return ""
-	}
 }
 
 func parseAdAcademicYear(value string) (int16, error) {

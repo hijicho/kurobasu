@@ -86,7 +86,7 @@ func CreateAdminTimetableImport(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, http.StatusBadRequest, "academic_year is required")
 		return
 	}
-	term := normalizeAdTerm(r.FormValue("term"))
+	term := normalizeSemesterTerm(r.FormValue("term"))
 	if term == "" {
 		errorResponse(w, http.StatusBadRequest, "term is required")
 		return
