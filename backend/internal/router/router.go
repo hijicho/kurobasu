@@ -96,7 +96,7 @@ func SetupRoutes() http.Handler {
 	// 効果：広告画像一覧の取得・アップロード（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/ads", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminAdsHandler())))
 	// DELETE /api/v1/admin/ads/{id}
-	// 効果：広告画像を無効化（admin/editor ロール）
+	// 効果：広告画像を物理削除（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/ads/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodDelete, handlers.DeleteAdminAd))))
 	// GET/POST /api/v1/admin/timetable-imports
 	// 効果：時間割PDFインポート（下書き）一覧の取得・新規アップロード（admin/editor ロール）

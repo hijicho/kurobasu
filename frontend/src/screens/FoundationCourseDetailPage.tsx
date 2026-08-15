@@ -6,15 +6,14 @@ import { getFoundationCourseData, FoundationCourseData } from '../lib/foundation
 
 interface FoundationCourseDetailPageProps {
   courseId?: string;
-  isAuthenticated?: boolean;
 }
 
-export function FoundationCourseDetailPage({ courseId = 'kaiseki-1-yamana', isAuthenticated = false }: FoundationCourseDetailPageProps) {
+export function FoundationCourseDetailPage({ courseId = 'kaiseki-1-yamana' }: FoundationCourseDetailPageProps) {
   const course = getFoundationCourseData(courseId);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
       
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb items={[

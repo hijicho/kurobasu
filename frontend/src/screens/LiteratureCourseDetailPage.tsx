@@ -6,15 +6,14 @@ import { getCourseDataById } from '../data/literatureCourses';
 
 interface LiteratureCourseDetailPageProps {
   courseId?: string;
-  isAuthenticated?: boolean;
 }
 
-export function LiteratureCourseDetailPage({ courseId = 'folklore-ono', isAuthenticated = false }: LiteratureCourseDetailPageProps) {
+export function LiteratureCourseDetailPage({ courseId = 'folklore-ono' }: LiteratureCourseDetailPageProps) {
   const courseData = getCourseDataById(courseId);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[

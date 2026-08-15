@@ -10,10 +10,6 @@ import hamubasuLogo from '../assets/59962a0286c10949e8d3fa57e1256b8b69b96d84.png
 import bgPattern from '../assets/c00c039666ebe180d57a090c8744e0552d438ca4.png';
 import titleImage from '../assets/573ad896cd92b11ef07ccb64a98726dc7a7aab11.png';
 
-interface TopPageProps {
-  isAuthenticated?: boolean;
-}
-
 const categoryHref = (slug: string) => {
   switch (slug) {
     case 'information-literacy':
@@ -36,7 +32,7 @@ const quickLinkConfigs = [
   { slug: 'english-native', icon: <Languages className="w-5 h-5" /> },
 ];
 
-export function TopPage({ isAuthenticated = false }: TopPageProps) {
+export function TopPage() {
   const [specializedOpen, setSpecializedOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -103,9 +99,7 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* ヘッダー */}
-      <Header
-        isAuthenticated={isAuthenticated}
-      />
+      <Header />
       
       <main className="flex-1">
         <div className="max-w-[1440px] mx-auto px-6 py-8">

@@ -7,11 +7,10 @@ import { ReviewSections } from '@/components/course-detail/ReviewSections';
 
 interface FirstYearSeminarDetailPageProps {
   courseId: string;
-  isAuthenticated: boolean;
   onBack?: () => void;
 }
 
-export function FirstYearSeminarDetailPage({ courseId, isAuthenticated, onBack }: FirstYearSeminarDetailPageProps) {
+export function FirstYearSeminarDetailPage({ courseId, onBack }: FirstYearSeminarDetailPageProps) {
   // courseIdで授業を検索
   const course = firstYearSeminarScheduleData.find(c => c.courseCode === courseId);
 

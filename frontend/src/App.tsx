@@ -94,7 +94,6 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>("top");
   const [currentCategory, setCurrentCategory] =
     useState<CategorySlug>("general");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedInstructorId, setSelectedInstructorId] = useState<string>("hayashi-yuki");
   const [selectedEnglishInstructorId, setSelectedEnglishInstructorId] = useState<string>("pollock-timothy-wayne");
   const [selectedJapaneseInstructorId, setSelectedJapaneseInstructorId] = useState<string>("ikari-yukio");
@@ -137,16 +136,13 @@ export default function App() {
         return (
           <LoginPage
             onLoginSuccess={() => {
-              setIsAuthenticated(true);
               setCurrentPage("top");
             }}
           />
         );
       case "top":
         return (
-          <TopPage
-            isAuthenticated={isAuthenticated}
-          />
+          <TopPage />
         );
       case "category":
         return (
@@ -162,7 +158,7 @@ export default function App() {
       case "course-detail":
         // Generic course-detail route: fall back to top for now (no generic CourseDetailPage in src/pages)
         return (
-          <TopPage isAuthenticated={isAuthenticated} />
+          <TopPage />
         );
       case "timetable-examples":
         return (
@@ -173,7 +169,6 @@ export default function App() {
       case "instructor-list":
         return (
           <InstructorListPage
-            isAuthenticated={isAuthenticated}
             onInstructorClick={(instructorId) => {
               setSelectedInstructorId(instructorId);
               setCurrentPage("instructor-detail");
@@ -184,13 +179,11 @@ export default function App() {
         return (
           <InstructorDetailPage
             instructorId={selectedInstructorId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "english-instructor-list":
         return (
           <EnglishInstructorListPage
-            isAuthenticated={isAuthenticated}
             onInstructorClick={(instructorId) => {
               setSelectedEnglishInstructorId(instructorId);
               setCurrentPage("english-instructor-detail");
@@ -201,13 +194,11 @@ export default function App() {
         return (
           <EnglishInstructorDetailPage
             instructorId={selectedEnglishInstructorId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "japanese-instructor-list":
         return (
           <JapaneseInstructorListPage
-            isAuthenticated={isAuthenticated}
             onInstructorClick={(instructorId) => {
               setSelectedJapaneseInstructorId(instructorId);
               setCurrentPage("japanese-instructor-detail");
@@ -218,13 +209,11 @@ export default function App() {
         return (
           <JapaneseInstructorDetailPage
             instructorId={selectedJapaneseInstructorId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "foundation-courses-list":
         return (
           <FoundationCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedFoundationCourseId(courseId);
               setCurrentPage("foundation-course-detail");
@@ -235,13 +224,11 @@ export default function App() {
         return (
           <FoundationCourseDetailPage
             courseId={selectedFoundationCourseId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "modern-system-courses-list":
         return (
           <ModernSystemCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedModernSystemCourseId(courseId);
               setCurrentPage("modern-system-course-detail");
@@ -252,14 +239,12 @@ export default function App() {
         return (
           <ModernSystemCourseDetailPage
             courseId={selectedModernSystemCourseId}
-            isAuthenticated={isAuthenticated}
             onNavigateToList={() => setCurrentPage("modern-system-courses-list")}
           />
         );
       case "general-education-list":
         return (
           <GeneralEducationListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedGeneralEducationId(courseId);
               setCurrentPage("general-education-detail");
@@ -271,14 +256,12 @@ export default function App() {
         return (
           <GeneralEducationDetailPage
             courseId={selectedGeneralEducationId}
-            isAuthenticated={isAuthenticated}
             onNavigateToList={() => setCurrentPage("general-education-list")}
           />
         );
       case "first-year-education-list":
         return (
           <FirstYearEducationListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedFirstYearEducationId(courseId);
               setCurrentPage("first-year-education-detail");
@@ -290,14 +273,12 @@ export default function App() {
         return (
           <FirstYearEducationDetailPage
             courseId={selectedFirstYearEducationId}
-            isAuthenticated={isAuthenticated}
             onNavigateToList={() => setCurrentPage("first-year-education-list")}
           />
         );
       case "commerce-courses-list":
         return (
           <CommerceCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedCommerceCourseId(courseId);
               setCurrentPage("commerce-course-detail");
@@ -308,14 +289,12 @@ export default function App() {
         return (
           <CommerceCourseDetailPage
             courseId={selectedCommerceCourseId}
-            isAuthenticated={isAuthenticated}
             onNavigateToList={() => setCurrentPage("commerce-courses-list")}
           />
         );
       case "engineering-courses-list":
         return (
           <EngineeringCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedEngineeringCourseId(courseId);
               setCurrentPage("engineering-course-detail");
@@ -326,13 +305,11 @@ export default function App() {
         return (
           <EngineeringCourseDetailPage
             courseId={selectedEngineeringCourseId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "law-courses-list":
         return (
           <LawCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedLawCourseId(courseId);
               setCurrentPage("law-course-detail");
@@ -343,13 +320,11 @@ export default function App() {
         return (
           <LawCourseDetailPage
             courseId={selectedLawCourseId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "science-courses-list":
         return (
           <ScienceCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedScienceCourseId(courseId);
               setCurrentPage("science-course-detail");
@@ -360,13 +335,11 @@ export default function App() {
         return (
           <ScienceCourseDetailPage
             courseId={selectedScienceCourseId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "literature-courses-list":
         return (
           <LiteratureCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedLiteratureCourseId(courseId);
               setCurrentPage("literature-course-detail");
@@ -377,13 +350,11 @@ export default function App() {
         return (
           <LiteratureCourseDetailPage
             courseId={selectedLiteratureCourseId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "medical-rehab-courses-list":
         return (
           <MedicalRehabCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedMedicalRehabCourseId(courseId);
               setCurrentPage("medical-rehab-course-detail");
@@ -394,13 +365,11 @@ export default function App() {
         return (
           <MedicalRehabCourseDetailPage
             courseId={selectedMedicalRehabCourseId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "nursing-courses-list":
         return (
           <NursingCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedNursingCourseId(courseId);
               setCurrentPage("nursing-course-detail");
@@ -411,13 +380,11 @@ export default function App() {
         return (
           <NursingCourseDetailPage
             courseId={selectedNursingCourseId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "economics-courses-list":
         return (
           <EconomicsCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedEconomicsCourseId(courseId);
               setCurrentPage("economics-course-detail");
@@ -428,13 +395,11 @@ export default function App() {
         return (
           <EconomicsCourseDetailPage
             courseId={selectedEconomicsCourseId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "life-science-courses-list":
         return (
           <LifeScienceCoursesListPage
-            isAuthenticated={isAuthenticated}
             onCourseClick={(courseId) => {
               setSelectedLifeScienceCourseId(courseId);
               setCurrentPage("life-science-course-detail");
@@ -445,32 +410,23 @@ export default function App() {
         return (
           <LifeScienceCourseDetailPage
             courseId={selectedLifeScienceCourseId}
-            isAuthenticated={isAuthenticated}
           />
         );
       case "veterinary-no-data":
         return (
-          <VeterinaryNoDataPage
-            isAuthenticated={isAuthenticated}
-          />
+          <VeterinaryNoDataPage />
         );
       case "medical-no-data":
         return (
-          <MedicalNoDataPage
-            isAuthenticated={isAuthenticated}
-          />
+          <MedicalNoDataPage />
         );
       case "agriculture-no-data":
         return (
-          <AgricultureNoDataPage
-            isAuthenticated={isAuthenticated}
-          />
+          <AgricultureNoDataPage />
         );
       default:
         return (
-          <TopPage
-            isAuthenticated={isAuthenticated}
-          />
+          <TopPage />
         );
     }
   };

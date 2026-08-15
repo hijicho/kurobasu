@@ -1,11 +1,9 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
 import { ScienceCourseDetailPage } from '@/screens/ScienceCourseDetailPage';
 
 export default function Page() {
   const params = useParams<{ id: string }>();
-  const { isAuthenticated } = useAuth();
-  return <ScienceCourseDetailPage courseId={params.id} isAuthenticated={isAuthenticated} />;
+  return <ScienceCourseDetailPage courseId={params.id} />;
 }
