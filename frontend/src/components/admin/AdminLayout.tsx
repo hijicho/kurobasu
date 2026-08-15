@@ -34,12 +34,26 @@ const roleLabels: Record<string, string> = {
   user: '一般ユーザー',
 };
 
+type AdminProfileCache = {
+  profile: UserProfile | null;
+  error: string | null;
+  errorStatus: number | null;
+  checked: boolean;
+};
+
+let adminProfileCache: AdminProfileCache = {
+  profile: null,
+  error: null,
+  errorStatus: null,
+  checked: false,
+};
+
 export default function AdminLayout({ children, currentPath, title, subtitle }: AdminLayoutProps) {
   const { getIdToken } = useAuth();
-  const [me, setMe] = useState<UserProfile | null>(null);
-  const [meError, setMeError] = useState<string | null>(null);
-  const [meErrorStatus, setMeErrorStatus] = useState<number | null>(null);
-  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [me, setMe] = useState<UserProfile | null>(adminProfileCache.profile);
+  const [meError, setMeError] = useState<string | null>(adminProfileCache.error);
+  const [meErrorStatus, setMeErrorStatus] = useState<number | null>(adminProfileCache.errorStatus);
+  const [checkingAccess, setCheckingAccess] = useState(!adminProfileCache.checked);
   const [editingName, setEditingName] = useState(false);
   const [displayNameDraft, setDisplayNameDraft] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -51,19 +65,37 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
     async function loadMe() {
       setMeError(null);
       setMeErrorStatus(null);
-      setCheckingAccess(true);
+      if (!adminProfileCache.checked) {
+        setCheckingAccess(true);
+      }
       try {
         const idToken = await getIdToken();
         const profile = await getAdminMe(idToken);
+        adminProfileCache = {
+          profile,
+          error: null,
+          errorStatus: null,
+          checked: true,
+        };
         if (!cancelled) {
           setMe(profile);
           setDisplayNameDraft(profile.display_name);
+          setMeError(null);
+          setMeErrorStatus(null);
         }
       } catch (err) {
+        const error = getApiErrorMessage(err, 'ユーザー情報を取得できませんでした。');
+        const errorStatus = err instanceof ApiError ? err.status : null;
+        adminProfileCache = {
+          profile: null,
+          error,
+          errorStatus,
+          checked: true,
+        };
         if (!cancelled) {
           setMe(null);
-          setMeErrorStatus(err instanceof ApiError ? err.status : null);
-          setMeError(getApiErrorMessage(err, 'ユーザー情報を取得できませんでした。'));
+          setMeErrorStatus(errorStatus);
+          setMeError(error);
         }
       } finally {
         if (!cancelled) {
@@ -107,6 +139,12 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
         throw new ApiError(401, 'Authorization header required');
       }
       const updated = await updateMe(idToken, nextName);
+      adminProfileCache = {
+        profile: updated,
+        error: null,
+        errorStatus: null,
+        checked: true,
+      };
       setMe(updated);
       setDisplayNameDraft(updated.display_name);
       setEditingName(false);
