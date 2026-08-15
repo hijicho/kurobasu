@@ -48,7 +48,7 @@ export function ModernSystemCourseDetailPage({ courseId = '' }: ModernSystemCour
         <Breadcrumb
           items={[
             { label: 'トップ', href: '/' },
-            { label: '現代システム科学域科目一覧', href: '/courses/specialized/modern-system' },
+            { label: '現代システム科学域科目一覧', href: '/courses/modern-system' },
             { label: name },
           ]}
         />

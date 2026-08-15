@@ -78,23 +78,27 @@ export function TopPage() {
       };
     })
     .filter((link): link is { title: string; icon: JSX.Element; href: string } => Boolean(link));
-  const specializedCategory = categoriesBySlug.get('specialized');
-
-  const specializedCourses = [
-    { name: '現代システム科学域', href: '/courses/specialized/modern-system' },
-    { name: '理学部', href: '/courses/specialized/science' },
-    { name: '工学部', href: '/courses/specialized/engineering' },
-    { name: '農学部', href: '/courses/specialized/agriculture' },
-    { name: '獣医学部', href: '/courses/specialized/veterinary' },
-    { name: '医学部医学科', href: '/courses/specialized/medicine' },
-    { name: '医学部リハビリテーション学科', href: '/courses/specialized/medical-rehab' },
-    { name: '看護学部', href: '/courses/specialized/nursing' },
-    { name: '生活科学部', href: '/courses/specialized/human-life' },
-    { name: '文学部', href: '/courses/specialized/literature' },
-    { name: '法学部', href: '/courses/specialized/law' },
-  { name: '経済学部', href: '/courses/specialized/economics' },
-    { name: '商学部', href: '/courses/specialized/commerce' },
+  const specializedSlugs = [
+    'modern-system',
+    'science',
+    'engineering',
+    'agriculture',
+    'veterinary',
+    'medicine',
+    'medical-rehab',
+    'nursing',
+    'human-life',
+    'literature',
+    'law',
+    'economics',
+    'commerce',
   ];
+  const specializedCourses = specializedSlugs
+    .map((slug) => {
+      const category = categoriesBySlug.get(slug);
+      return category ? { name: category.name, href: `/courses/${category.slug}` } : null;
+    })
+    .filter((course): course is { name: string; href: string } => Boolean(course));
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -155,7 +159,7 @@ export function TopPage() {
                 )}
 
                 {/* 専門科目（アコーディオン） */}
-                {specializedCategory && (
+                {specializedCourses.length > 0 && (
                   <div className="rounded-xl overflow-hidden">
                     <button
                       onClick={() => setSpecializedOpen(!specializedOpen)}
@@ -165,7 +169,7 @@ export function TopPage() {
                         <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center">
                           <GraduationCap className="w-5 h-5" style={{ color: '#000000' }} />
                         </div>
-                        <h3 className="font-bold text-[14px]">{specializedCategory.name}</h3>
+                        <h3 className="font-bold text-[14px]">専門科目</h3>
                       </div>
                       {specializedOpen ? (
                         <ChevronUp className="w-5 h-5" />

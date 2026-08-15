@@ -26,6 +26,7 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
   const [error, setError] = useState<string | null>(null);
   const [academicYear, setAcademicYear] = useState(2026);
   const [term] = useState('spring');
+  const usesTimetable = categoryId === 'general-education';
 
   // 授業データをAPIから取得
   useEffect(() => {
@@ -95,9 +96,9 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
     return slots;
   };
 
-  const timetableSlots = convertToTimetableSlots(offerings);
+  const timetableSlots = usesTimetable ? convertToTimetableSlots(offerings) : [];
   // 曜日・時限が定まらない授業（集中講義・時間割外）は時間割表に載らないため別枠で一覧表示する
-  const intensiveOfferings = offerings.filter((offering) => offering.meetings.length === 0);
+  const intensiveOfferings = usesTimetable ? offerings.filter((offering) => offering.meetings.length === 0) : [];
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -118,32 +119,36 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
           </button>
           <div>
             <h1 className="mb-2">{categoryName}</h1>
-            <p className="text-gray-600 text-sm">{academicYear}年度 前期。授業を選択すると詳細が表示されます</p>
+            <p className="text-gray-600 text-sm">
+              {academicYear}年度 前期。授業を選択すると詳細が表示されます
+            </p>
           </div>
         </div>
 
         {/* 凡例 */}
-        <div className="border border-[#2B4DCA] rounded-xl p-4 mb-6 bg-[#ffffff]">
-          <h3 className="text-sm mb-2">Lv（難易度・推奨度）</h3>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
-              <span className="text-gray-700">楽単！！</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
-              <span className="text-gray-700">普通</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
-              <span className="text-gray-700">興味があれば</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
-              <span className="text-gray-700">よほど興味があれば</span>
+        {usesTimetable && (
+          <div className="border border-[#2B4DCA] rounded-xl p-4 mb-6 bg-[#ffffff]">
+            <h3 className="text-sm mb-2">Lv（難易度・推奨度）</h3>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
+                <span className="text-gray-700">楽単！！</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
+                <span className="text-gray-700">普通</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
+                <span className="text-gray-700">興味があれば</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
+                <span className="text-gray-700">よほど興味があれば</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* 時間割表 */}
         {loading ? (
@@ -158,7 +163,7 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-sm text-gray-600">
             このカテゴリの授業データはまだ登録されていません。
           </div>
-        ) : (
+        ) : usesTimetable ? (
           <>
             <TimetableView
               slots={timetableSlots}
@@ -194,6 +199,32 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
               </div>
             )}
           </>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {offerings.map((offering) => {
+              const level = offering.rate;
+              return (
+                <button
+                  key={offering.offering_id}
+                  onClick={() => onCourseClick?.(String(offering.offering_id))}
+                  className="relative rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+                >
+                  {level && levelBadgeClasses[level] && (
+                    <span className={`absolute top-3 right-3 rounded px-1.5 py-0.5 text-[10px] font-bold ${levelBadgeClasses[level]}`}>
+                      {level}
+                    </span>
+                  )}
+                  <h3 className="mb-2 pr-10 text-base font-bold text-gray-900">{offering.subject.title}</h3>
+                  <p className="text-sm font-semibold text-gray-600">
+                    {offering.instructor_names.join('、') || '担当教員未設定'}
+                  </p>
+                  {offering.note && (
+                    <p className="mt-2 text-xs font-medium leading-snug text-gray-500">{offering.note}</p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         )}
       </main>
 

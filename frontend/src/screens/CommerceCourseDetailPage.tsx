@@ -814,7 +814,7 @@ export function CommerceCourseDetailPage({ courseId = 'accounting-basics-asano',
         {/* 一覧ページに戻るリンク */}
         <div className="mt-6 md:mt-8">
           <a
-            href="/courses/specialized/commerce"
+            href="/courses/commerce"
             className="inline-block text-sm md:text-base text-[#2B4DCA] hover:underline"
           >
             ← 商学部科目一覧に戻る

@@ -55,7 +55,19 @@ func seedCategories() []models.Category {
 		{Slug: "information-literacy", Name: "情報リテラシー科目", SortOrder: 4},
 		{Slug: "english-japanese", Name: "外国語科目(英語必修)-日本語教師", SortOrder: 5},
 		{Slug: "english-native", Name: "外国語科目(英語必修)-英語教師", SortOrder: 6},
-		{Slug: "specialized", Name: "専門科目", SortOrder: 7},
+		{Slug: "modern-system", Name: "現代システム科学域", SortOrder: 7},
+		{Slug: "science", Name: "理学部", SortOrder: 8},
+		{Slug: "engineering", Name: "工学部", SortOrder: 9},
+		{Slug: "agriculture", Name: "農学部", SortOrder: 10},
+		{Slug: "veterinary", Name: "獣医学部", SortOrder: 11},
+		{Slug: "medicine", Name: "医学部医学科", SortOrder: 12},
+		{Slug: "medical-rehab", Name: "医学部リハビリテーション学科", SortOrder: 13},
+		{Slug: "nursing", Name: "看護学部", SortOrder: 14},
+		{Slug: "human-life", Name: "生活科学部", SortOrder: 15},
+		{Slug: "literature", Name: "文学部", SortOrder: 16},
+		{Slug: "law", Name: "法学部", SortOrder: 17},
+		{Slug: "economics", Name: "経済学部", SortOrder: 18},
+		{Slug: "commerce", Name: "商学部", SortOrder: 19},
 	}
 	for i := range categories {
 		if err := config.DB.Where(models.Category{Slug: categories[i].Slug}).FirstOrCreate(&categories[i]).Error; err != nil {

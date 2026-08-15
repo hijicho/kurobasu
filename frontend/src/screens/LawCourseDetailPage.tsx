@@ -406,7 +406,7 @@ export function LawCourseDetailPage({ courseId = 'law-intro-naka-moriya-kanazawa
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[
           { label: 'トップ', href: '/' },
-          { label: '法学部科目一覧', href: '/courses/specialized/law' },
+          { label: '法学部科目一覧', href: '/courses/law' },
           { label: courseData.name },
         ]} />
 

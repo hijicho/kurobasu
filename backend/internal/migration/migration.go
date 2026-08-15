@@ -218,29 +218,40 @@ func syncUICategories() error {
 				sort_order integer NOT NULL
 			) ON COMMIT DROP;
 
-			INSERT INTO desired_categories (slug, name, sort_order) VALUES
-				('general-education', '総合教養科目（般教）', 1),
-				('first-year-education', '初年次教育科目（初ゼミ）', 2),
-				('foundation-list', '基礎教育科目', 3),
-				('information-literacy', '情報リテラシー科目', 4),
-				('english-japanese', '外国語科目(英語必修)-日本語教師', 5),
-				('english-native', '外国語科目(英語必修)-英語教師', 6),
-				('specialized', '専門科目', 7);
+				INSERT INTO desired_categories (slug, name, sort_order) VALUES
+					('general-education', '総合教養科目（般教）', 1),
+					('first-year-education', '初年次教育科目（初ゼミ）', 2),
+					('foundation-list', '基礎教育科目', 3),
+					('information-literacy', '情報リテラシー科目', 4),
+					('english-japanese', '外国語科目(英語必修)-日本語教師', 5),
+					('english-native', '外国語科目(英語必修)-英語教師', 6),
+					('modern-system', '現代システム科学域', 7),
+					('science', '理学部', 8),
+					('engineering', '工学部', 9),
+					('agriculture', '農学部', 10),
+					('veterinary', '獣医学部', 11),
+					('medicine', '医学部医学科', 12),
+					('medical-rehab', '医学部リハビリテーション学科', 13),
+					('nursing', '看護学部', 14),
+					('human-life', '生活科学部', 15),
+					('literature', '文学部', 16),
+					('law', '法学部', 17),
+					('economics', '経済学部', 18),
+					('commerce', '商学部', 19);
 
 			CREATE TEMP TABLE legacy_category_slugs (
 				old_slug text PRIMARY KEY,
 				new_slug text NOT NULL
 			) ON COMMIT DROP;
 
-			INSERT INTO legacy_category_slugs (old_slug, new_slug) VALUES
-				('science', 'general-education'),
-				('mathematics', 'foundation-list'),
-				('languages', 'english-japanese'),
-				('arts', 'specialized'),
-				('general', 'general-education'),
-				('foundation', 'foundation-list'),
-				('first-year-seminar', 'first-year-education'),
-				('english', 'english-native');
+				INSERT INTO legacy_category_slugs (old_slug, new_slug) VALUES
+					('mathematics', 'foundation-list'),
+					('languages', 'english-japanese'),
+					('arts', 'literature'),
+					('general', 'general-education'),
+					('foundation', 'foundation-list'),
+					('first-year-seminar', 'first-year-education'),
+					('english', 'english-native');
 
 			INSERT INTO categories (slug, name, sort_order)
 			SELECT d.slug, d.name, d.sort_order
@@ -256,9 +267,15 @@ func syncUICategories() error {
 			JOIN categories target ON target.slug = l.new_slug
 			WHERE s.category_id = legacy.category_id;
 
-			DELETE FROM categories c
-			USING legacy_category_slugs l
-			WHERE c.slug = l.old_slug;
+				DELETE FROM categories c
+				USING legacy_category_slugs l
+				WHERE c.slug = l.old_slug;
+
+				DELETE FROM categories c
+				WHERE c.slug = 'specialized'
+				  AND NOT EXISTS (
+					SELECT 1 FROM subjects s WHERE s.category_id = c.category_id
+				  );
 
 			UPDATE categories c
 			SET name = d.name,

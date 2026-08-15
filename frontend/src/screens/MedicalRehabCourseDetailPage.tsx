@@ -66,7 +66,7 @@ export function MedicalRehabCourseDetailPage({ courseId = 'morphology-function-1
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[
           { label: 'トップ', href: '/' },
-          { label: '医学部リハビリテーション学科科目一覧', href: '/courses/specialized/medical-rehab' },
+          { label: '医学部リハビリテーション学科科目一覧', href: '/courses/medical-rehab' },
           { label: courseData.name },
         ]} />
 

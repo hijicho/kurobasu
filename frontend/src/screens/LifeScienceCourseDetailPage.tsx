@@ -116,7 +116,7 @@ export function LifeScienceCourseDetailPage({ courseId }: LifeScienceCourseDetai
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[
           { label: 'トップ', href: '/' },
-          { label: '生活科学部科目一覧', href: '/courses/specialized/human-life' },
+          { label: '生活科学部科目一覧', href: '/courses/human-life' },
           { label: course.name },
         ]} />
 
@@ -151,7 +151,7 @@ export function LifeScienceCourseDetailPage({ courseId }: LifeScienceCourseDetai
         {/* 戻るリンク */}
         <div className="text-center">
           <a
-            href="/courses/specialized/human-life"
+            href="/courses/human-life"
             className="inline-block text-sm md:text-base text-[#2B4DCA] hover:underline"
           >
             ← 生活科学部科目一覧に戻る

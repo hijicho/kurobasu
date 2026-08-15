@@ -12,7 +12,19 @@ const categoryNames: Record<string, string> = {
   'information-literacy': '情報リテラシー科目',
   'english-japanese': '外国語科目(英語必修)-日本語教師',
   'english-native': '外国語科目(英語必修)-英語教師',
-  specialized: '専門科目',
+  'modern-system': '現代システム科学域',
+  science: '理学部',
+  engineering: '工学部',
+  agriculture: '農学部',
+  veterinary: '獣医学部',
+  medicine: '医学部医学科',
+  'medical-rehab': '医学部リハビリテーション学科',
+  nursing: '看護学部',
+  'human-life': '生活科学部',
+  literature: '文学部',
+  law: '法学部',
+  economics: '経済学部',
+  commerce: '商学部',
 };
 
 export default function Page() {

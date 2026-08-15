@@ -68,7 +68,7 @@ export function ModernSystemCoursesListPage({ onCourseClick }: ModernSystemCours
           {filteredCourses.map((course) => (
             <a
               key={course.id}
-              href={`/courses/specialized/modern-system/${course.id}`}
+              href={`/courses/modern-system/${course.id}`}
               onClick={() => handleCourseClick(course.id)}
               className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 hover:border-[#2B4DCA] hover:shadow-md transition-all text-left"
             >
