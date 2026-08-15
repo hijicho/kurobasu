@@ -11,16 +11,7 @@ import bgPattern from '../assets/c00c039666ebe180d57a090c8744e0552d438ca4.png';
 import titleImage from '../assets/image-1786800393446.png';
 
 const categoryHref = (slug: string) => {
-  switch (slug) {
-    case 'information-literacy':
-      return '/instructors/information-literacy';
-    case 'english-japanese':
-      return '/instructors/english-japanese';
-    case 'english-native':
-      return '/instructors/english-native';
-    default:
-      return `/courses/${slug}`;
-  }
+  return `/courses/${slug}`;
 };
 
 const quickLinkConfigs = [
