@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, BookMarked, Globe, Calendar, GraduationCap, Languages, ChevronDown, ChevronUp, Activity, Search } from 'lucide-react';
-import Link from 'next/link';
+import { BookOpen, BookMarked, Globe, GraduationCap, Languages, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { Footer } from '../components/Footer';
 import { ExternalLinkButton } from '../components/ExternalLinkButton';
 import { Header } from '../components/Header';
@@ -28,11 +27,19 @@ const categoryHref = (slug: string) => {
   }
 };
 
+const quickLinkConfigs = [
+  { slug: 'general-education', icon: <BookOpen className="w-5 h-5" /> },
+  { slug: 'first-year-education', icon: <GraduationCap className="w-5 h-5" /> },
+  { slug: 'foundation-list', icon: <BookMarked className="w-5 h-5" /> },
+  { slug: 'information-literacy', icon: <Globe className="w-5 h-5" /> },
+  { slug: 'english-japanese', icon: <Languages className="w-5 h-5" /> },
+  { slug: 'english-native', icon: <Languages className="w-5 h-5" /> },
+];
+
 export function TopPage({ isAuthenticated = false }: TopPageProps) {
   const [specializedOpen, setSpecializedOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // カテゴリデータをAPIから取得
@@ -41,7 +48,6 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
 
     const fetchCategories = async () => {
       try {
-        setLoading(true);
         const response = await getCategories();
         if (!cancelled) {
           setCategories(response.items);
@@ -53,10 +59,6 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
           setCategories([]);
           setError('カテゴリを取得できませんでした。');
         }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
       }
     };
 
@@ -66,38 +68,21 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
     };
   }, []);
 
-  const quickLinks = [
-    {
-      title: '総合教養科目（般教）',
-      icon: <BookOpen className="w-5 h-5" />,
-      href: '/courses/general-education',
-    },
-    {
-      title: '初年次教育科目（初ゼミ）',
-      icon: <GraduationCap className="w-5 h-5" />,
-      href: '/courses/first-year-education',
-    },
-    {
-      title: '基礎教育科目',
-      icon: <BookMarked className="w-5 h-5" />,
-      href: '/courses/foundation-list',
-    },
-    {
-      title: '情報リテラシー科目',
-      icon: <Globe className="w-5 h-5" />,
-      href: '/instructors/information-literacy',
-    },
-    {
-      title: '外国語科目(英語必修)-日本語教師',
-      icon: <Languages className="w-5 h-5" />,
-      href: '/instructors/english-japanese',
-    },
-    {
-      title: '外国語科目(英語必修)-英語教師',
-      icon: <Languages className="w-5 h-5" />,
-      href: '/instructors/english-native',
-    },
-  ];
+  const categoriesBySlug = new Map(categories.map((category) => [category.slug, category]));
+  const quickLinks = quickLinkConfigs
+    .map((config) => {
+      const category = categoriesBySlug.get(config.slug);
+      if (!category) {
+        return null;
+      }
+      return {
+        title: category.name,
+        icon: config.icon,
+        href: categoryHref(category.slug),
+      };
+    })
+    .filter((link): link is { title: string; icon: JSX.Element; href: string } => Boolean(link));
+  const specializedCategory = categoriesBySlug.get('specialized');
 
   const specializedCourses = [
     { name: '現代システム科学域', href: '/courses/specialized/modern-system' },
@@ -153,92 +138,78 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
               backgroundPosition: 'center',
             }}
           >
-            {/* カテゴリボタン */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-              {quickLinks.map((link, index) => (
-                <a
-                  key={index}
-                  href={link.href}
-                  className="flex items-center gap-3 p-2.5 bg-white rounded-xl hover:shadow-lg transition-all"
-                >
-                  <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center shrink-0">
-                    {link.icon}
-                  </div>
-                  <h3 className="font-bold leading-tight text-[14px]">{link.title}</h3>
-                </a>
-              ))}
-            </div>
-
-            {/* 専門科目（アコーディオン） */}
-            <div className="rounded-xl overflow-hidden">
-              <button
-                onClick={() => setSpecializedOpen(!specializedOpen)}
-                className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center">
-                    <GraduationCap className="w-5 h-5" style={{ color: '#000000' }} />
-                  </div>
-                  <h3 className="font-bold text-[14px]">専門科目</h3>
-                </div>
-                {specializedOpen ? (
-                  <ChevronUp className="w-5 h-5" />
-                ) : (
-                  <ChevronDown className="w-5 h-5" />
-                )}
-              </button>
-              
-              {specializedOpen && (
-                <div className="px-3 pb-3 bg-white">
-                  <div className="pt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {specializedCourses.map((course, index) => (
-                      (course as any).disabled ? (
-                        <div
-                          key={index}
-                          className="px-3 py-2 bg-gray-200 rounded-lg text-center text-xs md:text-sm text-gray-500 cursor-not-allowed"
-                        >
-                          <div>{course.name}</div>
-                          <div className="text-xs text-red-600 mt-1">※修正中です</div>
+            {error ? (
+              <div className="bg-white rounded-xl p-4 text-sm text-red-700">{error}</div>
+            ) : (
+              <>
+                {/* カテゴリボタン */}
+                {quickLinks.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                    {quickLinks.map((link) => (
+                      <a
+                        key={link.href}
+                        href={link.href}
+                        className="flex items-center gap-3 p-2.5 bg-white rounded-xl hover:shadow-lg transition-all"
+                      >
+                        <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center shrink-0">
+                          {link.icon}
                         </div>
-                      ) : (
-                        <a
-                          key={index}
-                          href={course.href}
-                          className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-theme-primary-light transition-colors text-center text-xs md:text-sm"
-                        >
-                          {course.name}
-                        </a>
-                      )
+                        <h3 className="font-bold leading-tight text-[14px]">{link.title}</h3>
+                      </a>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
+                )}
 
-          {(categories.length > 0 || error) && (
-            <section className="mb-6 bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <h2 className="text-base font-bold">登録済みカテゴリ</h2>
-                {loading && <span className="text-xs text-gray-500">読み込み中</span>}
-              </div>
-              {error ? (
-                <p className="text-xs text-red-700">{error}</p>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {categories.map((category) => (
-                    <Link
-                      key={category.category_id}
-                      href={categoryHref(category.slug)}
-                      className="px-3 py-2 bg-gray-50 rounded-lg hover:bg-theme-primary-light transition-colors text-center text-xs md:text-sm"
+                {/* 専門科目（アコーディオン） */}
+                {specializedCategory && (
+                  <div className="rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => setSpecializedOpen(!specializedOpen)}
+                      className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
                     >
-                      {category.name}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center">
+                          <GraduationCap className="w-5 h-5" style={{ color: '#000000' }} />
+                        </div>
+                        <h3 className="font-bold text-[14px]">{specializedCategory.name}</h3>
+                      </div>
+                      {specializedOpen ? (
+                        <ChevronUp className="w-5 h-5" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5" />
+                      )}
+                    </button>
+
+                    {specializedOpen && (
+                      <div className="px-3 pb-3 bg-white">
+                        <div className="pt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {specializedCourses.map((course, index) => (
+                            (course as any).disabled ? (
+                              <div
+                                key={index}
+                                className="px-3 py-2 bg-gray-200 rounded-lg text-center text-xs md:text-sm text-gray-500 cursor-not-allowed"
+                              >
+                                <div>{course.name}</div>
+                                <div className="text-xs text-red-600 mt-1">※修正中です</div>
+                              </div>
+                            ) : (
+                              <a
+                                key={index}
+                                href={course.href}
+                                className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-theme-primary-light transition-colors text-center text-xs md:text-sm"
+                              >
+                                {course.name}
+                              </a>
+                            )
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           {/* 外部リンク */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
