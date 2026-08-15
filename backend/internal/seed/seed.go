@@ -56,6 +56,7 @@ func seedCategories() []models.Category {
 		{Slug: "english-japanese", Name: "外国語科目(英語必修)-日本語教師", SortOrder: 5},
 		{Slug: "english-native", Name: "外国語科目(英語必修)-英語教師", SortOrder: 6},
 		{Slug: "specialized", Name: "専門科目", SortOrder: 7},
+		{Slug: "second-language", Name: "第二外国語", SortOrder: 8},
 	}
 	for i := range categories {
 		if err := config.DB.Where(models.Category{Slug: categories[i].Slug}).FirstOrCreate(&categories[i]).Error; err != nil {

@@ -34,6 +34,7 @@ const quickLinkConfigs = [
 
 export function TopPage() {
   const [specializedOpen, setSpecializedOpen] = useState(false);
+  const [secondLanguageOpen, setSecondLanguageOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +97,14 @@ export function TopPage() {
     { name: '商学部', href: '/courses/specialized/commerce' },
   ];
 
+  const secondLanguageCourses = [
+    { name: '中国語', href: '/courses/second-language/chinese' },
+    { name: '朝鮮語', href: '/courses/second-language/korean' },
+    { name: 'ロシア語', href: '/courses/second-language/russian' },
+    { name: 'ドイツ語', href: '/courses/second-language/german' },
+    { name: 'フランス語', href: '/courses/second-language/french' },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* ヘッダー */}
@@ -152,53 +161,96 @@ export function TopPage() {
                   </div>
                 )}
 
-                {/* 専門科目（アコーディオン） */}
-                {specializedCategory && (
-                  <div className="rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setSpecializedOpen(!specializedOpen)}
-                      className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center">
-                          <GraduationCap className="w-5 h-5" style={{ color: '#000000' }} />
-                        </div>
-                        <h3 className="font-bold text-[14px]">{specializedCategory.name}</h3>
-                      </div>
-                      {specializedOpen ? (
-                        <ChevronUp className="w-5 h-5" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5" />
-                      )}
-                    </button>
+                {/* 専門科目 + 第二外国語 */}
+                <div className="flex gap-4 items-start">
+                  {/* 専門科目（PC:2/3・スマホ:1/2） */}
+                  <div className="w-1/2 md:w-2/3">
+                    {specializedCategory && (
+                      <div className="rounded-xl overflow-hidden">
+                        <button
+                          onClick={() => setSpecializedOpen(!specializedOpen)}
+                          className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center">
+                              <GraduationCap className="w-5 h-5" style={{ color: '#000000' }} />
+                            </div>
+                            <h3 className="font-bold text-[14px]">{specializedCategory.name}</h3>
+                          </div>
+                          {specializedOpen ? (
+                            <ChevronUp className="w-5 h-5" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5" />
+                          )}
+                        </button>
 
-                    {specializedOpen && (
-                      <div className="px-3 pb-3 bg-white">
-                        <div className="pt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-                          {specializedCourses.map((course, index) => (
-                            (course as any).disabled ? (
-                              <div
-                                key={index}
-                                className="px-3 py-2 bg-gray-200 rounded-lg text-center text-xs md:text-sm text-gray-500 cursor-not-allowed"
-                              >
-                                <div>{course.name}</div>
-                                <div className="text-xs text-red-600 mt-1">※修正中です</div>
-                              </div>
-                            ) : (
-                              <a
-                                key={index}
-                                href={course.href}
-                                className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-theme-primary-light transition-colors text-center text-xs md:text-sm"
-                              >
-                                {course.name}
-                              </a>
-                            )
-                          ))}
-                        </div>
+                        {specializedOpen && (
+                          <div className="px-3 pb-3 bg-white">
+                            <div className="pt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {specializedCourses.map((course, index) => (
+                                (course as any).disabled ? (
+                                  <div
+                                    key={index}
+                                    className="px-3 py-2 bg-gray-200 rounded-lg text-center text-xs md:text-sm text-gray-500 cursor-not-allowed"
+                                  >
+                                    <div>{course.name}</div>
+                                    <div className="text-xs text-red-600 mt-1">※修正中です</div>
+                                  </div>
+                                ) : (
+                                  <a
+                                    key={index}
+                                    href={course.href}
+                                    className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-theme-primary-light transition-colors text-center text-xs md:text-sm"
+                                  >
+                                    {course.name}
+                                  </a>
+                                )
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
+
+                  {/* 第二外国語（PC:1/3・スマホ:1/2） */}
+                  <div className="w-1/2 md:w-1/3">
+                    <div className="rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => setSecondLanguageOpen(!secondLanguageOpen)}
+                        className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center shrink-0">
+                            <Languages className="w-5 h-5" />
+                          </div>
+                          <h3 className="font-bold text-[14px]">第二外国語</h3>
+                        </div>
+                        {secondLanguageOpen ? (
+                          <ChevronUp className="w-5 h-5 shrink-0" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 shrink-0" />
+                        )}
+                      </button>
+
+                      {secondLanguageOpen && (
+                        <div className="px-3 pb-3 bg-white">
+                          <div className="pt-2 flex flex-col gap-1.5">
+                            {secondLanguageCourses.map((course) => (
+                              <a
+                                key={course.href}
+                                href={course.href}
+                                className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-theme-primary-light transition-colors text-left text-xs md:text-sm"
+                              >
+                                {course.name}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </>
             )}
           </div>

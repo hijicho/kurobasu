@@ -231,7 +231,8 @@ func syncUICategories() error {
 				('information-literacy', '情報リテラシー科目', 4),
 				('english-japanese', '外国語科目(英語必修)-日本語教師', 5),
 				('english-native', '外国語科目(英語必修)-英語教師', 6),
-				('specialized', '専門科目', 7);
+				('specialized', '専門科目', 7),
+				('second-language', '第二外国語', 8);
 
 			CREATE TEMP TABLE legacy_category_slugs (
 				old_slug text PRIMARY KEY,
