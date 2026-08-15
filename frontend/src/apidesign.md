@@ -24,12 +24,12 @@
 }
 ```
 
-（任意）デフォルト年度をサーバで決めたい場合
-- **GET** `/api/v1/meta/default-academic-year`
+デフォルト公開年度・学期をサーバで決める
+- **GET** `/api/v1/meta/site-settings`
 
 返す例：
 ```json
-{ "academic_year": 2026 前期}　
+{ "default_academic_year": 2026, "default_term": "spring" }
 ```
 
 ---

@@ -4,11 +4,14 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { TimetableView } from '../components/TimetableView';
 import { Breadcrumb } from '../components/Breadcrumb';
-import { getDefaultAcademicYear, getDefaultTerm, getOfferings, Offering } from '../lib/api';
+import { getOfferings, Offering } from '../lib/api';
+import { publicTopPath, termLabels } from '../lib/public-routing';
 
 interface CategoryPageProps {
   categoryName: string;
   categoryId: string;
+  academicYear: number;
+  term: string;
   onNavigateBack?: () => void;
   onCourseClick?: (courseId: string) => void;
 }
@@ -20,57 +23,28 @@ const levelBadgeClasses: Record<string, string> = {
   C: 'bg-blue-100 text-blue-700',
 };
 
-const termOptions = [
-  { key: 'spring', label: '前期' },
-  { key: 'fall', label: '後期' },
-];
-
-// 管理画面での上書きが無い場合のフォールバック: 4〜9月は前期、10〜3月は後期
-const getFallbackTerm = () => {
-  const month = new Date().getMonth() + 1;
-  return month >= 4 && month <= 9 ? 'spring' : 'fall';
-};
-
-export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCourseClick }: CategoryPageProps) {
+export function CategoryPage({
+  categoryName,
+  categoryId,
+  academicYear,
+  term,
+  onNavigateBack,
+  onCourseClick,
+}: CategoryPageProps) {
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [academicYear, setAcademicYear] = useState(2026);
-  // null = まだデフォルト学期(管理画面の設定またはカレンダー基準)を取得できていない
-  const [term, setTerm] = useState<string | null>(null);
-
-  // 管理画面で設定されたデフォルト学期を初回のみ取得する
-  useEffect(() => {
-    let cancelled = false;
-
-    getDefaultTerm()
-      .then((res) => {
-        if (!cancelled) setTerm(res.term);
-      })
-      .catch(() => {
-        if (!cancelled) setTerm(getFallbackTerm());
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const usesTimetable = categoryId === 'general-education';
 
   // 授業データをAPIから取得
   useEffect(() => {
-    if (term === null) {
-      return;
-    }
-
     let cancelled = false;
 
     const fetchOfferings = async () => {
       try {
         setLoading(true);
-        const meta = await getDefaultAcademicYear().catch(() => ({ academic_year: academicYear }));
-        const response = await getOfferings(categoryId, meta.academic_year, term);
+        const response = await getOfferings(categoryId, academicYear, term);
         if (!cancelled) {
-          setAcademicYear(meta.academic_year);
           setOfferings(response.items);
           setError(null);
         }
@@ -91,7 +65,7 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
     return () => {
       cancelled = true;
     };
-  }, [categoryId, term]);
+  }, [academicYear, categoryId, term]);
 
   // APIデータを時間割ビュー用のフォーマットに変換
   const convertToTimetableSlots = (offerings: Offering[]) => {
@@ -128,9 +102,9 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
     return slots;
   };
 
-  const timetableSlots = convertToTimetableSlots(offerings);
+  const timetableSlots = usesTimetable ? convertToTimetableSlots(offerings) : [];
   // 曜日・時限が定まらない授業（集中講義・時間割外）は時間割表に載らないため別枠で一覧表示する
-  const intensiveOfferings = offerings.filter((offering) => offering.meetings.length === 0);
+  const intensiveOfferings = usesTimetable ? offerings.filter((offering) => offering.meetings.length === 0) : [];
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -138,7 +112,7 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
       
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb items={[
-          { label: 'トップ', href: '/' },
+          { label: 'トップ', href: publicTopPath(academicYear, term) },
           { label: categoryName },
         ]} />
 
@@ -152,49 +126,35 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
           <div>
             <h1 className="mb-2">{categoryName}</h1>
             <p className="text-gray-600 text-sm">
-              {academicYear}年度 {termOptions.find((t) => t.key === term)?.label ?? term}。授業を選択すると詳細が表示されます
+              {academicYear}年度 {termLabels[term] ?? term}。授業を選択すると詳細が表示されます
             </p>
-          </div>
-
-          <div className="ml-auto flex gap-2">
-            {termOptions.map((option) => (
-              <button
-                key={option.key}
-                onClick={() => setTerm(option.key)}
-                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                  term === option.key
-                    ? 'bg-[#2B4DCA] text-white border-[#2B4DCA]'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-[#2B4DCA]'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
           </div>
         </div>
 
         {/* 凡例 */}
-        <div className="border border-[#2B4DCA] rounded-xl p-4 mb-6 bg-[#ffffff]">
-          <h3 className="text-sm mb-2">Lv（難易度・推奨度）</h3>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
-              <span className="text-gray-700">楽単！！</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
-              <span className="text-gray-700">普通</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
-              <span className="text-gray-700">興味があれば</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
-              <span className="text-gray-700">よほど興味があれば</span>
+        {usesTimetable && (
+          <div className="border border-[#2B4DCA] rounded-xl p-4 mb-6 bg-[#ffffff]">
+            <h3 className="text-sm mb-2">Lv（難易度・推奨度）</h3>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
+                <span className="text-gray-700">楽単！！</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
+                <span className="text-gray-700">普通</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
+                <span className="text-gray-700">興味があれば</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
+                <span className="text-gray-700">よほど興味があれば</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* 時間割表 */}
         {loading ? (
@@ -209,7 +169,7 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-sm text-gray-600">
             このカテゴリの授業データはまだ登録されていません。
           </div>
-        ) : (
+        ) : usesTimetable ? (
           <>
             <TimetableView
               slots={timetableSlots}
@@ -245,6 +205,32 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
               </div>
             )}
           </>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {offerings.map((offering) => {
+              const level = offering.rate;
+              return (
+                <button
+                  key={offering.offering_id}
+                  onClick={() => onCourseClick?.(String(offering.offering_id))}
+                  className="relative rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+                >
+                  {level && levelBadgeClasses[level] && (
+                    <span className={`absolute top-3 right-3 rounded px-1.5 py-0.5 text-[10px] font-bold ${levelBadgeClasses[level]}`}>
+                      {level}
+                    </span>
+                  )}
+                  <h3 className="mb-2 pr-10 text-base font-bold text-gray-900">{offering.subject.title}</h3>
+                  <p className="text-sm font-semibold text-gray-600">
+                    {offering.instructor_names.join('、') || '担当教員未設定'}
+                  </p>
+                  {offering.note && (
+                    <p className="mt-2 text-xs font-medium leading-snug text-gray-500">{offering.note}</p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         )}
       </main>
 

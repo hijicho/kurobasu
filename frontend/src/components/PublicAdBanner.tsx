@@ -1,72 +1,61 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_ORIGIN, getDefaultAcademicYear, listAds, type AdImage } from '../lib/api';
+import { listAds, type AdImage } from '@/lib/api';
 
 interface PublicAdBannerProps {
-  term?: string;
+  academicYear: number;
+  term: string;
 }
 
-const getImageSrc = (imageUrl: string) => {
-  if (imageUrl.startsWith('http')) {
-    return imageUrl;
-  }
-  return `${API_ORIGIN}${imageUrl}`;
-};
-
-export function PublicAdBanner({ term = 'spring' }: PublicAdBannerProps) {
-  const [ad, setAd] = useState<AdImage | null>(null);
+export function PublicAdBanner({ academicYear, term }: PublicAdBannerProps) {
+  const [ads, setAds] = useState<AdImage[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadAd() {
+    async function loadAds() {
       try {
-        const { academic_year } = await getDefaultAcademicYear();
-        const response = await listAds(academic_year, term);
+        const response = await listAds(academicYear, term);
         if (!cancelled) {
-          setAd(response.items.find((item) => item.is_active) ?? null);
+          setAds(response.items.filter((ad) => ad.is_active));
         }
       } catch (error) {
         console.error('Failed to load ads:', error);
         if (!cancelled) {
-          setAd(null);
+          setAds([]);
         }
       }
     }
 
-    loadAd();
+    loadAds();
     return () => {
       cancelled = true;
     };
-  }, [term]);
+  }, [academicYear, term]);
 
-  // 縦横比 1:5（縦:横）の広告枠。未掲載時は枠だけ表示して空きであることを示す。
+  if (ads.length === 0) {
+    return null;
+  }
+
   return (
-    <section aria-label="広告">
-      {ad ? (
+    <section className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4" aria-label="広告">
+      {ads.map((ad) => (
         <a
-          href={getImageSrc(ad.image_url)}
+          key={ad.ad_id}
+          href={ad.image_url}
           target="_blank"
           rel="noreferrer"
-          className="block w-full overflow-hidden rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
-          style={{ aspectRatio: '5 / 1' }}
+          className="block overflow-hidden rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
         >
           <img
-            src={getImageSrc(ad.image_url)}
+            src={ad.image_url}
             alt={ad.original_filename || '広告'}
-            className="h-full w-full object-contain bg-white"
+            className="h-28 md:h-36 w-full object-contain bg-white"
             loading="lazy"
           />
         </a>
-      ) : (
-        <div
-          className="flex w-full items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-100 text-xs text-gray-400"
-          style={{ aspectRatio: '5 / 1' }}
-        >
-          広告枠（現在未掲載です）
-        </div>
-      )}
+      ))}
     </section>
   );
 }

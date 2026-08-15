@@ -149,6 +149,12 @@ type ListUsersResponse struct {
 	RoleCounts map[string]int `json:"role_counts"`
 }
 
+type SiteSettingsResponse struct {
+	DefaultAcademicYear int16     `json:"default_academic_year"`
+	DefaultTerm         string    `json:"default_term"`
+	UpdatedAt           time.Time `json:"updated_at"`
+}
+
 // UpdateUserRoleRequest はユーザーのロール変更リクエスト
 type UpdateUserRoleRequest struct {
 	Role string `json:"role"`
@@ -191,6 +197,11 @@ type BootstrapUserRequest struct {
 // UpdateUserRequest
 type UpdateUserRequest struct {
 	DisplayName string `json:"display_name"`
+}
+
+type UpdateSiteSettingsRequest struct {
+	DefaultAcademicYear int16  `json:"default_academic_year"`
+	DefaultTerm         string `json:"default_term"`
 }
 
 // CreateTimetableRequest

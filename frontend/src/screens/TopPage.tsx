@@ -6,22 +6,10 @@ import { Header } from '../components/Header';
 import { GlossaryModal } from '../components/GlossaryModal';
 import { PublicAdBanner } from '../components/PublicAdBanner';
 import { getCategories, Category } from '../lib/api';
+import { publicCategoryPath, termLabels } from '../lib/public-routing';
 import hamubasuLogo from '../assets/59962a0286c10949e8d3fa57e1256b8b69b96d84.png';
 import bgPattern from '../assets/c00c039666ebe180d57a090c8744e0552d438ca4.png';
 import titleImage from '../assets/image-1786800393446.png';
-
-const categoryHref = (slug: string) => {
-  switch (slug) {
-    case 'information-literacy':
-      return '/instructors/information-literacy';
-    case 'english-japanese':
-      return '/instructors/english-japanese';
-    case 'english-native':
-      return '/instructors/english-native';
-    default:
-      return `/courses/${slug}`;
-  }
-};
 
 const quickLinkConfigs = [
   { slug: 'general-education', icon: <BookOpen className="w-5 h-5" /> },
@@ -32,9 +20,13 @@ const quickLinkConfigs = [
   { slug: 'english-native', icon: <Languages className="w-5 h-5" /> },
 ];
 
-export function TopPage() {
+interface TopPageProps {
+  academicYear: number;
+  term: string;
+}
+
+export function TopPage({ academicYear, term }: TopPageProps) {
   const [specializedOpen, setSpecializedOpen] = useState(false);
-  const [secondLanguageOpen, setSecondLanguageOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -75,35 +67,31 @@ export function TopPage() {
       return {
         title: category.name,
         icon: config.icon,
-        href: categoryHref(category.slug),
+        href: publicCategoryPath(academicYear, term, category.slug),
       };
     })
     .filter((link): link is { title: string; icon: JSX.Element; href: string } => Boolean(link));
-  const specializedCategory = categoriesBySlug.get('specialized');
-
-  const specializedCourses = [
-    { name: '現代システム科学域', href: '/courses/specialized/modern-system' },
-    { name: '理学部', href: '/courses/specialized/science' },
-    { name: '工学部', href: '/courses/specialized/engineering' },
-    { name: '農学部', href: '/courses/specialized/agriculture' },
-    { name: '獣医学部', href: '/courses/specialized/veterinary' },
-    { name: '医学部医学科', href: '/courses/specialized/medicine' },
-    { name: '医学部リハビリテーション学科', href: '/courses/specialized/medical-rehab' },
-    { name: '看護学部', href: '/courses/specialized/nursing' },
-    { name: '生活科学部', href: '/courses/specialized/human-life' },
-    { name: '文学部', href: '/courses/specialized/literature' },
-    { name: '法学部', href: '/courses/specialized/law' },
-  { name: '経済学部', href: '/courses/specialized/economics' },
-    { name: '商学部', href: '/courses/specialized/commerce' },
+  const specializedSlugs = [
+    'modern-system',
+    'science',
+    'engineering',
+    'agriculture',
+    'veterinary',
+    'medicine',
+    'medical-rehab',
+    'nursing',
+    'human-life',
+    'literature',
+    'law',
+    'economics',
+    'commerce',
   ];
-
-  const secondLanguageCourses = [
-    { name: '中国語', href: '/courses/second-language/chinese' },
-    { name: '朝鮮語', href: '/courses/second-language/korean' },
-    { name: 'ロシア語', href: '/courses/second-language/russian' },
-    { name: 'ドイツ語', href: '/courses/second-language/german' },
-    { name: 'フランス語', href: '/courses/second-language/french' },
-  ];
+  const specializedCourses = specializedSlugs
+    .map((slug) => {
+      const category = categoriesBySlug.get(slug);
+      return category ? { name: category.name, href: publicCategoryPath(academicYear, term, category.slug) } : null;
+    })
+    .filter((course): course is { name: string; href: string } => Boolean(course));
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -115,8 +103,9 @@ export function TopPage() {
           {/* 年度表示 */}
           <div className="text-center mb-6">
               <div className="flex justify-center mb-2">
-              <img src={titleImage.src ?? titleImage} alt="2025年度 後期" className="h-12 md:h-16 w-auto" />
+              <img src={titleImage.src ?? titleImage} alt={`${academicYear}年度 ${termLabels[term] ?? term}`} className="h-12 md:h-16 w-auto" />
             </div>
+            <p className="text-sm font-bold text-gray-700">{academicYear}年度 {termLabels[term] ?? term}</p>
             <p className="text-xs text-gray-500 mt-3">何かあれば @kurobasu_ocu まで連絡を。<br />落単・情報の誤りには一切責任を負いません。</p>
           </div>
 
@@ -129,6 +118,8 @@ export function TopPage() {
               大学用語はこちら
             </button>
           </div>
+
+          <PublicAdBanner academicYear={academicYear} term={term} />
 
           {/* カテゴリボタン＆専門科目セクション - 統一背景 */}
           <div 
@@ -161,96 +152,53 @@ export function TopPage() {
                   </div>
                 )}
 
-                {/* 専門科目 + 第二外国語 */}
-                <div className="flex gap-4 items-start">
-                  {/* 専門科目（PC:2/3・スマホ:1/2） */}
-                  <div className="w-1/2 md:w-2/3">
-                    {specializedCategory && (
-                      <div className="rounded-xl overflow-hidden">
-                        <button
-                          onClick={() => setSpecializedOpen(!specializedOpen)}
-                          className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center">
-                              <GraduationCap className="w-5 h-5" style={{ color: '#000000' }} />
-                            </div>
-                            <h3 className="font-bold text-[14px]">{specializedCategory.name}</h3>
-                          </div>
-                          {specializedOpen ? (
-                            <ChevronUp className="w-5 h-5" />
-                          ) : (
-                            <ChevronDown className="w-5 h-5" />
-                          )}
-                        </button>
-
-                        {specializedOpen && (
-                          <div className="px-3 pb-3 bg-white">
-                            <div className="pt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-                              {specializedCourses.map((course, index) => (
-                                (course as any).disabled ? (
-                                  <div
-                                    key={index}
-                                    className="px-3 py-2 bg-gray-200 rounded-lg text-center text-xs md:text-sm text-gray-500 cursor-not-allowed"
-                                  >
-                                    <div>{course.name}</div>
-                                    <div className="text-xs text-red-600 mt-1">※修正中です</div>
-                                  </div>
-                                ) : (
-                                  <a
-                                    key={index}
-                                    href={course.href}
-                                    className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-theme-primary-light transition-colors text-center text-xs md:text-sm"
-                                  >
-                                    {course.name}
-                                  </a>
-                                )
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 第二外国語（PC:1/3・スマホ:1/2） */}
-                  <div className="w-1/2 md:w-1/3">
-                    <div className="rounded-xl overflow-hidden">
-                      <button
-                        onClick={() => setSecondLanguageOpen(!secondLanguageOpen)}
-                        className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center shrink-0">
-                            <Languages className="w-5 h-5" />
-                          </div>
-                          <h3 className="font-bold text-[14px]">第二外国語</h3>
+                {/* 専門科目（アコーディオン） */}
+                {specializedCourses.length > 0 && (
+                  <div className="rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => setSpecializedOpen(!specializedOpen)}
+                      className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center">
+                          <GraduationCap className="w-5 h-5" style={{ color: '#000000' }} />
                         </div>
-                        {secondLanguageOpen ? (
-                          <ChevronUp className="w-5 h-5 shrink-0" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 shrink-0" />
-                        )}
-                      </button>
+                        <h3 className="font-bold text-[14px]">専門科目</h3>
+                      </div>
+                      {specializedOpen ? (
+                        <ChevronUp className="w-5 h-5" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5" />
+                      )}
+                    </button>
 
-                      {secondLanguageOpen && (
-                        <div className="px-3 pb-3 bg-white">
-                          <div className="pt-2 flex flex-col gap-1.5">
-                            {secondLanguageCourses.map((course) => (
+                    {specializedOpen && (
+                      <div className="px-3 pb-3 bg-white">
+                        <div className="pt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {specializedCourses.map((course, index) => (
+                            (course as any).disabled ? (
+                              <div
+                                key={index}
+                                className="px-3 py-2 bg-gray-200 rounded-lg text-center text-xs md:text-sm text-gray-500 cursor-not-allowed"
+                              >
+                                <div>{course.name}</div>
+                                <div className="text-xs text-red-600 mt-1">※修正中です</div>
+                              </div>
+                            ) : (
                               <a
-                                key={course.href}
+                                key={index}
                                 href={course.href}
-                                className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-theme-primary-light transition-colors text-left text-xs md:text-sm"
+                                className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-theme-primary-light transition-colors text-center text-xs md:text-sm"
                               >
                                 {course.name}
                               </a>
-                            ))}
-                          </div>
+                            )
+                          ))}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
               </>
             )}
           </div>
@@ -274,12 +222,6 @@ export function TopPage() {
               }
               label="授業カタログ"
             />
-          </div>
-
-          <div className="flex justify-center mb-6">
-            <div className="w-full md:w-[calc(50%-0.5rem)]">
-              <PublicAdBanner />
-            </div>
           </div>
         </div>
       </main>

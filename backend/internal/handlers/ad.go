@@ -43,7 +43,7 @@ func toAdImageResponse(ad *models.AdImage) dto.AdImageResponse {
 	}
 }
 
-// ListAds - GET /api/v1/ads?academic_year=2026&term=spring
+// ListAds - GET /api/v1/ads?academic_year={year}&term={term}
 func ListAds(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(r.URL.Query().Get("instrument_key")) != "" {
 		errorResponse(w, http.StatusBadRequest, "instrument_key is no longer supported; use academic_year and term")

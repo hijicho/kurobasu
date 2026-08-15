@@ -8,45 +8,71 @@ import (
 	"github.com/hageruto/kurobasu/models"
 )
 
-// =====================
-// RunSeeds: テストデータをデータベースに挿入
-// =====================
-// 役割：既存データがない場合にサンプルデータを挿入
-// 複数回実行しても重複しないよう、FirstOrCreate を使用
+type courseSeed struct {
+	categorySlug string
+	title        string
+	courseCode   string
+	instructors  []string
+	term         string
+	modality     string
+	note         string
+	meetings     []meetingSeed
+	reviews      []reviewSeed
+}
+
+type meetingSeed struct {
+	day       int16
+	period    int16
+	classroom string
+}
+
+type reviewSeed struct {
+	reviewType models.UserReviewType
+	comment    string
+}
+
+type seededOffering struct {
+	offering models.Offering
+	reviews  []reviewSeed
+}
+
+// RunSeeds inserts baseline data for development and production smoke checks.
+// The inserts are idempotent so the command can be run multiple times.
 func RunSeeds() error {
 	log.Println("Starting database seeding...")
 
-	// カテゴリーのシード
+	seedSiteSettings()
+
 	categories := seedCategories()
 	if len(categories) == 0 {
 		return nil
 	}
 
-	// 科目のシード
-	subjects := seedSubjects(categories)
-
-	// 開講情報のシード
-	offerings := seedOfferings(subjects)
-
-	// 授業時間のシード
-	seedMeetings(offerings)
-
-	// ユーザーのシード
+	offerings := seedCourses(categories)
 	users := seedUsers()
-
-	// 時間割のシード
 	seedTimetables(users)
-
-	// レビューのシード
 	seedReviews(offerings, users)
 
 	log.Println("Database seeding completed successfully")
 	return nil
 }
 
-// =====================
-// seedCategories: カテゴリーデータをシード
-// =====================
+func seedSiteSettings() {
+	settings := models.SiteSettings{
+		SettingsID:          1,
+		DefaultAcademicYear: currentAcademicYear(),
+		DefaultTerm:         "spring",
+		UpdatedAt:           time.Now(),
+	}
+	if err := config.DB.
+		Where(models.SiteSettings{SettingsID: settings.SettingsID}).
+		FirstOrCreate(&settings).Error; err != nil {
+		log.Printf("Error seeding site settings: %v", err)
+		return
+	}
+	log.Println("✓ Site settings seeded")
+}
+
 func seedCategories() []models.Category {
 	categories := []models.Category{
 		{Slug: "general-education", Name: "総合教養科目（般教）", SortOrder: 1},
@@ -55,131 +81,112 @@ func seedCategories() []models.Category {
 		{Slug: "information-literacy", Name: "情報リテラシー科目", SortOrder: 4},
 		{Slug: "english-japanese", Name: "外国語科目(英語必修)-日本語教師", SortOrder: 5},
 		{Slug: "english-native", Name: "外国語科目(英語必修)-英語教師", SortOrder: 6},
-		{Slug: "specialized", Name: "専門科目", SortOrder: 7},
-		{Slug: "second-language", Name: "第二外国語", SortOrder: 8},
+		{Slug: "modern-system", Name: "現代システム科学域", SortOrder: 7},
+		{Slug: "science", Name: "理学部", SortOrder: 8},
+		{Slug: "engineering", Name: "工学部", SortOrder: 9},
+		{Slug: "agriculture", Name: "農学部", SortOrder: 10},
+		{Slug: "veterinary", Name: "獣医学部", SortOrder: 11},
+		{Slug: "medicine", Name: "医学部医学科", SortOrder: 12},
+		{Slug: "medical-rehab", Name: "医学部リハビリテーション学科", SortOrder: 13},
+		{Slug: "nursing", Name: "看護学部", SortOrder: 14},
+		{Slug: "human-life", Name: "生活科学部", SortOrder: 15},
+		{Slug: "literature", Name: "文学部", SortOrder: 16},
+		{Slug: "law", Name: "法学部", SortOrder: 17},
+		{Slug: "economics", Name: "経済学部", SortOrder: 18},
+		{Slug: "commerce", Name: "商学部", SortOrder: 19},
 	}
+
 	for i := range categories {
-		if err := config.DB.Where(models.Category{Slug: categories[i].Slug}).FirstOrCreate(&categories[i]).Error; err != nil {
+		if err := config.DB.
+			Where(models.Category{Slug: categories[i].Slug}).
+			Assign(models.Category{Name: categories[i].Name, SortOrder: categories[i].SortOrder}).
+			FirstOrCreate(&categories[i]).Error; err != nil {
 			log.Printf("Error seeding category %s: %v", categories[i].Slug, err)
 			return nil
 		}
 	}
 
-	log.Println("✓ Categories seeded")
+	log.Printf("✓ Categories seeded: %d records", len(categories))
 	return categories
 }
 
-// =====================
-// seedSubjects: 科目データをシード
-// =====================
-func seedSubjects(categories []models.Category) []models.Subject {
-	var subjects []models.Subject
-
-	subjectData := []struct {
-		title      string
-		categoryID int64
-	}{
-		{"Physics", categories[0].CategoryID},
-		{"Chemistry", categories[0].CategoryID},
-		{"Biology", categories[0].CategoryID},
-		{"Calculus", categories[2].CategoryID},
-		{"Linear Algebra", categories[2].CategoryID},
-		{"English", categories[4].CategoryID},
-		{"Japanese", categories[4].CategoryID},
+func seedCourses(categories []models.Category) []seededOffering {
+	academicYear := currentAcademicYear()
+	categoryBySlug := make(map[string]models.Category, len(categories))
+	for _, category := range categories {
+		categoryBySlug[category.Slug] = category
 	}
 
-	for _, data := range subjectData {
-		sub := models.Subject{
-			CategoryID: data.categoryID,
-			Title:      data.title,
-		}
-		if err := config.DB.Where(models.Subject{Title: sub.Title, CategoryID: sub.CategoryID}).FirstOrCreate(&sub).Error; err != nil {
-			log.Printf("Error seeding subject %s: %v", sub.Title, err)
+	var offerings []seededOffering
+	for _, data := range courseSeeds() {
+		category, ok := categoryBySlug[data.categorySlug]
+		if !ok {
+			log.Printf("Skipping course %s: category %s not found", data.title, data.categorySlug)
 			continue
 		}
-		subjects = append(subjects, sub)
-	}
 
-	log.Printf("✓ Subjects seeded: %d records", len(subjects))
-	return subjects
-}
+		subject := models.Subject{
+			CategoryID: category.CategoryID,
+			Title:      data.title,
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
+		}
+		if err := config.DB.
+			Where(models.Subject{CategoryID: subject.CategoryID, Title: subject.Title}).
+			Assign(models.Subject{UpdatedAt: time.Now()}).
+			FirstOrCreate(&subject).Error; err != nil {
+			log.Printf("Error seeding subject %s: %v", data.title, err)
+			continue
+		}
 
-// =====================
-// seedOfferings: 開講情報データをシード
-// =====================
-func seedOfferings(subjects []models.Subject) []models.Offering {
-	var offerings []models.Offering
-
-	offeringData := []struct {
-		subjectID       int64
-		academicYear    int16
-		term            string
-		modality        string
-		instructorNames []string
-	}{
-		{subjects[0].SubjectID, 2026, "spring", "onsite", []string{"Dr. Smith"}},
-		{subjects[1].SubjectID, 2026, "spring", "onsite", []string{"Prof. Johnson"}},
-		{subjects[3].SubjectID, 2026, "spring", "hybrid", []string{"Dr. Williams"}},
-		{subjects[0].SubjectID, 2026, "fall", "online", []string{"Dr. Smith"}},
-		{subjects[5].SubjectID, 2026, "spring", "onsite", []string{"Ms. Brown"}},
-	}
-
-	for _, data := range offeringData {
-		off := models.Offering{
-			SubjectID:       data.subjectID,
-			AcademicYear:    data.academicYear,
+		offering := models.Offering{
+			SubjectID:       subject.SubjectID,
+			AcademicYear:    academicYear,
 			Term:            data.term,
 			Modality:        data.modality,
-			InstructorNames: data.instructorNames,
+			CourseCode:      data.courseCode,
+			Note:            data.note,
+			InstructorNames: data.instructors,
 			CreatedAt:       time.Now(),
 		}
-		if err := config.DB.Where(models.Offering{SubjectID: off.SubjectID, AcademicYear: off.AcademicYear, Term: off.Term}).FirstOrCreate(&off).Error; err != nil {
-			log.Printf("Error seeding offering: %v", err)
+		if err := config.DB.
+			Where("subject_id = ? AND academic_year = ? AND term = ? AND course_code = ?",
+				offering.SubjectID, offering.AcademicYear, offering.Term, offering.CourseCode).
+			Assign(models.Offering{
+				Modality:        offering.Modality,
+				Note:            offering.Note,
+				InstructorNames: offering.InstructorNames,
+			}).
+			FirstOrCreate(&offering).Error; err != nil {
+			log.Printf("Error seeding offering %s: %v", data.courseCode, err)
 			continue
 		}
-		offerings = append(offerings, off)
+
+		seedMeetings(offering.OfferingID, data.meetings)
+		offerings = append(offerings, seededOffering{offering: offering, reviews: data.reviews})
 	}
 
-	log.Printf("✓ Offerings seeded: %d records", len(offerings))
+	log.Printf("✓ Courses seeded: %d offerings", len(offerings))
 	return offerings
 }
 
-// =====================
-// seedMeetings: 授業時間データをシード
-// =====================
-func seedMeetings(offerings []models.Offering) {
-	if len(offerings) == 0 {
-		return
-	}
-
-	meetingData := []struct {
-		offeringID int64
-		day        int16
-		period     int16
-	}{
-		{offerings[0].OfferingID, 1, 3}, // Monday 3rd
-		{offerings[0].OfferingID, 3, 3}, // Wednesday 3rd
-		{offerings[1].OfferingID, 2, 4}, // Tuesday 4th
-		{offerings[1].OfferingID, 4, 4}, // Thursday 4th
-		{offerings[2].OfferingID, 1, 2}, // Monday 2nd
-		{offerings[2].OfferingID, 5, 2}, // Friday 2nd
-	}
-
-	for _, data := range meetingData {
-		mtg := models.Meeting{
-			OfferingID: data.offeringID,
+func seedMeetings(offeringID int64, meetings []meetingSeed) {
+	for _, data := range meetings {
+		meeting := models.Meeting{
+			OfferingID: offeringID,
 			Day:        data.day,
 			Period:     data.period,
+			Classroom:  data.classroom,
 		}
-		config.DB.Where(models.Meeting{OfferingID: mtg.OfferingID, Day: mtg.Day, Period: mtg.Period}).FirstOrCreate(&mtg)
+		if err := config.DB.
+			Where(models.Meeting{OfferingID: meeting.OfferingID, Day: meeting.Day, Period: meeting.Period}).
+			Assign(models.Meeting{Classroom: meeting.Classroom}).
+			FirstOrCreate(&meeting).Error; err != nil {
+			log.Printf("Error seeding meeting for offering %d: %v", offeringID, err)
+		}
 	}
-
-	log.Println("✓ Meetings seeded")
 }
 
-// =====================
-// seedUsers: ユーザーデータをシード
-// =====================
 func seedUsers() []models.User {
 	var users []models.User
 
@@ -187,10 +194,10 @@ func seedUsers() []models.User {
 		displayName string
 		authUID     string
 	}{
-		{"Alice Johnson", "seed_user_alice"},
-		{"Bob Smith", "seed_user_bob"},
-		{"Carol White", "seed_user_carol"},
-		{"David Brown", "seed_user_david"},
+		{"大阪 太郎", "seed_user_taro"},
+		{"杉本 花子", "seed_user_hanako"},
+		{"中百舌鳥 次郎", "seed_user_jiro"},
+		{"羽曳野 三郎", "seed_user_saburo"},
 	}
 
 	for _, data := range userData {
@@ -199,7 +206,10 @@ func seedUsers() []models.User {
 			AuthUID:     data.authUID,
 			CreatedAt:   time.Now(),
 		}
-		if err := config.DB.Where(models.User{AuthUID: user.AuthUID}).FirstOrCreate(&user).Error; err != nil {
+		if err := config.DB.
+			Where(models.User{AuthUID: user.AuthUID}).
+			Assign(models.User{DisplayName: user.DisplayName}).
+			FirstOrCreate(&user).Error; err != nil {
 			log.Printf("Error seeding user %s: %v", user.DisplayName, err)
 			continue
 		}
@@ -210,13 +220,12 @@ func seedUsers() []models.User {
 	return users
 }
 
-// =====================
-// seedTimetables: 時間割データをシード
-// =====================
 func seedTimetables(users []models.User) {
 	if len(users) == 0 {
 		return
 	}
+	academicYear := currentAcademicYear()
+
 	timetableData := []struct {
 		userID   int64
 		title    string
@@ -224,13 +233,13 @@ func seedTimetables(users []models.User) {
 		term     string
 		isPublic bool
 	}{
-		{users[0].UserID, "Spring 2026 Schedule", 2026, "spring", true},
-		{users[1].UserID, "My Courses 2026", 2026, "spring", false},
-		{users[2].UserID, "Spring 2026", 2026, "spring", true},
+		{users[0].UserID, "前期 時間割", academicYear, "spring", true},
+		{users[1].UserID, "履修候補", academicYear, "spring", false},
+		{users[2].UserID, "般教中心", academicYear, "spring", true},
 	}
 
 	for _, data := range timetableData {
-		tt := models.Timetable{
+		timetable := models.Timetable{
 			UserID:    data.userID,
 			Title:     data.title,
 			Year:      data.year,
@@ -238,45 +247,141 @@ func seedTimetables(users []models.User) {
 			IsPublic:  data.isPublic,
 			CreatedAt: time.Now(),
 		}
-		config.DB.Where(models.Timetable{UserID: tt.UserID}).FirstOrCreate(&tt)
+		if err := config.DB.
+			Where(models.Timetable{UserID: timetable.UserID, Year: timetable.Year, Term: timetable.Term}).
+			Assign(models.Timetable{Title: timetable.Title, IsPublic: timetable.IsPublic}).
+			FirstOrCreate(&timetable).Error; err != nil {
+			log.Printf("Error seeding timetable %s: %v", timetable.Title, err)
+		}
 	}
 
 	log.Println("✓ Timetables seeded")
 }
 
-// =====================
-// seedReviews: レビューデータをシード
-// =====================
-func seedReviews(offerings []models.Offering, users []models.User) {
-	if len(offerings) < 3 || len(users) == 0 {
+func seedReviews(offerings []seededOffering, users []models.User) {
+	if len(offerings) == 0 || len(users) == 0 {
 		return
 	}
 
-	reviewData := []struct {
-		offeringIndex int
-		userIndex     int
-		comment       string
-	}{
-		{0, 0, "Great introduction to the subject. Well-structured lectures."},
-		{1, 1, "Hands-on assignments were helpful, but grading was strict."},
-		{2, 2, "Clear explanations, recommended for beginners."},
-	}
-
-	for _, data := range reviewData {
-		if data.offeringIndex >= len(offerings) || data.userIndex >= len(users) {
-			continue
+	for i, item := range offerings {
+		for _, data := range item.reviews {
+			userID := users[i%len(users)].UserID
+			review := models.UserReview{
+				UserID:     &userID,
+				OfferingID: item.offering.OfferingID,
+				Comment:    data.comment,
+				Type:       data.reviewType,
+				Status:     models.UserReviewStatusApproved,
+				CreatedAt:  time.Now(),
+				UpdatedAt:  time.Now(),
+			}
+			if err := config.DB.
+				Where("offering_id = ? AND type = ? AND comment = ?",
+					review.OfferingID, review.Type, review.Comment).
+				Assign(models.UserReview{
+					UserID:    review.UserID,
+					Status:    review.Status,
+					UpdatedAt: time.Now(),
+				}).
+				FirstOrCreate(&review).Error; err != nil {
+				log.Printf("Error seeding review for offering %d: %v", item.offering.OfferingID, err)
+			}
 		}
-		userID := users[data.userIndex].UserID
-		rev := models.UserReview{
-			UserID:     &userID,
-			OfferingID: offerings[data.offeringIndex].OfferingID,
-			Comment:    data.comment,
-			Status:     models.UserReviewStatusApproved,
-			CreatedAt:  time.Now(),
-			UpdatedAt:  time.Now(),
-		}
-		config.DB.Where("user_id = ? AND offering_id = ? AND comment = ?", userID, rev.OfferingID, rev.Comment).FirstOrCreate(&rev)
 	}
 
 	log.Println("✓ Reviews seeded")
+}
+
+func courseSeeds() []courseSeed {
+	return []courseSeed{
+		{
+			categorySlug: "general-education",
+			title:        "心理学入門",
+			courseCode:   "GE-PSY-101",
+			instructors:  []string{"山田 一郎"},
+			term:         "spring",
+			modality:     "onsite",
+			note:         "人気講義",
+			meetings:     []meetingSeed{{day: 1, period: 2, classroom: "杉本キャンパス 1号館101"}},
+			reviews: []reviewSeed{
+				{reviewType: models.UserReviewTypePros, comment: "身近な例が多く、初めてでも内容を追いやすいです。"},
+				{reviewType: models.UserReviewTypeCons, comment: "毎回の小レポートは少し時間がかかります。"},
+			},
+		},
+		{
+			categorySlug: "general-education",
+			title:        "現代社会論",
+			courseCode:   "GE-SOC-102",
+			instructors:  []string{"佐藤 美咲"},
+			term:         "spring",
+			modality:     "hybrid",
+			note:         "抽選あり",
+			meetings:     []meetingSeed{{day: 2, period: 3, classroom: "杉本キャンパス 学術情報総合センター"}},
+			reviews: []reviewSeed{
+				{reviewType: models.UserReviewTypePros, comment: "ニュースと授業内容がつながっていて理解しやすいです。"},
+				{reviewType: models.UserReviewTypeOthers, comment: "発表回があるので早めにテーマを決めると楽です。"},
+			},
+		},
+		{
+			categorySlug: "general-education",
+			title:        "データサイエンス基礎",
+			courseCode:   "GE-DS-103",
+			instructors:  []string{"田中 健"},
+			term:         "spring",
+			modality:     "onsite",
+			note:         "PC持参",
+			meetings:     []meetingSeed{{day: 4, period: 4, classroom: "中百舌鳥キャンパス B3棟202"}},
+			reviews: []reviewSeed{
+				{reviewType: models.UserReviewTypePros, comment: "演習中心で、Pythonを触ったことがなくても進められます。"},
+				{reviewType: models.UserReviewTypeCons, comment: "課題提出の締切管理は少しシビアです。"},
+			},
+		},
+		{categorySlug: "first-year-education", title: "初年次ゼミナールA", courseCode: "FY-SEM-101", instructors: []string{"高橋 亮"}, term: "spring", modality: "onsite", note: "少人数", reviews: compactReviews("少人数で質問しやすい雰囲気です。", "発表準備は早めに始めた方が安心です。")},
+		{categorySlug: "first-year-education", title: "大学での学び入門", courseCode: "FY-STU-102", instructors: []string{"伊藤 香織"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("レポートの書き方を具体的に学べます。", "グループワークの比重がやや高いです。")},
+		{categorySlug: "foundation-list", title: "線形代数1", courseCode: "FN-MAT-101", instructors: []string{"宮地 秀樹"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("板書が整理されていて復習しやすいです。", "証明問題に慣れていないと序盤は重めです。")},
+		{categorySlug: "foundation-list", title: "微積分1A", courseCode: "FN-MAT-102", instructors: []string{"中野 智"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("例題が多く、試験対策の方向性が見えやすいです。", "演習量は多いので毎週の復習が必要です。")},
+		{categorySlug: "information-literacy", title: "情報リテラシー", courseCode: "IL-ICT-101", instructors: []string{"林 直子"}, term: "spring", modality: "online", note: "オンデマンド併用", reviews: compactReviews("資料が丁寧で自分のペースで進めやすいです。", "提出形式の指定を見落としやすいです。")},
+		{categorySlug: "information-literacy", title: "データ活用基礎", courseCode: "IL-DAT-102", instructors: []string{"森 大輔"}, term: "spring", modality: "hybrid", note: "", reviews: compactReviews("表計算から統計の入口までつながって学べます。", "演習ファイルの管理に少し慣れが必要です。")},
+		{categorySlug: "english-japanese", title: "English Reading A", courseCode: "EJ-RDG-101", instructors: []string{"伊狩 弘"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("英文の読み方を文法から確認してくれます。", "単語テストが定期的にあります。")},
+		{categorySlug: "english-japanese", title: "English Writing A", courseCode: "EJ-WRT-102", instructors: []string{"山本 由紀"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("添削が具体的で次の文章に反映しやすいです。", "毎週短い作文課題があります。")},
+		{categorySlug: "english-native", title: "Communication English A", courseCode: "EN-COM-101", instructors: []string{"James Pollock"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("会話の機会が多く、英語を話す抵抗が減ります。", "出席と参加姿勢がかなり見られます。")},
+		{categorySlug: "english-native", title: "Academic English", courseCode: "EN-ACD-102", instructors: []string{"Maria Ocon"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("プレゼンと要約の練習が実践的です。", "人前で話す回数は多めです。")},
+		{categorySlug: "modern-system", title: "公共政策論", courseCode: "MS-POL-201", instructors: []string{"山口 真"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("制度の背景まで説明があり、社会課題の見方が広がります。", "扱う資料が多いので事前確認が必要です。")},
+		{categorySlug: "modern-system", title: "データサイエンス実践", courseCode: "MS-DAT-202", instructors: []string{"金子 周平"}, term: "spring", modality: "hybrid", note: "演習あり", reviews: compactReviews("実データを使うので分析の流れが掴みやすいです。", "PC環境の準備で少し詰まりやすいです。")},
+		{categorySlug: "science", title: "解析学1", courseCode: "SC-MAT-201", instructors: []string{"伊師 英之"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("定義から丁寧に進むので基礎を固めやすいです。", "抽象的な内容が増えると復習時間が必要です。")},
+		{categorySlug: "science", title: "有機化学1", courseCode: "SC-CHE-202", instructors: []string{"小嵜 正敏"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("反応機構を図で説明してくれるので理解しやすいです。", "暗記だけでは試験が厳しいです。")},
+		{categorySlug: "engineering", title: "制御工学1", courseCode: "EG-CTL-201", instructors: []string{"原 尚之"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("数式と実例の対応が分かりやすいです。", "ラプラス変換の復習をしておくと楽です。")},
+		{categorySlug: "engineering", title: "通信システム", courseCode: "EG-COM-202", instructors: []string{"山田 誠"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("図解が多く、通信の全体像を掴めます。", "専門用語が多いので予習が効きます。")},
+		{categorySlug: "agriculture", title: "植物生産科学", courseCode: "AG-PLT-201", instructors: []string{"田中 光"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("作物の具体例が多く、農学らしさを感じられます。", "レポートは観察内容を細かく書く必要があります。")},
+		{categorySlug: "agriculture", title: "食品化学", courseCode: "AG-FOD-202", instructors: []string{"佐藤 亜紀"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("食品成分と実生活が結びついて面白いです。", "化学の基礎を忘れていると少し大変です。")},
+		{categorySlug: "veterinary", title: "獣医解剖学", courseCode: "VT-ANA-201", instructors: []string{"鈴木 達也"}, term: "spring", modality: "onsite", note: "実習あり", reviews: compactReviews("構造を立体的に説明してくれるので理解しやすいです。", "覚える量はかなり多いです。")},
+		{categorySlug: "veterinary", title: "動物感染症学", courseCode: "VT-INF-202", instructors: []string{"中村 恵"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("症例ベースで説明されるので記憶に残ります。", "病原体名の整理に時間がかかります。")},
+		{categorySlug: "medicine", title: "解剖学", courseCode: "MD-ANA-201", instructors: []string{"井上 淳"}, term: "spring", modality: "onsite", note: "実習あり", reviews: compactReviews("要点が明確で、試験範囲の見通しを立てやすいです。", "予習なしで実習に出ると追いつきにくいです。")},
+		{categorySlug: "medicine", title: "生理学", courseCode: "MD-PHY-202", instructors: []string{"木村 由美"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("各器官のつながりを意識して説明してくれます。", "細かいメカニズムの暗記は必要です。")},
+		{categorySlug: "medical-rehab", title: "形態機能学1", courseCode: "MR-FNC-201", instructors: []string{"宮井 一郎"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("臨床との関連を交えて説明されるので納得しやすいです。", "専門用語は早めに整理すると良いです。")},
+		{categorySlug: "medical-rehab", title: "リハビリテーション概論", courseCode: "MR-REH-202", instructors: []string{"澤田 智子"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("職種ごとの役割が具体的に分かります。", "グループ発表の準備時間が必要です。")},
+		{categorySlug: "nursing", title: "解剖生理学", courseCode: "NS-APH-201", instructors: []string{"澤井 信夫"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("看護で使う観点から説明されるので実践につながります。", "毎回の確認テストで復習が必要です。")},
+		{categorySlug: "nursing", title: "基礎看護学", courseCode: "NS-FND-202", instructors: []string{"田村 和子"}, term: "spring", modality: "onsite", note: "演習あり", reviews: compactReviews("演習で手順を確認できるので理解が深まります。", "持ち物と事前課題の確認が重要です。")},
+		{categorySlug: "human-life", title: "栄養学概論", courseCode: "HL-NUT-201", instructors: []string{"石川 由美"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("食生活と結びつけて学べるので興味を持ちやすいです。", "計算問題が少し出ます。")},
+		{categorySlug: "human-life", title: "居住環境学", courseCode: "HL-HOU-202", instructors: []string{"小林 直樹"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("住環境の事例紹介が多く、イメージしやすいです。", "図面や資料の読み取りに慣れが必要です。")},
+		{categorySlug: "literature", title: "民俗学", courseCode: "LT-FLK-201", instructors: []string{"大野 寿子"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("身近な文化を別の角度から見られて面白いです。", "レポートでは具体例を集める必要があります。")},
+		{categorySlug: "literature", title: "教育史", courseCode: "LT-EDH-202", instructors: []string{"弘田 陽介"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("時代背景と制度の変化が整理されていて分かりやすいです。", "文献を読む量はやや多めです。")},
+		{categorySlug: "law", title: "法学入門", courseCode: "LW-LAW-201", instructors: []string{"仲 正", "守矢 健一", "金澤 真理"}, term: "spring", modality: "onsite", note: "複数教員", reviews: compactReviews("複数分野を広く見られるので入口として良いです。", "扱う範囲が広く、試験前にまとめ直す必要があります。")},
+		{categorySlug: "law", title: "民法第3部", courseCode: "LW-CIV-202", instructors: []string{"藤井 俊二"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("条文と事例の対応を丁寧に扱います。", "判例の整理に時間がかかります。")},
+		{categorySlug: "economics", title: "計量経済学1", courseCode: "EC-ECO-201", instructors: []string{"狩野 裕"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("統計の復習から入るので入りやすいです。", "数式処理に慣れていないと課題が重く感じます。")},
+		{categorySlug: "economics", title: "金融経済論", courseCode: "EC-FIN-202", instructors: []string{"辻 幸民"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("金融市場のニュースと講義がつながります。", "専門用語の整理が必要です。")},
+		{categorySlug: "commerce", title: "会計基礎論", courseCode: "CM-ACC-201", instructors: []string{"浅野 敬志"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("簿記未経験でも基礎から確認できます。", "演習を溜めると後半が大変です。")},
+		{categorySlug: "commerce", title: "地域経済論", courseCode: "CM-REG-202", instructors: []string{"松永 桂子"}, term: "spring", modality: "onsite", note: "", reviews: compactReviews("大阪の事例が多く、地域経済を具体的に理解できます。", "レポートで統計資料を読む必要があります。")},
+	}
+}
+
+func compactReviews(pros string, cons string) []reviewSeed {
+	return []reviewSeed{
+		{reviewType: models.UserReviewTypePros, comment: pros},
+		{reviewType: models.UserReviewTypeCons, comment: cons},
+	}
+}
+
+func currentAcademicYear() int16 {
+	return int16(time.Now().Year())
 }

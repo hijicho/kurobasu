@@ -11,6 +11,8 @@ import { getOffering, type Offering } from '@/lib/api';
 interface ApiCourseDetailPageProps {
   offeringId: number;
   categoryName: string;
+  usesTimetable?: boolean;
+  topHref?: string;
   onNavigateToList?: () => void;
 }
 
@@ -45,7 +47,13 @@ function termLabel(term: string) {
   }
 }
 
-export function ApiCourseDetailPage({ offeringId, categoryName, onNavigateToList }: ApiCourseDetailPageProps) {
+export function ApiCourseDetailPage({
+  offeringId,
+  categoryName,
+  usesTimetable = true,
+  topHref = '/',
+  onNavigateToList,
+}: ApiCourseDetailPageProps) {
   const [offering, setOffering] = useState<Offering | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +106,7 @@ export function ApiCourseDetailPage({ offeringId, categoryName, onNavigateToList
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb
           items={[
-            { label: 'トップ', href: '/' },
+            { label: 'トップ', href: topHref },
             { label: categoryName, onClick: onNavigateToList },
             { label: offering?.subject.title ?? '授業詳細' },
           ]}
@@ -134,13 +142,15 @@ export function ApiCourseDetailPage({ offeringId, categoryName, onNavigateToList
                     <p className="font-medium">{offering.instructor_names.join('、') || '未定'}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-[#2B4DCA] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">曜日・時限</p>
-                    <p className="font-medium">{meetingText}</p>
+                {usesTimetable && (
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-[#2B4DCA] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">曜日・時限</p>
+                      <p className="font-medium">{meetingText}</p>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex items-start gap-3">
                   <BookOpen className="w-5 h-5 text-[#2B4DCA] mt-0.5 flex-shrink-0" />
                   <div>
@@ -150,13 +160,15 @@ export function ApiCourseDetailPage({ offeringId, categoryName, onNavigateToList
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Monitor className="w-5 h-5 text-[#2B4DCA] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">授業形態</p>
-                    <p className="font-medium">{modalityLabel(offering.modality)}</p>
+                {usesTimetable && (
+                  <div className="flex items-start gap-3">
+                    <Monitor className="w-5 h-5 text-[#2B4DCA] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">授業形態</p>
+                      <p className="font-medium">{modalityLabel(offering.modality)}</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 

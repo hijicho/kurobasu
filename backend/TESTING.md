@@ -87,7 +87,7 @@ SUPABASE_SERVICE_ROLE_KEY=<supabase start の service_role key>
 - `TestUpdateTimetable` - PATCH /api/v1/timetables/{id}
 
 ### メタデータ API
-- `TestGetDefaultAcademicYear` - GET /api/v1/meta/default-academic-year
+- `TestGetSiteSettings` - GET /api/v1/meta/site-settings
 
 ### その他
 - `TestNotFound` - 存在しないエンドポイント
@@ -184,7 +184,7 @@ Go 1.22 の http.ServeMux では、`{id}` のようなパス パラメータ マ
   - `/api/v1/categories` (固定パス)
   - `/api/v1/reviews` (固定パス)
   - `/api/v1/auth/bootstrap` (固定パス)
-  - `/api/v1/meta/default-academic-year` (固定パス)
+  - `/api/v1/meta/site-settings` (固定パス)
 
 - マッチしない可能性があるパターン：
   - `/api/v1/categories/{slug}/offerings` 

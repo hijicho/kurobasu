@@ -6,77 +6,84 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hageruto/kurobasu/internal/repository"
+	"github.com/hageruto/kurobasu/config"
+	"github.com/hageruto/kurobasu/internal/dto"
+	"github.com/hageruto/kurobasu/models"
 )
 
-// GetDefaultAcademicYear - GET /api/v1/meta/default-academic-year
-func GetDefaultAcademicYear(w http.ResponseWriter, r *http.Request) {
-	year := time.Now().Year()
-	successResponse(w, map[string]interface{}{"academic_year": year})
+const siteSettingsID int16 = 1
+
+func toSiteSettingsResponse(settings *models.SiteSettings) dto.SiteSettingsResponse {
+	return dto.SiteSettingsResponse{
+		DefaultAcademicYear: settings.DefaultAcademicYear,
+		DefaultTerm:         settings.DefaultTerm,
+		UpdatedAt:           settings.UpdatedAt,
+	}
 }
 
-// calendarDefaultTerm computes the term shown to users when no admin
-// override is set: 4〜9月は前期(spring)、10〜3月は後期(fall)。
-func calendarDefaultTerm(now time.Time) string {
-	month := int(now.Month())
-	if month >= 4 && month <= 9 {
-		return "spring"
+func getSiteSettingsModel() (*models.SiteSettings, error) {
+	settings := &models.SiteSettings{
+		SettingsID:          siteSettingsID,
+		DefaultAcademicYear: int16(time.Now().Year()),
+		DefaultTerm:         "spring",
+		UpdatedAt:           time.Now(),
 	}
-	return "fall"
+	if err := config.DB.
+		Where(models.SiteSettings{SettingsID: siteSettingsID}).
+		FirstOrCreate(settings).Error; err != nil {
+		return nil, err
+	}
+	return settings, nil
 }
 
-// GetDefaultTerm - GET /api/v1/meta/default-term
-// 管理画面で上書きされていればその値を、なければカレンダー基準の値を返す
-func GetDefaultTerm(w http.ResponseWriter, r *http.Request) {
-	settingRepo := &repository.SettingRepository{}
-	override, err := settingRepo.GetDefaultTermOverride()
-	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, "デフォルト学期の取得に失敗しました")
-		return
-	}
-
-	if override != nil && *override != "" {
-		successResponse(w, map[string]interface{}{"term": *override, "is_override": true})
-		return
-	}
-
-	successResponse(w, map[string]interface{}{"term": calendarDefaultTerm(time.Now()), "is_override": false})
-}
-
-// UpdateAdminDefaultTerm - PUT /api/v1/admin/settings/default-term
-// admin/editor ロールのみ。term に "spring"/"fall" を指定して固定表示に切り替え、
-// "auto"（または空文字）を指定するとカレンダー基準の自動判定に戻す。
-func UpdateAdminDefaultTerm(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Term string `json:"term"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		errorResponse(w, http.StatusBadRequest, "リクエストの形式が不正です")
-		return
-	}
-
-	term := strings.ToLower(strings.TrimSpace(body.Term))
-	settingRepo := &repository.SettingRepository{}
-
-	var override *string
-	switch term {
-	case "spring", "fall":
-		override = &term
-	case "", "auto":
-		override = nil
+func normalizeTerm(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "spring", "fall", "intensive", "year":
+		return value
 	default:
-		errorResponse(w, http.StatusBadRequest, "term は spring, fall, auto のいずれかを指定してください")
+		return ""
+	}
+}
+
+// GetSiteSettings - GET /api/v1/meta/site-settings
+func GetSiteSettings(w http.ResponseWriter, r *http.Request) {
+	settings, err := getSiteSettingsModel()
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to fetch site settings")
+		return
+	}
+	successResponse(w, toSiteSettingsResponse(settings))
+}
+
+// UpdateSiteSettings - PATCH /api/v1/admin/site-settings
+func UpdateSiteSettings(w http.ResponseWriter, r *http.Request) {
+	var req dto.UpdateSiteSettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		errorResponse(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	if err := settingRepo.SetDefaultTermOverride(override); err != nil {
-		errorResponse(w, http.StatusInternalServerError, "デフォルト学期の更新に失敗しました")
+	if req.DefaultAcademicYear < 2000 || req.DefaultAcademicYear > 2100 {
+		errorResponse(w, http.StatusBadRequest, "default_academic_year must be between 2000 and 2100")
+		return
+	}
+	term := normalizeTerm(req.DefaultTerm)
+	if term == "" {
+		errorResponse(w, http.StatusBadRequest, "default_term must be one of: spring, fall, intensive, year")
 		return
 	}
 
-	if override != nil {
-		successResponse(w, map[string]interface{}{"term": *override, "is_override": true})
+	settings := &models.SiteSettings{
+		SettingsID:          siteSettingsID,
+		DefaultAcademicYear: req.DefaultAcademicYear,
+		DefaultTerm:         term,
+		UpdatedAt:           time.Now(),
+	}
+	if err := config.DB.Save(settings).Error; err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to update site settings")
 		return
 	}
-	successResponse(w, map[string]interface{}{"term": calendarDefaultTerm(time.Now()), "is_override": false})
+
+	successResponse(w, toSiteSettingsResponse(settings))
 }

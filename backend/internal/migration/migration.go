@@ -41,7 +41,7 @@ func RunMigrations() error {
 		&models.AdImage{},
 		&models.TimetableImportBatch{},
 		&models.TimetableImportRow{},
-		&models.AppSetting{},
+		&models.SiteSettings{},
 	)
 	if err != nil {
 		return err
@@ -50,10 +50,8 @@ func RunMigrations() error {
 	if err := syncUICategories(); err != nil {
 		return err
 	}
-
-	// app_settings は常に id=1 の単一行のみを使う設定テーブル。まだ無ければ作成する
-	if err := config.DB.Exec(`INSERT INTO app_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`).Error; err != nil {
-		return fmt.Errorf("failed seeding app_settings row: %w", err)
+	if err := ensureDefaultSiteSettings(); err != nil {
+		return err
 	}
 
 	// Ensure `role` column exists on users table for existing databases
@@ -103,7 +101,7 @@ func RunMigrations() error {
 	// Offering -> Subject relationship
 	// One Subject can have many Offerings (different semesters/instructors of same subject)
 	// If a Subject is deleted, all Offerings for that Subject are automatically deleted
-	// Example: Physics subject deleted -> Spring 2026 Physics offering is deleted
+	// Example: deleting a subject deletes every offering for that subject.
 	if err := addConstraintIfNotExists(
 		"offerings",
 		"fk_offerings_subject",
@@ -117,7 +115,7 @@ func RunMigrations() error {
 	// Meeting -> Offering relationship
 	// One Offering can have many Meetings (lectures, labs, etc. for that offering)
 	// If an Offering is deleted, all its Meetings are automatically deleted
-	// Example: Spring 2026 Physics deleted -> All class meetings for that offering are deleted
+	// Example: deleting an offering deletes all class meetings for that offering.
 	if err := addConstraintIfNotExists(
 		"meetings",
 		"fk_meetings_offering",
@@ -185,7 +183,7 @@ func RunMigrations() error {
 	// One Offering can appear in many TimetableItems (multiple students add same course to schedule)
 	// Unlike previous relationships, deleting an Offering does NOT delete TimetableItems
 	// (A TimetableItem is a "reference" to an offering, not owned by it)
-	// Example: Spring 2026 Physics offering deleted -> TimetableItems reference to it can become stale
+	// Example: deleting an offering can leave stale timetable item references.
 	if err := addConstraintIfNotExists(
 		"timetable_items",
 		"fk_timetable_items_offering",
@@ -214,6 +212,18 @@ func RunMigrations() error {
 	return nil
 }
 
+func ensureDefaultSiteSettings() error {
+	sql := `
+		INSERT INTO site_settings (settings_id, default_academic_year, default_term, updated_at)
+		VALUES (1, EXTRACT(YEAR FROM CURRENT_DATE)::smallint, 'spring', CURRENT_TIMESTAMP)
+		ON CONFLICT (settings_id) DO NOTHING
+	`
+	if err := config.DB.Exec(sql).Error; err != nil {
+		return fmt.Errorf("failed ensuring default site settings: %w", err)
+	}
+	return nil
+}
+
 func syncUICategories() error {
 	sql := `
 		DO $$
@@ -224,30 +234,40 @@ func syncUICategories() error {
 				sort_order integer NOT NULL
 			) ON COMMIT DROP;
 
-			INSERT INTO desired_categories (slug, name, sort_order) VALUES
-				('general-education', '総合教養科目（般教）', 1),
-				('first-year-education', '初年次教育科目（初ゼミ）', 2),
-				('foundation-list', '基礎教育科目', 3),
-				('information-literacy', '情報リテラシー科目', 4),
-				('english-japanese', '外国語科目(英語必修)-日本語教師', 5),
-				('english-native', '外国語科目(英語必修)-英語教師', 6),
-				('specialized', '専門科目', 7),
-				('second-language', '第二外国語', 8);
+				INSERT INTO desired_categories (slug, name, sort_order) VALUES
+					('general-education', '総合教養科目（般教）', 1),
+					('first-year-education', '初年次教育科目（初ゼミ）', 2),
+					('foundation-list', '基礎教育科目', 3),
+					('information-literacy', '情報リテラシー科目', 4),
+					('english-japanese', '外国語科目(英語必修)-日本語教師', 5),
+					('english-native', '外国語科目(英語必修)-英語教師', 6),
+					('modern-system', '現代システム科学域', 7),
+					('science', '理学部', 8),
+					('engineering', '工学部', 9),
+					('agriculture', '農学部', 10),
+					('veterinary', '獣医学部', 11),
+					('medicine', '医学部医学科', 12),
+					('medical-rehab', '医学部リハビリテーション学科', 13),
+					('nursing', '看護学部', 14),
+					('human-life', '生活科学部', 15),
+					('literature', '文学部', 16),
+					('law', '法学部', 17),
+					('economics', '経済学部', 18),
+					('commerce', '商学部', 19);
 
 			CREATE TEMP TABLE legacy_category_slugs (
 				old_slug text PRIMARY KEY,
 				new_slug text NOT NULL
 			) ON COMMIT DROP;
 
-			INSERT INTO legacy_category_slugs (old_slug, new_slug) VALUES
-				('science', 'general-education'),
-				('mathematics', 'foundation-list'),
-				('languages', 'english-japanese'),
-				('arts', 'specialized'),
-				('general', 'general-education'),
-				('foundation', 'foundation-list'),
-				('first-year-seminar', 'first-year-education'),
-				('english', 'english-native');
+				INSERT INTO legacy_category_slugs (old_slug, new_slug) VALUES
+					('mathematics', 'foundation-list'),
+					('languages', 'english-japanese'),
+					('arts', 'literature'),
+					('general', 'general-education'),
+					('foundation', 'foundation-list'),
+					('first-year-seminar', 'first-year-education'),
+					('english', 'english-native');
 
 			INSERT INTO categories (slug, name, sort_order)
 			SELECT d.slug, d.name, d.sort_order
@@ -263,9 +283,15 @@ func syncUICategories() error {
 			JOIN categories target ON target.slug = l.new_slug
 			WHERE s.category_id = legacy.category_id;
 
-			DELETE FROM categories c
-			USING legacy_category_slugs l
-			WHERE c.slug = l.old_slug;
+				DELETE FROM categories c
+				USING legacy_category_slugs l
+				WHERE c.slug = l.old_slug;
+
+				DELETE FROM categories c
+				WHERE c.slug = 'specialized'
+				  AND NOT EXISTS (
+					SELECT 1 FROM subjects s WHERE s.category_id = c.category_id
+				  );
 
 			UPDATE categories c
 			SET name = d.name,
