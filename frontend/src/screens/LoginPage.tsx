@@ -33,6 +33,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [registerSuccessMessage, setRegisterSuccessMessage] = useState<string | null>(null);
 
   const [loginData, setLoginData] = useState({
     email: '',
@@ -62,6 +63,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
 
     setErrors(newErrors);
+    setRegisterSuccessMessage(null);
 
     if (Object.keys(newErrors).length !== 0) {
       return;
@@ -107,7 +109,14 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
     setSubmitting(true);
     try {
-      await signUp(registerData.email, registerData.password, registerData.email);
+      const result = await signUp(registerData.email, registerData.password, registerData.email);
+      if (result.needsEmailConfirmation) {
+        setRegisterSuccessMessage('確認メールを送信しました。メール内のリンクを開いてからログインしてください。');
+        setActiveTab('login');
+        setLoginData({ email: registerData.email, password: '' });
+        setRegisterData({ email: '', password: '', confirmPassword: '' });
+        return;
+      }
       onLoginSuccess?.();
     } catch (err) {
       const message = (err as { message?: string })?.message ?? '';
@@ -154,6 +163,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               onClick={() => {
                 setActiveTab('login');
                 setErrors({});
+                setRegisterSuccessMessage(null);
               }}
               className={`flex-1 py-4 transition-colors ${
                 activeTab === 'login'
@@ -167,6 +177,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               onClick={() => {
                 setActiveTab('register');
                 setErrors({});
+                setRegisterSuccessMessage(null);
               }}
               className={`flex-1 py-4 transition-colors ${
                 activeTab === 'register'
@@ -182,6 +193,11 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <div className="p-6 md:p-8">
             {activeTab === 'login' ? (
               <form onSubmit={handleLogin} className="space-y-5">
+                {registerSuccessMessage && (
+                  <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+                    {registerSuccessMessage}
+                  </div>
+                )}
                 {errors.form && (
                   <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                     {errors.form}
