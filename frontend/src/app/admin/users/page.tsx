@@ -79,7 +79,8 @@ export default function AdminManagementPage() {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{user.display_name}</p>
-                    <p className="mt-1 text-sm text-slate-600">ロール: {user.role}</p>
+                    <p className="mt-1 text-sm text-slate-600">{user.email ?? 'メール未設定'}</p>
+                    <p className="mt-1 text-sm text-slate-600">User ID: {user.user_id} / ロール: {user.role}</p>
                   </div>
                   <div className="flex flex-wrap gap-3">
                     {roleOptions.map((role) => (

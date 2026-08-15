@@ -19,6 +19,7 @@ func toUserResponse(user *models.User) dto.UserResponse {
 		UserID:      user.UserID,
 		AuthUID:     user.AuthUID,
 		DisplayName: user.DisplayName,
+		Email:       user.Email,
 		Role:        user.Role,
 		CreatedAt:   user.CreatedAt,
 	}
@@ -43,6 +44,12 @@ func BootstrapUser(w http.ResponseWriter, r *http.Request) {
 	userRepo := &repository.UserRepository{}
 	existingUser, err := userRepo.GetUserByAuthUID(authUser.ID)
 	if err == nil {
+		if syncUserEmail(existingUser, authUser.Email) {
+			if updateErr := userRepo.UpdateUser(existingUser); updateErr != nil {
+				errorResponse(w, http.StatusInternalServerError, "Failed to update user")
+				return
+			}
+		}
 		successResponse(w, toUserResponse(existingUser))
 		return
 	}
@@ -62,6 +69,7 @@ func BootstrapUser(w http.ResponseWriter, r *http.Request) {
 
 	user := &models.User{
 		DisplayName: displayName,
+		Email:       stringPtrOrNil(authUser.Email),
 		AuthUID:     authUser.ID,
 		CreatedAt:   time.Now(),
 	}
@@ -95,6 +103,14 @@ func GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if authUser, ok := middleware.SupabaseUser(r); ok && syncUserEmail(user, authUser.Email) {
+		userRepo := &repository.UserRepository{}
+		if err := userRepo.UpdateUser(user); err != nil {
+			errorResponse(w, http.StatusInternalServerError, "Failed to update user")
+			return
+		}
+	}
+
 	successResponse(w, toUserResponse(user))
 }
 
@@ -125,4 +141,24 @@ func UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	successResponse(w, toUserResponse(user))
+}
+
+func stringPtrOrNil(value string) *string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
+func syncUserEmail(user *models.User, email string) bool {
+	nextEmail := stringPtrOrNil(email)
+	if nextEmail == nil {
+		return false
+	}
+	if user.Email != nil && *user.Email == *nextEmail {
+		return false
+	}
+	user.Email = nextEmail
+	return true
 }

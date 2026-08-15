@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarRange, ChevronRight, LogOut, Megaphone, MessageSquareText, ShieldUser, Sparkles, UserRound } from 'lucide-react';
-import { ApiError, getAdminMe, getApiErrorMessage, type UserProfile } from '@/lib/api';
+import { CalendarRange, Check, ChevronRight, LogOut, Megaphone, MessageSquareText, Pencil, ShieldUser, Sparkles, UserRound, X } from 'lucide-react';
+import { ApiError, getAdminMe, getApiErrorMessage, updateMe, type UserProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 type AdminLayoutProps = {
@@ -40,6 +40,10 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
   const [meError, setMeError] = useState<string | null>(null);
   const [meErrorStatus, setMeErrorStatus] = useState<number | null>(null);
   const [checkingAccess, setCheckingAccess] = useState(true);
+  const [editingName, setEditingName] = useState(false);
+  const [displayNameDraft, setDisplayNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +57,7 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
         const profile = await getAdminMe(idToken);
         if (!cancelled) {
           setMe(profile);
+          setDisplayNameDraft(profile.display_name);
         }
       } catch (err) {
         if (!cancelled) {
@@ -73,6 +78,45 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
       cancelled = true;
     };
   }, [getIdToken]);
+
+  const startEditingName = () => {
+    if (!me) return;
+    setDisplayNameDraft(me.display_name);
+    setProfileMessage(null);
+    setEditingName(true);
+  };
+
+  const cancelEditingName = () => {
+    setDisplayNameDraft(me?.display_name ?? '');
+    setProfileMessage(null);
+    setEditingName(false);
+  };
+
+  const saveDisplayName = async () => {
+    const nextName = displayNameDraft.trim();
+    if (!nextName) {
+      setProfileMessage({ tone: 'error', text: '表示名を入力してください。' });
+      return;
+    }
+
+    setSavingName(true);
+    setProfileMessage(null);
+    try {
+      const idToken = await getIdToken();
+      if (!idToken) {
+        throw new ApiError(401, 'Authorization header required');
+      }
+      const updated = await updateMe(idToken, nextName);
+      setMe(updated);
+      setDisplayNameDraft(updated.display_name);
+      setEditingName(false);
+      setProfileMessage({ tone: 'success', text: '表示名を更新しました。' });
+    } catch (err) {
+      setProfileMessage({ tone: 'error', text: getApiErrorMessage(err, '表示名の更新に失敗しました。') });
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   if (checkingAccess) {
     return (
@@ -150,7 +194,49 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
             </div>
             {me ? (
               <div className="space-y-2 text-sm">
-                <p className="truncate font-semibold text-white">{me.display_name || '名前未設定'}</p>
+                {editingName ? (
+                  <div className="space-y-2">
+                    <input
+                      value={displayNameDraft}
+                      onChange={(event) => setDisplayNameDraft(event.target.value)}
+                      className="w-full rounded-xl border border-white/20 bg-white px-3 py-2 text-sm text-slate-900 outline-none"
+                      maxLength={80}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={saveDisplayName}
+                        disabled={savingName}
+                        className="inline-flex flex-1 items-center justify-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#2b4dca] disabled:opacity-60"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        保存
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEditingName}
+                        disabled={savingName}
+                        className="inline-flex flex-1 items-center justify-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="min-w-0 flex-1 truncate font-semibold text-white">{me.display_name || '名前未設定'}</p>
+                    <button
+                      type="button"
+                      onClick={startEditingName}
+                      className="rounded-full bg-white/15 p-1.5 text-white transition hover:bg-white/25"
+                      aria-label="表示名を編集"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {me.email ? <p className="truncate text-xs text-blue-100">{me.email}</p> : null}
                 <div className="flex items-center justify-between gap-3 text-blue-100">
                   <span>ロール</span>
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#2b4dca]">
@@ -158,6 +244,11 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
                   </span>
                 </div>
                 <p className="text-xs text-blue-100">User ID: {me.user_id}</p>
+                {profileMessage ? (
+                  <p className={`text-xs ${profileMessage.tone === 'error' ? 'text-red-100' : 'text-blue-100'}`}>
+                    {profileMessage.text}
+                  </p>
+                ) : null}
               </div>
             ) : (
               <p className="text-sm text-blue-100">{meError ?? 'ユーザー情報を読み込んでいます。'}</p>

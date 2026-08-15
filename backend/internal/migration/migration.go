@@ -55,6 +55,9 @@ func RunMigrations() error {
 	if err := config.DB.Exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(20) NOT NULL DEFAULT 'user'`).Error; err != nil {
 		return fmt.Errorf("failed adding role column to users: %w", err)
 	}
+	if err := config.DB.Exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email text`).Error; err != nil {
+		return fmt.Errorf("failed adding email column to users: %w", err)
+	}
 
 	// user_reviews: pros/cons を type 列（pros/cons/others）に置き換えたため、
 	// 過去に追加された pros/cons 列が残っていれば破棄する

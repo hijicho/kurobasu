@@ -203,6 +203,7 @@ export interface UserProfile {
   user_id: number;
   auth_uid?: string;
   display_name: string;
+  email?: string;
   role: string;
   created_at: string;
 }
@@ -223,8 +224,8 @@ export async function bootstrap(
 export async function updateMe(
   idToken: string,
   displayName: string
-): Promise<void> {
-  return fetchApi<void>('/me', {
+): Promise<UserProfile> {
+  return fetchApi<UserProfile>('/me', {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${idToken}`,

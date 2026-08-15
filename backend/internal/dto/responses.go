@@ -137,6 +137,7 @@ type UserResponse struct {
 	UserID      int64     `json:"user_id"`
 	AuthUID     string    `json:"auth_uid"`
 	DisplayName string    `json:"display_name"`
+	Email       *string   `json:"email,omitempty"`
 	Role        string    `json:"role"`
 	CreatedAt   time.Time `json:"created_at"`
 }
