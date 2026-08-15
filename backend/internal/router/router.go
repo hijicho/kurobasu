@@ -47,8 +47,8 @@ func SetupRoutes() http.Handler {
 	// 講義詳詳情報 (Reviews) API
 	// =====================
 	// POST /api/v1/reviews
-	// 効果：新しい講義詳詳を作成。リクエストボディに JSON で詳詳情報を送らなければいけない
-	mux.HandleFunc("/api/v1/reviews", middleware.RequireAuth(methodHandler(http.MethodPost, handlers.CreateReview)))
+	// 効果：新しい講義詳詳を作成。未ログインでも投稿でき、ログイン済みならユーザーに紐づく
+	mux.HandleFunc("/api/v1/reviews", middleware.OptionalAuth(methodHandler(http.MethodPost, handlers.CreateReview)))
 	// GET /api/v1/reviews/{id}
 	// (removed) 単一レビュー取得エンドポイントは廃止
 	// GET /api/v1/me/reviews

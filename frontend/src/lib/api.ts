@@ -162,15 +162,13 @@ export interface CreateReviewResponse {
 }
 
 export async function createReview(
-  idToken: string,
+  idToken: string | null | undefined,
   offeringId: number,
   review: { pros: string; cons: string; others?: string }
 ): Promise<CreateReviewResponse> {
   return fetchApi<CreateReviewResponse>('/reviews', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: idToken ? { Authorization: `Bearer ${idToken}` } : undefined,
     body: JSON.stringify({
       offering_id: offeringId,
       pros: review.pros,
@@ -267,8 +265,8 @@ export async function updateUserRole(
 
 export interface AdminReview {
   review_id: number;
-  user_id: number;
-  user_display_name: string;
+  user_id?: number | null;
+  user_display_name?: string;
   offering_id: number;
   subject_title: string;
   instructor_names: string[];

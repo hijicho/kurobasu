@@ -32,7 +32,9 @@ func toAdminReviewResponse(review *repository.AdminReviewRecord) dto.AdminReview
 		UpdatedAt:  review.UpdatedAt,
 	}
 
-	resp.UserDisplayName = review.UserDisplayName
+	if review.UserDisplayName.Valid {
+		resp.UserDisplayName = review.UserDisplayName.String
+	}
 	resp.SubjectTitle = review.SubjectTitle
 	resp.InstructorNames = []string(review.InstructorNames)
 	resp.AcademicYear = review.AcademicYear

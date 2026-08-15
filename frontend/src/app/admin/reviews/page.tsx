@@ -159,7 +159,7 @@ export default function ReviewsPage() {
                       {item.subject_title || `開講ID: ${item.offering_id}`}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      担当: {item.instructor_names?.length ? item.instructor_names.join('、') : '未設定'} / 投稿者: {item.user_display_name || `User ${item.user_id}`}
+                      担当: {item.instructor_names?.length ? item.instructor_names.join('、') : '未設定'} / 投稿者: {item.user_display_name || (item.user_id ? `User ${item.user_id}` : '匿名')}
                     </p>
                     <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{item.comment}</p>
                     <p className="mt-3 text-xs text-slate-400">

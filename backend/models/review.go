@@ -24,7 +24,7 @@ const (
 // type ごとに複数行（pros/cons/[others]）として保存される
 type UserReview struct {
 	UserReviewID int64  `gorm:"primaryKey;column:user_review_id" json:"user_review_id"`
-	UserID       int64  `gorm:"column:user_id;not null;index" json:"user_id"`
+	UserID       *int64 `gorm:"column:user_id;index" json:"user_id,omitempty"`
 	OfferingID   int64  `gorm:"column:offering_id;not null;index" json:"offering_id"`
 	Comment      string `gorm:"column:comment;type:text;not null" json:"comment"`
 	// Type: 既存行（pros/cons区別導入前）の移行時は 'others' で埋める（default:'others'）

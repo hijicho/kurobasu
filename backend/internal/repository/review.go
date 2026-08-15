@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -17,8 +18,8 @@ type ReviewRepository struct{}
 // AdminReviewRecord is the joined projection used by the moderation UI.
 type AdminReviewRecord struct {
 	ReviewID        int64
-	UserID          int64
-	UserDisplayName string
+	UserID          *int64
+	UserDisplayName sql.NullString
 	OfferingID      int64
 	SubjectTitle    string
 	InstructorNames pq.StringArray `gorm:"type:text[]"`

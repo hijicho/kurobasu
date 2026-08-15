@@ -60,6 +60,36 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// OptionalAuth resolves a Supabase user when Authorization is present, but
+// allows unauthenticated requests to continue. Invalid tokens still fail.
+func OptionalAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if strings.TrimSpace(r.Header.Get("Authorization")) == "" {
+			next(w, r)
+			return
+		}
+
+		authUser, err := verifySupabaseToken(r)
+		if err != nil {
+			writeAuthError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), supabaseUserKey{}, authUser)
+
+		userRepo := &repository.UserRepository{}
+		user, err := userRepo.GetUserByAuthUID(authUser.ID)
+		if err == nil {
+			ctx = context.WithValue(ctx, currentUserKey{}, user)
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			writeAuthError(w, http.StatusInternalServerError, "Failed to resolve user")
+			return
+		}
+
+		next(w, r.WithContext(ctx))
+	}
+}
+
 func RequireRole(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	allowed := make(map[string]struct{}, len(roles))
 	for _, role := range roles {
