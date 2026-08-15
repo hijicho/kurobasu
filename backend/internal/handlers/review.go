@@ -74,16 +74,15 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, ok := middleware.CurrentUser(r)
-	if !ok {
-		errorResponse(w, http.StatusUnauthorized, "Authorization header required")
-		return
+	var userID *int64
+	if user, ok := middleware.CurrentUser(r); ok {
+		userID = &user.UserID
 	}
 
 	now := time.Now()
 	newRow := func(reviewType models.UserReviewType, comment string) *models.UserReview {
 		return &models.UserReview{
-			UserID:     user.UserID,
+			UserID:     userID,
 			OfferingID: req.OfferingID,
 			Comment:    comment,
 			Type:       reviewType,

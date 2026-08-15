@@ -47,8 +47,8 @@ func SetupRoutes() http.Handler {
 	// 講義詳詳情報 (Reviews) API
 	// =====================
 	// POST /api/v1/reviews
-	// 効果：新しい講義詳詳を作成。リクエストボディに JSON で詳詳情報を送らなければいけない
-	mux.HandleFunc("/api/v1/reviews", middleware.RequireAuth(methodHandler(http.MethodPost, handlers.CreateReview)))
+	// 効果：新しい講義詳詳を作成。未ログインでも投稿でき、ログイン済みならユーザーに紐づく
+	mux.HandleFunc("/api/v1/reviews", middleware.OptionalAuth(methodHandler(http.MethodPost, handlers.CreateReview)))
 	// GET /api/v1/reviews/{id}
 	// (removed) 単一レビュー取得エンドポイントは廃止
 	// GET /api/v1/me/reviews
@@ -77,6 +77,9 @@ func SetupRoutes() http.Handler {
 	// =====================
 	// 管理者 (Admin) API
 	// =====================
+	// GET /api/v1/admin/me
+	// 効果：管理画面に入れる現在ユーザー情報を取得（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/me", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodGet, handlers.GetCurrentUser))))
 	// GET /api/v1/admin/users
 	// 効果：全ユーザー一覧を取得（admin ロールのみ）
 	mux.HandleFunc("/api/v1/admin/users", middleware.RequireAuth(middleware.RequireRole("admin")(methodHandler(http.MethodGet, handlers.ListUsers))))
@@ -96,7 +99,7 @@ func SetupRoutes() http.Handler {
 	// 効果：広告画像一覧の取得・アップロード（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/ads", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminAdsHandler())))
 	// DELETE /api/v1/admin/ads/{id}
-	// 効果：広告画像を無効化（admin/editor ロール）
+	// 効果：広告画像を物理削除（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/ads/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodDelete, handlers.DeleteAdminAd))))
 	// GET/POST /api/v1/admin/timetable-imports
 	// 効果：時間割CSVインポート（下書き）一覧の取得・新規アップロード（admin/editor ロール）

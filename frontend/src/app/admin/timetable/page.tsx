@@ -6,6 +6,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAuth } from '@/lib/auth-context';
 import {
   createAdminTimetableImport,
+  getApiErrorMessage,
   getDefaultAcademicYear,
   listAdminTimetableImports,
   type TimetableImportBatch,
@@ -61,11 +62,10 @@ export default function TimetablePage() {
     setLoadingBatches(true);
     try {
       const idToken = await getIdToken();
-      if (!idToken) throw new Error('not authenticated');
       const res = await listAdminTimetableImports(idToken, 'general-education');
       setBatches(res.items);
-    } catch {
-      // 一覧の取得失敗はアップロードのブロッカーにしない
+    } catch (err) {
+      setErrorMessage(getApiErrorMessage(err, 'アップロード履歴の取得に失敗しました。'));
     } finally {
       setLoadingBatches(false);
     }
@@ -132,7 +132,6 @@ export default function TimetablePage() {
     setUploading(true);
     try {
       const idToken = await getIdToken();
-      if (!idToken) throw new Error('not authenticated');
       const batch = await createAdminTimetableImport(
         idToken,
         academicYear,
@@ -145,7 +144,10 @@ export default function TimetablePage() {
     } catch (err) {
       console.error('Failed to import timetable CSV:', err);
       setErrorMessage(
-        'CSVの解析に失敗しました。総合教養科目の時間割CSVであることを確認するか、しばらくしてから再度お試しください。'
+        getApiErrorMessage(
+          err,
+          'CSVの解析に失敗しました。総合教養科目の時間割CSVであることを確認するか、しばらくしてから再度お試しください。'
+        )
       );
     } finally {
       setUploading(false);

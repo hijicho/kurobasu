@@ -5,10 +5,9 @@ import { Breadcrumb } from '../components/Breadcrumb';
 
 interface InstructorDetailPageProps {
   instructorId?: string;
-  isAuthenticated?: boolean;
 }
 
-export function InstructorDetailPage({ instructorId = 'hayashi-yuki', isAuthenticated = false }: InstructorDetailPageProps) {
+export function InstructorDetailPage({ instructorId = 'hayashi-yuki' }: InstructorDetailPageProps) {
   // 教員データを instructorId に応じて切り替え
   const getInstructorData = (id: string) => {
     switch (id) {
@@ -329,7 +328,7 @@ export function InstructorDetailPage({ instructorId = 'hayashi-yuki', isAuthenti
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
       
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb items={[

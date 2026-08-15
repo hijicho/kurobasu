@@ -5,11 +5,10 @@ import { Menu, X, BookOpen, ExternalLink } from 'lucide-react';
 import logoImage from '../assets/e52bb999d689900e37b9d134926cef87854ec798.png';
 
 interface HeaderProps {
-  isAuthenticated?: boolean;
   onGlossaryOpen?: () => void;
 }
 
-export function Header({ isAuthenticated = true, onGlossaryOpen }: HeaderProps) {
+export function Header({ onGlossaryOpen }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (

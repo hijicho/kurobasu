@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, UserRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import logoImage from '../assets/e52bb999d689900e37b9d134926cef87854ec798.png';
 import { useAuth } from '@/lib/auth-context';
 
@@ -7,7 +7,14 @@ interface LoginPageProps {
   onLoginSuccess?: () => void;
 }
 
-function mapAuthError(message: string): string {
+type AuthAction = 'login' | 'register';
+
+function isRateLimitError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes('rate limit') || lower.includes('too many');
+}
+
+function mapAuthError(message: string, action: AuthAction): string {
   const lower = message.toLowerCase();
   if (lower.includes('already')) {
       return 'このメールアドレスは既に登録されています';
@@ -21,18 +28,22 @@ function mapAuthError(message: string): string {
   if (lower.includes('invalid login') || lower.includes('invalid credentials')) {
       return 'メールアドレスまたはパスワードが正しくありません';
   }
-  if (lower.includes('rate limit') || lower.includes('too many')) {
-      return 'ログイン試行回数が多すぎます。しばらくしてから再度お試しください';
+  if (isRateLimitError(message)) {
+      const actionLabel = action === 'register' ? '新規登録' : 'ログイン';
+      return `${actionLabel}のリクエストが短時間に多すぎます。1分ほど待ってから再度お試しください。`;
   }
   return 'エラーが発生しました。時間をおいて再度お試しください';
 }
 
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
-  const { signIn, signUp, signInAsGuest } = useAuth();
+  const { signIn, signUp } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [registerSuccessMessage, setRegisterSuccessMessage] = useState<string | null>(null);
+  const [authCooldownUntil, setAuthCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const [loginData, setLoginData] = useState({
     email: '',
@@ -46,9 +57,46 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const cooldownSeconds = authCooldownUntil ? Math.max(0, Math.ceil((authCooldownUntil - now) / 1000)) : 0;
+  const authDisabled = submitting || cooldownSeconds > 0;
+
+  useEffect(() => {
+    if (!authCooldownUntil) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= authCooldownUntil) {
+        setAuthCooldownUntil(null);
+      }
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [authCooldownUntil]);
+
+  const handleAuthError = (err: unknown, action: AuthAction) => {
+    const message = (err as { message?: string })?.message ?? '';
+    if (isRateLimitError(message)) {
+      setAuthCooldownUntil(Date.now() + 60_000);
+    }
+    setErrors({ form: mapAuthError(message, action) });
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('confirmed') === '1') {
+      setActiveTab('login');
+      setRegisterSuccessMessage('メール確認が完了しました。ログインできます。');
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authDisabled) {
+      return;
+    }
     const newErrors: Record<string, string> = {};
 
     if (!loginData.email) {
@@ -62,6 +110,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
 
     setErrors(newErrors);
+    setRegisterSuccessMessage(null);
 
     if (Object.keys(newErrors).length !== 0) {
       return;
@@ -72,8 +121,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       await signIn(loginData.email, loginData.password);
       onLoginSuccess?.();
     } catch (err) {
-      const message = (err as { message?: string })?.message ?? '';
-      setErrors({ form: mapAuthError(message) });
+      handleAuthError(err, 'login');
     } finally {
       setSubmitting(false);
     }
@@ -81,6 +129,9 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authDisabled) {
+      return;
+    }
     const newErrors: Record<string, string> = {};
 
     if (!registerData.email) {
@@ -107,25 +158,17 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
     setSubmitting(true);
     try {
-      await signUp(registerData.email, registerData.password, registerData.email);
+      const result = await signUp(registerData.email, registerData.password, registerData.email);
+      if (result.needsEmailConfirmation) {
+        setRegisterSuccessMessage('確認メールを送信しました。メール内のリンクを開いてからログインしてください。');
+        setActiveTab('login');
+        setLoginData({ email: registerData.email, password: '' });
+        setRegisterData({ email: '', password: '', confirmPassword: '' });
+        return;
+      }
       onLoginSuccess?.();
     } catch (err) {
-      const message = (err as { message?: string })?.message ?? '';
-      setErrors({ form: mapAuthError(message) });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleGuestLogin = async () => {
-    setSubmitting(true);
-    setErrors({});
-    try {
-      await signInAsGuest();
-      onLoginSuccess?.();
-    } catch (err) {
-      const message = (err as { message?: string })?.message ?? '';
-      setErrors({ form: mapAuthError(message) });
+      handleAuthError(err, 'register');
     } finally {
       setSubmitting(false);
     }
@@ -154,6 +197,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               onClick={() => {
                 setActiveTab('login');
                 setErrors({});
+                setRegisterSuccessMessage(null);
               }}
               className={`flex-1 py-4 transition-colors ${
                 activeTab === 'login'
@@ -167,6 +211,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               onClick={() => {
                 setActiveTab('register');
                 setErrors({});
+                setRegisterSuccessMessage(null);
               }}
               className={`flex-1 py-4 transition-colors ${
                 activeTab === 'register'
@@ -182,9 +227,17 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <div className="p-6 md:p-8">
             {activeTab === 'login' ? (
               <form onSubmit={handleLogin} className="space-y-5">
+                {registerSuccessMessage && (
+                  <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+                    {registerSuccessMessage}
+                  </div>
+                )}
                 {errors.form && (
                   <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                     {errors.form}
+                    {cooldownSeconds > 0 ? (
+                      <span className="mt-1 block text-red-500">再試行まで約{cooldownSeconds}秒です。</span>
+                    ) : null}
                   </div>
                 )}
                 <div>
@@ -246,36 +299,21 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={authDisabled}
                   className="btn-theme-primary w-full py-3 rounded-xl disabled:opacity-60"
                 >
                   {submitting ? 'ログイン中...' : 'ログイン'}
                 </button>
 
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">または</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGuestLogin}
-                  disabled={submitting}
-                  className="w-full py-3 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-                >
-                  <UserRound className="w-5 h-5 text-gray-500" />
-                  {submitting ? 'ゲストログイン中...' : 'ゲストとして続ける'}
-                </button>
               </form>
             ) : (
               <form onSubmit={handleRegister} className="space-y-5">
                 {errors.form && (
                   <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                     {errors.form}
+                    {cooldownSeconds > 0 ? (
+                      <span className="mt-1 block text-red-500">再試行まで約{cooldownSeconds}秒です。</span>
+                    ) : null}
                   </div>
                 )}
                 <div>
@@ -345,7 +383,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={authDisabled}
                   className="btn-theme-primary w-full py-3 rounded-xl disabled:opacity-60"
                 >
                   {submitting ? '登録中...' : '新規登録'}

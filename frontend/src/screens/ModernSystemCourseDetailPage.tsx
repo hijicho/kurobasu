@@ -6,11 +6,10 @@ import modernSystemCourses from '../data/modernSystemCourses';
 
 interface ModernSystemCourseDetailPageProps {
   courseId?: string;
-  isAuthenticated?: boolean;
   onNavigateToList?: () => void;
 }
 
-export function ModernSystemCourseDetailPage({ courseId = '', isAuthenticated = false }: ModernSystemCourseDetailPageProps) {
+export function ModernSystemCourseDetailPage({ courseId = '' }: ModernSystemCourseDetailPageProps) {
   // Use the same slug strategy as the list page: encodeURIComponent so Japanese characters are preserved
   const slugify = (s: string) => encodeURIComponent((s ?? '').trim());
 
@@ -24,7 +23,7 @@ export function ModernSystemCourseDetailPage({ courseId = '', isAuthenticated = 
   if (!course) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header isAuthenticated={isAuthenticated} />
+        <Header />
         <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
           <p className="text-center text-gray-600">科目情報が見つかりませんでした</p>
         </main>
@@ -43,7 +42,7 @@ export function ModernSystemCourseDetailPage({ courseId = '', isAuthenticated = 
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb

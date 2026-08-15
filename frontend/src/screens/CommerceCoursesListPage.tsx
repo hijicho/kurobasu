@@ -5,11 +5,10 @@ import { Footer } from '../components/Footer';
 import { Breadcrumb } from '../components/Breadcrumb';
 
 interface CommerceCoursesListPageProps {
-  isAuthenticated?: boolean;
   onCourseClick?: (courseId: string) => void;
 }
 
-export function CommerceCoursesListPage({ isAuthenticated = false, onCourseClick }: CommerceCoursesListPageProps) {
+export function CommerceCoursesListPage({ onCourseClick }: CommerceCoursesListPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // 商学部の科目データ
@@ -74,7 +73,7 @@ export function CommerceCoursesListPage({ isAuthenticated = false, onCourseClick
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[

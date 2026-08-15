@@ -5,10 +5,9 @@ import { Breadcrumb } from '../components/Breadcrumb';
 
 interface JapaneseInstructorDetailPageProps {
   instructorId?: string;
-  isAuthenticated?: boolean;
 }
 
-export function JapaneseInstructorDetailPage({ instructorId = 'ikari-yukio', isAuthenticated = false }: JapaneseInstructorDetailPageProps) {
+export function JapaneseInstructorDetailPage({ instructorId = 'ikari-yukio' }: JapaneseInstructorDetailPageProps) {
   // 教員データを instructorId に応じて切り替え
   const getInstructorData = (id: string) => {
     switch (id) {
@@ -667,7 +666,7 @@ export function JapaneseInstructorDetailPage({ instructorId = 'ikari-yukio', isA
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
       
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb items={[

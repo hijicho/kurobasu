@@ -3,14 +3,10 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumb } from '../components/Breadcrumb';
 
-interface VeterinaryNoDataPageProps {
-  isAuthenticated?: boolean;
-}
-
-export function VeterinaryNoDataPage({ isAuthenticated = false }: VeterinaryNoDataPageProps) {
+export function VeterinaryNoDataPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[

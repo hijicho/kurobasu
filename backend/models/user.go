@@ -17,6 +17,9 @@ type User struct {
 	// 例: 「田中太郎」
 	DisplayName string `gorm:"column:display_name;not null" json:"display_name"`
 
+	// email: Supabase Auth email. Anonymous users may not have one.
+	Email *string `gorm:"column:email;type:text" json:"email,omitempty"`
+
 	// auth_uid: Supabase Auth user id
 	AuthUID string `gorm:"column:auth_uid;uniqueIndex;not null" json:"auth_uid"`
 	// role: ユーザーの権限 ('user' or 'admin')

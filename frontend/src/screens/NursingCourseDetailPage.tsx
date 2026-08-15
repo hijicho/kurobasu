@@ -5,7 +5,6 @@ import { ReviewSections } from '../components/course-detail/ReviewSections';
 
 interface NursingCourseDetailPageProps {
   courseId?: string;
-  isAuthenticated?: boolean;
 }
 
 interface CourseData {
@@ -18,7 +17,7 @@ interface CourseData {
   others: string[];
 }
 
-export function NursingCourseDetailPage({ courseId = 'anatomy-physiology-sawai', isAuthenticated = false }: NursingCourseDetailPageProps) {
+export function NursingCourseDetailPage({ courseId = 'anatomy-physiology-sawai' }: NursingCourseDetailPageProps) {
   const getCourseData = (id: string): CourseData => {
     const courses: Record<string, CourseData> = {
       'anatomy-physiology-sawai': {
@@ -45,7 +44,7 @@ export function NursingCourseDetailPage({ courseId = 'anatomy-physiology-sawai',
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[

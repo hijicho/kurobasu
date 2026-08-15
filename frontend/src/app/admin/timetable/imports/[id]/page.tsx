@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAuth } from '@/lib/auth-context';
 import {
+  getApiErrorMessage,
   getAdminTimetableImport,
   publishAdminTimetableImport,
   updateAdminTimetableImportRows,
@@ -103,12 +104,11 @@ export default function TimetableImportEditPage() {
     setLoading(true);
     try {
       const idToken = await getIdToken();
-      if (!idToken) throw new Error('not authenticated');
       const res = await getAdminTimetableImport(idToken, batchId);
       setBatch(res);
       setRows(toEditableRows(res));
-    } catch {
-      setMessage({ tone: 'error', text: 'インポートデータの取得に失敗しました。' });
+    } catch (err) {
+      setMessage({ tone: 'error', text: getApiErrorMessage(err, 'インポートデータの取得に失敗しました。') });
     } finally {
       setLoading(false);
     }
@@ -137,13 +137,12 @@ export default function TimetableImportEditPage() {
     setMessage(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) throw new Error('not authenticated');
       const updated = await updateAdminTimetableImportRows(idToken, batchId, toRowInputs(rows));
       setBatch(updated);
       setRows(toEditableRows(updated));
       setMessage({ tone: 'success', text: '保存しました。' });
-    } catch {
-      setMessage({ tone: 'error', text: '保存に失敗しました。' });
+    } catch (err) {
+      setMessage({ tone: 'error', text: getApiErrorMessage(err, '保存に失敗しました。') });
     } finally {
       setSaving(false);
     }
@@ -154,7 +153,6 @@ export default function TimetableImportEditPage() {
     setMessage(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) throw new Error('not authenticated');
       // 公開前に未保存の修正を確実に反映する（公開済みバッチは行を編集できないため対象外）
       if (!isPublished) {
         await updateAdminTimetableImportRows(idToken, batchId, toRowInputs(rows));
@@ -163,8 +161,8 @@ export default function TimetableImportEditPage() {
       setBatch(published);
       setRows(toEditableRows(published));
       setMessage({ tone: 'success', text: '公開しました。ユーザー画面の総合教養科目に反映されています。' });
-    } catch {
-      setMessage({ tone: 'error', text: '公開に失敗しました。' });
+    } catch (err) {
+      setMessage({ tone: 'error', text: getApiErrorMessage(err, '公開に失敗しました。') });
     } finally {
       setPublishing(false);
     }

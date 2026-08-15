@@ -6,11 +6,10 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { economicsCourses } from '../data/economicsCourses';
 
 interface EconomicsCoursesListPageProps {
-  isAuthenticated?: boolean;
   onCourseClick?: (courseId: string) => void;
 }
 
-export function EconomicsCoursesListPage({ isAuthenticated = false, onCourseClick }: EconomicsCoursesListPageProps) {
+export function EconomicsCoursesListPage({ onCourseClick }: EconomicsCoursesListPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Build course list directly from canonical economicsCourses data so
@@ -34,7 +33,7 @@ export function EconomicsCoursesListPage({ isAuthenticated = false, onCourseClic
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[

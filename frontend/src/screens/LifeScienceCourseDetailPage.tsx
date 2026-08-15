@@ -5,10 +5,9 @@ import { ReviewSections } from '../components/course-detail/ReviewSections';
 
 interface LifeScienceCourseDetailPageProps {
   courseId: string;
-  isAuthenticated?: boolean;
 }
 
-export function LifeScienceCourseDetailPage({ courseId, isAuthenticated = false }: LifeScienceCourseDetailPageProps) {
+export function LifeScienceCourseDetailPage({ courseId }: LifeScienceCourseDetailPageProps) {
   // 生活科学部の科目詳細データ
   const courseDetails: Record<string, {
     name: string;
@@ -101,7 +100,7 @@ export function LifeScienceCourseDetailPage({ courseId, isAuthenticated = false 
   if (!course) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header isAuthenticated={isAuthenticated} />
+        <Header />
         <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
           <p className="text-center text-gray-500">科目が見つかりませんでした</p>
         </main>
@@ -112,7 +111,7 @@ export function LifeScienceCourseDetailPage({ courseId, isAuthenticated = false 
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[

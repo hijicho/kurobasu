@@ -8,11 +8,7 @@ import { PublicAdBanner } from '../components/PublicAdBanner';
 import { getCategories, Category } from '../lib/api';
 import hamubasuLogo from '../assets/59962a0286c10949e8d3fa57e1256b8b69b96d84.png';
 import bgPattern from '../assets/c00c039666ebe180d57a090c8744e0552d438ca4.png';
-import titleImage from '../assets/573ad896cd92b11ef07ccb64a98726dc7a7aab11.png';
-
-interface TopPageProps {
-  isAuthenticated?: boolean;
-}
+import titleImage from '../assets/image-1786800393446.png';
 
 const categoryHref = (slug: string) => {
   switch (slug) {
@@ -36,7 +32,7 @@ const quickLinkConfigs = [
   { slug: 'english-native', icon: <Languages className="w-5 h-5" /> },
 ];
 
-export function TopPage({ isAuthenticated = false }: TopPageProps) {
+export function TopPage() {
   const [specializedOpen, setSpecializedOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -103,16 +99,14 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* ヘッダー */}
-      <Header
-        isAuthenticated={isAuthenticated}
-      />
+      <Header />
       
       <main className="flex-1">
         <div className="max-w-[1440px] mx-auto px-6 py-8">
           {/* 年度表示 */}
           <div className="text-center mb-6">
               <div className="flex justify-center mb-2">
-              <img src={titleImage.src ?? titleImage} alt="2026年度 前期" className="h-12 md:h-16 w-auto" />
+              <img src={titleImage.src ?? titleImage} alt="2025年度 後期" className="h-12 md:h-16 w-auto" />
             </div>
             <p className="text-xs text-gray-500 mt-3">何かあれば @kurobasu_ocu まで連絡を。<br />落単・情報の誤りには一切責任を負いません。</p>
           </div>

@@ -31,7 +31,7 @@ export function ReviewForm({ onSubmit, disabled = false, disabledMessage }: Revi
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);
     } catch {
-      setError('投稿に失敗しました。ログイン状態と通信状況を確認してください。');
+      setError('投稿に失敗しました。入力内容と通信状況を確認してください。');
     } finally {
       setSubmitting(false);
     }

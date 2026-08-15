@@ -6,7 +6,6 @@ import { economicsCourses } from '../data/economicsCourses';
 
 interface EconomicsCourseDetailPageProps {
   courseId?: string;
-  isAuthenticated?: boolean;
 }
 
 interface CourseData {
@@ -19,7 +18,7 @@ interface CourseData {
   others: string[];
 }
 
-export function EconomicsCourseDetailPage({ courseId = 'econometrics-1-kano', isAuthenticated = false }: EconomicsCourseDetailPageProps) {
+export function EconomicsCourseDetailPage({ courseId = 'econometrics-1-kano' }: EconomicsCourseDetailPageProps) {
 
   const getCourseData = (id: string): CourseData => {
     // Use the canonical economicsCourses data exported from src/data
@@ -70,7 +69,7 @@ export function EconomicsCourseDetailPage({ courseId = 'econometrics-1-kano', is
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[

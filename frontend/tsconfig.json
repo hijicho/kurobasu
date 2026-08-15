@@ -37,7 +37,6 @@
   ],
   "exclude": [
     "node_modules",
-    "src/App.tsx",
     "src/imports",
     "dist"
   ]

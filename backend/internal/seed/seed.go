@@ -265,15 +265,16 @@ func seedReviews(offerings []models.Offering, users []models.User) {
 		if data.offeringIndex >= len(offerings) || data.userIndex >= len(users) {
 			continue
 		}
+		userID := users[data.userIndex].UserID
 		rev := models.UserReview{
-			UserID:     users[data.userIndex].UserID,
+			UserID:     &userID,
 			OfferingID: offerings[data.offeringIndex].OfferingID,
 			Comment:    data.comment,
 			Status:     models.UserReviewStatusApproved,
 			CreatedAt:  time.Now(),
 			UpdatedAt:  time.Now(),
 		}
-		config.DB.Where(models.UserReview{UserID: rev.UserID, OfferingID: rev.OfferingID, Comment: rev.Comment}).FirstOrCreate(&rev)
+		config.DB.Where("user_id = ? AND offering_id = ? AND comment = ?", userID, rev.OfferingID, rev.Comment).FirstOrCreate(&rev)
 	}
 
 	log.Println("✓ Reviews seeded")

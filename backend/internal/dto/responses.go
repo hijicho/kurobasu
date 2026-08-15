@@ -88,8 +88,8 @@ type ListUserReviewsResponse struct {
 // AdminReviewResponse は管理画面でレビューを確認するための情報です
 type AdminReviewResponse struct {
 	ReviewID        int64     `json:"review_id"`
-	UserID          int64     `json:"user_id"`
-	UserDisplayName string    `json:"user_display_name"`
+	UserID          *int64    `json:"user_id,omitempty"`
+	UserDisplayName string    `json:"user_display_name,omitempty"`
 	OfferingID      int64     `json:"offering_id"`
 	SubjectTitle    string    `json:"subject_title"`
 	InstructorNames []string  `json:"instructor_names"`
@@ -137,6 +137,7 @@ type UserResponse struct {
 	UserID      int64     `json:"user_id"`
 	AuthUID     string    `json:"auth_uid"`
 	DisplayName string    `json:"display_name"`
+	Email       *string   `json:"email,omitempty"`
 	Role        string    `json:"role"`
 	CreatedAt   time.Time `json:"created_at"`
 }

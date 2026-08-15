@@ -9,11 +9,10 @@ import { ReviewSections } from '../components/course-detail/ReviewSections';
 
 interface FirstYearEducationDetailPageProps {
   courseId: string;
-  isAuthenticated: boolean;
   onNavigateToList?: () => void;
 }
 
-export function FirstYearEducationDetailPage({ courseId, isAuthenticated, onNavigateToList }: FirstYearEducationDetailPageProps) {
+export function FirstYearEducationDetailPage({ courseId, onNavigateToList }: FirstYearEducationDetailPageProps) {
   // まず詳細データから検索
   let course = firstYearEducationCourses.find(c => c.courseCode === courseId);
   

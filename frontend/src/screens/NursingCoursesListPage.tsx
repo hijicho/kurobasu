@@ -5,11 +5,10 @@ import { Footer } from '../components/Footer';
 import { Breadcrumb } from '../components/Breadcrumb';
 
 interface NursingCoursesListPageProps {
-  isAuthenticated?: boolean;
   onCourseClick?: (courseId: string) => void;
 }
 
-export function NursingCoursesListPage({ isAuthenticated = false, onCourseClick }: NursingCoursesListPageProps) {
+export function NursingCoursesListPage({ onCourseClick }: NursingCoursesListPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // 看護学部の科目データ
@@ -34,7 +33,7 @@ export function NursingCoursesListPage({ isAuthenticated = false, onCourseClick 
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[

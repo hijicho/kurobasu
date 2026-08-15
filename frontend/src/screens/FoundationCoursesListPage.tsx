@@ -4,7 +4,6 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { useState } from 'react';
 
 interface FoundationCoursesListPageProps {
-  isAuthenticated?: boolean;
   onCourseClick?: (courseId: string) => void;
 }
 
@@ -19,7 +18,7 @@ interface CourseGroup {
   instructors: CourseInstructor[];
 }
 
-export function FoundationCoursesListPage({ isAuthenticated = false, onCourseClick }: FoundationCoursesListPageProps) {
+export function FoundationCoursesListPage({ onCourseClick }: FoundationCoursesListPageProps) {
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
 
   // 基礎教育科目データ（カテゴリ別）
@@ -202,7 +201,7 @@ export function FoundationCoursesListPage({ isAuthenticated = false, onCourseCli
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
       
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-4 md:py-6">
         <Breadcrumb items={[

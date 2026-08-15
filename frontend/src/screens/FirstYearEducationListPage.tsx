@@ -6,12 +6,11 @@ import { firstYearSeminarScheduleData, FirstYearSeminarScheduleCourse } from '..
 import { firstYearEducationCourses } from '../lib/firstYearEducationData';
 
 interface FirstYearEducationListPageProps {
-  isAuthenticated: boolean;
   onCourseClick?: (courseId: string) => void;
   onNavigateBack?: () => void;
 }
 
-export function FirstYearEducationListPage({ isAuthenticated, onCourseClick, onNavigateBack }: FirstYearEducationListPageProps) {
+export function FirstYearEducationListPage({ onCourseClick, onNavigateBack }: FirstYearEducationListPageProps) {
   const days = ['月', '火', '水', '木', '金'];
   const periods = ['1限', '2限', '3限', '4限', '5限'];
 

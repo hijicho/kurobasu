@@ -70,14 +70,11 @@ export function ReviewSections({ pros, cons, others, offeringId }: ReviewSection
   }, [offeringId]);
 
   const handleSubmit = async (review: { pros: string; cons: string; others: string }) => {
-    if (!offeringId || !isAuthenticated) {
+    if (!offeringId) {
       throw new Error('review submission is not available');
     }
 
-    const idToken = await getIdToken();
-    if (!idToken) {
-      throw new Error('missing id token');
-    }
+    const idToken = isAuthenticated ? await getIdToken() : null;
 
     await createReview(idToken, offeringId, review);
     setSubmitted((prev) => [...prev, { ...review, approved: false }]);
@@ -89,12 +86,10 @@ export function ReviewSections({ pros, cons, others, offeringId }: ReviewSection
   const pendingList = submitted.filter((r) => !r.approved);
   const approvedList = submitted.filter((r) => r.approved);
   const hasSubmitted = submitted.length > 0;
-  const formDisabled = !offeringId || !isAuthenticated;
+  const formDisabled = !offeringId;
   const disabledMessage = !offeringId
     ? 'この授業はまだ投稿 API と紐づいていません。'
-    : !isAuthenticated
-      ? '口コミを投稿するにはログインしてください。'
-      : undefined;
+    : undefined;
 
   return (
     <div className="space-y-4 md:space-y-6">

@@ -294,17 +294,13 @@ func TestListReviews(t *testing.T) {
 
 // TestCreateReview - POST /api/v1/reviews
 func TestCreateReview(t *testing.T) {
-	token := getTestSupabaseAccessToken(t)
-	// レビュー作成には DB 側ユーザーが必要なので、先に bootstrap しておく（冪等）
-	doRequest(t, "POST", "/api/v1/auth/bootstrap", dto.BootstrapUserRequest{DisplayName: "Test Suite User"}, authHeader(token))
-
 	body := dto.CreateReviewRequest{
 		OfferingID: 1,
 		Pros:       "Well-structured lectures.",
 		Cons:       "Homework load was heavy.",
 	}
 
-	w := doRequest(t, "POST", "/api/v1/reviews", body, authHeader(token))
+	w := doRequest(t, "POST", "/api/v1/reviews", body)
 
 	// OfferingID が存在しない場合はエラー (404) または作成成功 (201)
 	if w.Code != http.StatusNotFound && w.Code != http.StatusCreated {

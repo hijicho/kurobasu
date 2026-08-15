@@ -5,11 +5,10 @@ import { ArrowLeft } from 'lucide-react';
 import { firstYearSeminarScheduleData, FirstYearSeminarScheduleCourse } from '@/lib/firstYearSeminarScheduleData';
 
 interface FirstYearSeminarTimetablePageProps {
-  isAuthenticated: boolean;
   onCourseClick?: (courseId: string) => void;
 }
 
-export function FirstYearSeminarTimetablePage({ isAuthenticated, onCourseClick }: FirstYearSeminarTimetablePageProps) {
+export function FirstYearSeminarTimetablePage({ onCourseClick }: FirstYearSeminarTimetablePageProps) {
   const days = ['月', '火', '水', '木', '金'];
   const periods = ['1限', '2限', '3限', '4限', '5限'];
 
