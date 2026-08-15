@@ -109,10 +109,42 @@ export async function getCategories(): Promise<CategoriesResponse> {
 
 export interface DefaultAcademicYearResponse {
   academic_year: number;
+  term?: string;
 }
 
 export async function getDefaultAcademicYear(): Promise<DefaultAcademicYearResponse> {
   return fetchApi<DefaultAcademicYearResponse>('/meta/default-academic-year');
+}
+
+export interface SiteSettings {
+  default_academic_year: number;
+  default_term: string;
+  updated_at: string;
+}
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+  return fetchApi<SiteSettings>('/meta/site-settings');
+}
+
+export async function getAdminSiteSettings(idToken: string | null | undefined): Promise<SiteSettings> {
+  return fetchApi<SiteSettings>('/admin/site-settings', {
+    headers: authHeaders(idToken),
+  });
+}
+
+export async function updateAdminSiteSettings(
+  idToken: string | null | undefined,
+  defaultAcademicYear: number,
+  defaultTerm: string
+): Promise<SiteSettings> {
+  return fetchApi<SiteSettings>('/admin/site-settings', {
+    method: 'PATCH',
+    headers: authHeaders(idToken),
+    body: JSON.stringify({
+      default_academic_year: defaultAcademicYear,
+      default_term: defaultTerm,
+    }),
+  });
 }
 
 // ============================

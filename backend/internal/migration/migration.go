@@ -41,12 +41,16 @@ func RunMigrations() error {
 		&models.AdImage{},
 		&models.TimetableImportBatch{},
 		&models.TimetableImportRow{},
+		&models.SiteSettings{},
 	)
 	if err != nil {
 		return err
 	}
 
 	if err := syncUICategories(); err != nil {
+		return err
+	}
+	if err := ensureDefaultSiteSettings(); err != nil {
 		return err
 	}
 
@@ -205,6 +209,18 @@ func RunMigrations() error {
 
 	// All migrations completed successfully
 	// Database schema is now ready for application use
+	return nil
+}
+
+func ensureDefaultSiteSettings() error {
+	sql := `
+		INSERT INTO site_settings (settings_id, default_academic_year, default_term, updated_at)
+		VALUES (1, 2026, 'spring', CURRENT_TIMESTAMP)
+		ON CONFLICT (settings_id) DO NOTHING
+	`
+	if err := config.DB.Exec(sql).Error; err != nil {
+		return fmt.Errorf("failed ensuring default site settings: %w", err)
+	}
 	return nil
 }
 

@@ -41,6 +41,8 @@ type seededOffering struct {
 func RunSeeds() error {
 	log.Println("Starting database seeding...")
 
+	seedSiteSettings()
+
 	categories := seedCategories()
 	if len(categories) == 0 {
 		return nil
@@ -53,6 +55,22 @@ func RunSeeds() error {
 
 	log.Println("Database seeding completed successfully")
 	return nil
+}
+
+func seedSiteSettings() {
+	settings := models.SiteSettings{
+		SettingsID:          1,
+		DefaultAcademicYear: 2026,
+		DefaultTerm:         "spring",
+		UpdatedAt:           time.Now(),
+	}
+	if err := config.DB.
+		Where(models.SiteSettings{SettingsID: settings.SettingsID}).
+		FirstOrCreate(&settings).Error; err != nil {
+		log.Printf("Error seeding site settings: %v", err)
+		return
+	}
+	log.Println("✓ Site settings seeded")
 }
 
 func seedCategories() []models.Category {

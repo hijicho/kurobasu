@@ -101,6 +101,9 @@ func SetupRoutes() http.Handler {
 	// DELETE /api/v1/admin/ads/{id}
 	// 効果：広告画像を物理削除（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/ads/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodDelete, handlers.DeleteAdminAd))))
+	// GET/PATCH /api/v1/admin/site-settings
+	// 効果：公開画面のデフォルト年度・学期を取得/更新（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/site-settings", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminSiteSettingsHandler())))
 	// GET/POST /api/v1/admin/timetable-imports
 	// 効果：時間割CSVインポート（下書き）一覧の取得・新規アップロード（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/timetable-imports", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminTimetableImportsHandler())))
@@ -132,6 +135,9 @@ func SetupRoutes() http.Handler {
 	// GET /api/v1/meta/default-academic-year
 	// 効果：現在年度のデフォルト値を取得 (例：2026)
 	mux.HandleFunc("/api/v1/meta/default-academic-year", methodHandler(http.MethodGet, handlers.GetDefaultAcademicYear))
+	// GET /api/v1/meta/site-settings
+	// 効果：公開画面のデフォルト年度・学期を取得
+	mux.HandleFunc("/api/v1/meta/site-settings", methodHandler(http.MethodGet, handlers.GetSiteSettings))
 
 	// 作成したルーターを CORS ミドルウェアでラップして返す
 	return middleware.CORS(mux)
@@ -153,6 +159,19 @@ func methodHandler(method string, handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		handler(w, r)
+	}
+}
+
+func adminSiteSettingsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetSiteSettings(w, r)
+		case http.MethodPatch:
+			handlers.UpdateSiteSettings(w, r)
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
 	}
 }
 

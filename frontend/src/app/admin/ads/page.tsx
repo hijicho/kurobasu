@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminLoadingBlock from '@/components/admin/AdminLoadingBlock';
-import { API_ORIGIN, deleteAdminAd, getApiErrorMessage, getDefaultAcademicYear, listAdminAds, uploadAdminAd, type AdImage } from '@/lib/api';
+import { API_ORIGIN, deleteAdminAd, getApiErrorMessage, getSiteSettings, listAdminAds, uploadAdminAd, type AdImage } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 const acceptableRatio = 1 / 5;
@@ -63,8 +63,11 @@ export default function AdsPage() {
   }, [loadAds]);
 
   useEffect(() => {
-    getDefaultAcademicYear()
-      .then((res) => setSelectedAcademicYear(res.academic_year))
+    getSiteSettings()
+      .then((res) => {
+        setSelectedAcademicYear(res.default_academic_year);
+        setSelectedTerm(res.default_term);
+      })
       .catch(() => undefined);
   }, []);
 

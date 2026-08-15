@@ -17,7 +17,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8
 - `CategoryPage.tsx`: URL の `/:year/:term/courses/:category` を使って `GET /categories/{slug}/offerings?academic_year=...&term=...`
 - `ApiCourseDetailPage.tsx`: `GET /offerings/{id}` と `GET /offerings/{id}/reviews`
 - `ReviewSections.tsx`: `POST /reviews`
-- `admin/*`: 管理ユーザー、口コミ承認/削除、広告アップロード/削除
+- `/`: `GET /meta/site-settings` で公開デフォルト年度・学期を取得し、`/:year/:term` に移動
+- `admin/*`: 管理ユーザー、口コミ承認/削除、広告アップロード/削除、公開設定の更新
 
 ## Auth
 

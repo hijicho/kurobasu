@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/auth-context';
 import {
   createAdminTimetableImport,
   getApiErrorMessage,
-  getDefaultAcademicYear,
+  getSiteSettings,
   listAdminTimetableImports,
   type TimetableImportBatch,
 } from '@/lib/api';
@@ -54,8 +54,13 @@ export default function TimetablePage() {
   const [isHistoryView, setIsHistoryView] = useState(false);
 
   useEffect(() => {
-    getDefaultAcademicYear()
-      .then((res) => setAcademicYear(res.academic_year))
+    getSiteSettings()
+      .then((res) => {
+        setAcademicYear(res.default_academic_year);
+        if (termOptions.some((item) => item.key === res.default_term)) {
+          setTerm(res.default_term);
+        }
+      })
       .catch(() => undefined);
   }, []);
 
