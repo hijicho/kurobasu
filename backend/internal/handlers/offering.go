@@ -36,7 +36,7 @@ func toOfferingResponse(off models.Offering, meetings []models.Meeting) dto.Offe
 func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	academicYearStr := r.URL.Query().Get("academic_year")
-	term := r.URL.Query().Get("term")
+	term := normalizeSemesterTerm(r.URL.Query().Get("term"))
 
 	if academicYearStr == "" || term == "" {
 		errorResponse(w, http.StatusBadRequest, "academic_year and term are required")

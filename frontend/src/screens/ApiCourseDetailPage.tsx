@@ -38,10 +38,6 @@ function termLabel(term: string) {
       return '前期';
     case 'fall':
       return '後期';
-    case 'intensive':
-      return '集中';
-    case 'year':
-      return '通年';
     default:
       return term;
   }

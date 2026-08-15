@@ -53,6 +53,9 @@ func RunMigrations() error {
 	if err := ensureDefaultSiteSettings(); err != nil {
 		return err
 	}
+	if err := ensureSemesterTermConstraints(); err != nil {
+		return err
+	}
 
 	// Ensure `role` column exists on users table for existing databases
 	// This is idempotent: `IF NOT EXISTS` prevents errors when the column already exists
@@ -364,12 +367,53 @@ func migrateAdImagesTermTarget() error {
 				UPDATE ad_images
 				SET term = 'spring'
 				WHERE term IS NULL
-				   OR term NOT IN ('spring', 'fall', 'intensive', 'year');
+				   OR term NOT IN ('spring', 'fall');
 			END IF;
 		END $$;
 	`
 	if err := config.DB.Exec(sql).Error; err != nil {
 		return fmt.Errorf("failed migrating ad_images term target: %w", err)
+	}
+	return nil
+}
+
+func ensureSemesterTermConstraints() error {
+	updates := []struct {
+		table  string
+		column string
+	}{
+		{"offerings", "term"},
+		{"timetables", "term"},
+		{"timetable_import_batches", "term"},
+		{"ad_images", "term"},
+		{"site_settings", "default_term"},
+	}
+	for _, update := range updates {
+		sql := fmt.Sprintf(`
+			UPDATE %s
+			SET %s = 'spring'
+			WHERE %s IS NULL OR %s NOT IN ('spring', 'fall')
+		`, update.table, update.column, update.column, update.column)
+		if err := config.DB.Exec(sql).Error; err != nil {
+			return fmt.Errorf("failed normalizing %s.%s: %w", update.table, update.column, err)
+		}
+	}
+
+	constraints := []struct {
+		table string
+		name  string
+		ddl   string
+	}{
+		{"offerings", "chk_offerings_term_semester", `ALTER TABLE offerings ADD CONSTRAINT chk_offerings_term_semester CHECK (term IN ('spring', 'fall'))`},
+		{"timetables", "chk_timetables_term_semester", `ALTER TABLE timetables ADD CONSTRAINT chk_timetables_term_semester CHECK (term IN ('spring', 'fall'))`},
+		{"timetable_import_batches", "chk_timetable_import_batches_term_semester", `ALTER TABLE timetable_import_batches ADD CONSTRAINT chk_timetable_import_batches_term_semester CHECK (term IN ('spring', 'fall'))`},
+		{"ad_images", "chk_ad_images_term_semester", `ALTER TABLE ad_images ADD CONSTRAINT chk_ad_images_term_semester CHECK (term IN ('spring', 'fall'))`},
+		{"site_settings", "chk_site_settings_default_term_semester", `ALTER TABLE site_settings ADD CONSTRAINT chk_site_settings_default_term_semester CHECK (default_term IN ('spring', 'fall'))`},
+	}
+	for _, constraint := range constraints {
+		if err := addConstraintIfNotExists(constraint.table, constraint.name, constraint.ddl); err != nil {
+			return err
+		}
 	}
 	return nil
 }
