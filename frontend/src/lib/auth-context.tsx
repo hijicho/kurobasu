@@ -11,7 +11,6 @@ interface AuthContextValue {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<{ needsEmailConfirmation: boolean }>;
-  signInAsGuest: () => Promise<void>;
   signOutUser: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   getIdToken: (forceRefresh?: boolean) => Promise<string | null>;
@@ -59,16 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { needsEmailConfirmation: true };
   };
 
-  const signInAsGuest = async () => {
-    const { data, error } = await supabase.auth.signInAnonymously();
-    if (error) {
-      throw error;
-    }
-    if (data.session?.access_token) {
-      await bootstrap(data.session.access_token, 'ゲスト');
-    }
-  };
-
   const signOutUser = async () => {
     const idToken = await getIdToken();
     await supabase.auth.signOut();
@@ -100,7 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         signIn,
         signUp,
-        signInAsGuest,
         signOutUser,
         resetPassword,
         getIdToken,

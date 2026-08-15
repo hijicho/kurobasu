@@ -81,9 +81,7 @@ go run ./cmd/server/main.go
 
 ### 認証
 
-認証が必要な API は、Supabase Auth の access token を検証します。ユーザー ID をそのまま `Authorization: Bearer ...` に入れる開発用バイパスはありません。
-
-Supabase Auth ではメール/パスワード認証に加えて、匿名サインインを有効にしてください。ゲストログインは Supabase Auth の匿名ユーザーとして作成されます。
+認証が必要な API は、Supabase Auth の access token を検証します。ユーザー ID をそのまま `Authorization: Bearer ...` に入れる開発用バイパスはありません。Supabase Auth ではメール/パスワード認証を使用します。
 
 バックエンドの `.env` には以下を設定します。
 

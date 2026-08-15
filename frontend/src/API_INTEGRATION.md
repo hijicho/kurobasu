@@ -21,7 +21,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8
 
 ## Auth
 
-認証が必要な API は Supabase Auth の access token を `Authorization: Bearer <token>` で送ります。匿名ユーザーも Supabase Auth の匿名サインインで access token を発行してから利用します。
+認証が必要な API は Supabase Auth の access token を `Authorization: Bearer <token>` で送ります。口コミ投稿は未ログインでも可能で、ログイン済みの場合だけユーザーに紐づきます。
 
 ## Known Gaps
 

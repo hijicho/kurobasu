@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, UserRound } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import logoImage from '../assets/e52bb999d689900e37b9d134926cef87854ec798.png';
 import { useAuth } from '@/lib/auth-context';
 
@@ -7,7 +7,7 @@ interface LoginPageProps {
   onLoginSuccess?: () => void;
 }
 
-type AuthAction = 'login' | 'register' | 'guest';
+type AuthAction = 'login' | 'register';
 
 function isRateLimitError(message: string): boolean {
   const lower = message.toLowerCase();
@@ -29,14 +29,14 @@ function mapAuthError(message: string, action: AuthAction): string {
       return 'メールアドレスまたはパスワードが正しくありません';
   }
   if (isRateLimitError(message)) {
-      const actionLabel = action === 'guest' ? 'ゲストログイン' : action === 'register' ? '新規登録' : 'ログイン';
+      const actionLabel = action === 'register' ? '新規登録' : 'ログイン';
       return `${actionLabel}のリクエストが短時間に多すぎます。1分ほど待ってから再度お試しください。`;
   }
   return 'エラーが発生しました。時間をおいて再度お試しください';
 }
 
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
-  const { signIn, signUp, signInAsGuest } = useAuth();
+  const { signIn, signUp } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -161,22 +161,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       onLoginSuccess?.();
     } catch (err) {
       handleAuthError(err, 'register');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleGuestLogin = async () => {
-    if (authDisabled) {
-      return;
-    }
-    setSubmitting(true);
-    setErrors({});
-    try {
-      await signInAsGuest();
-      onLoginSuccess?.();
-    } catch (err) {
-      handleAuthError(err, 'guest');
     } finally {
       setSubmitting(false);
     }
@@ -313,24 +297,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   {submitting ? 'ログイン中...' : 'ログイン'}
                 </button>
 
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">または</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGuestLogin}
-                  disabled={authDisabled}
-                  className="w-full py-3 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-                >
-                  <UserRound className="w-5 h-5 text-gray-500" />
-                  {submitting ? 'ゲストログイン中...' : 'ゲストとして続ける'}
-                </button>
               </form>
             ) : (
               <form onSubmit={handleRegister} className="space-y-5">
