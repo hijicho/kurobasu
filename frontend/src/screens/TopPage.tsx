@@ -6,13 +6,10 @@ import { Header } from '../components/Header';
 import { GlossaryModal } from '../components/GlossaryModal';
 import { PublicAdBanner } from '../components/PublicAdBanner';
 import { getCategories, Category } from '../lib/api';
+import { publicCategoryPath, termLabels } from '../lib/public-routing';
 import hamubasuLogo from '../assets/59962a0286c10949e8d3fa57e1256b8b69b96d84.png';
 import bgPattern from '../assets/c00c039666ebe180d57a090c8744e0552d438ca4.png';
 import titleImage from '../assets/image-1786800393446.png';
-
-const categoryHref = (slug: string) => {
-  return `/courses/${slug}`;
-};
 
 const quickLinkConfigs = [
   { slug: 'general-education', icon: <BookOpen className="w-5 h-5" /> },
@@ -23,7 +20,12 @@ const quickLinkConfigs = [
   { slug: 'english-native', icon: <Languages className="w-5 h-5" /> },
 ];
 
-export function TopPage() {
+interface TopPageProps {
+  academicYear: number;
+  term: string;
+}
+
+export function TopPage({ academicYear, term }: TopPageProps) {
   const [specializedOpen, setSpecializedOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -65,7 +67,7 @@ export function TopPage() {
       return {
         title: category.name,
         icon: config.icon,
-        href: categoryHref(category.slug),
+        href: publicCategoryPath(academicYear, term, category.slug),
       };
     })
     .filter((link): link is { title: string; icon: JSX.Element; href: string } => Boolean(link));
@@ -87,7 +89,7 @@ export function TopPage() {
   const specializedCourses = specializedSlugs
     .map((slug) => {
       const category = categoriesBySlug.get(slug);
-      return category ? { name: category.name, href: `/courses/${category.slug}` } : null;
+      return category ? { name: category.name, href: publicCategoryPath(academicYear, term, category.slug) } : null;
     })
     .filter((course): course is { name: string; href: string } => Boolean(course));
 
@@ -101,8 +103,9 @@ export function TopPage() {
           {/* 年度表示 */}
           <div className="text-center mb-6">
               <div className="flex justify-center mb-2">
-              <img src={titleImage.src ?? titleImage} alt="2025年度 後期" className="h-12 md:h-16 w-auto" />
+              <img src={titleImage.src ?? titleImage} alt={`${academicYear}年度 ${termLabels[term] ?? term}`} className="h-12 md:h-16 w-auto" />
             </div>
+            <p className="text-sm font-bold text-gray-700">{academicYear}年度 {termLabels[term] ?? term}</p>
             <p className="text-xs text-gray-500 mt-3">何かあれば @kurobasu_ocu まで連絡を。<br />落単・情報の誤りには一切責任を負いません。</p>
           </div>
 
@@ -116,7 +119,7 @@ export function TopPage() {
             </button>
           </div>
 
-          <PublicAdBanner />
+          <PublicAdBanner academicYear={academicYear} term={term} />
 
           {/* カテゴリボタン＆専門科目セクション - 統一背景 */}
           <div 

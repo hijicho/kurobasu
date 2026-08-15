@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getDefaultAcademicYear, listAds, type AdImage } from '@/lib/api';
+import { listAds, type AdImage } from '@/lib/api';
 
 interface PublicAdBannerProps {
-  term?: string;
+  academicYear: number;
+  term: string;
 }
 
-export function PublicAdBanner({ term = 'spring' }: PublicAdBannerProps) {
+export function PublicAdBanner({ academicYear, term }: PublicAdBannerProps) {
   const [ads, setAds] = useState<AdImage[]>([]);
 
   useEffect(() => {
@@ -15,8 +16,7 @@ export function PublicAdBanner({ term = 'spring' }: PublicAdBannerProps) {
 
     async function loadAds() {
       try {
-        const { academic_year } = await getDefaultAcademicYear();
-        const response = await listAds(academic_year, term);
+        const response = await listAds(academicYear, term);
         if (!cancelled) {
           setAds(response.items.filter((ad) => ad.is_active));
         }
@@ -32,7 +32,7 @@ export function PublicAdBanner({ term = 'spring' }: PublicAdBannerProps) {
     return () => {
       cancelled = true;
     };
-  }, [term]);
+  }, [academicYear, term]);
 
   if (ads.length === 0) {
     return null;

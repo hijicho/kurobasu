@@ -4,11 +4,14 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { TimetableView } from '../components/TimetableView';
 import { Breadcrumb } from '../components/Breadcrumb';
-import { getDefaultAcademicYear, getOfferings, Offering } from '../lib/api';
+import { getOfferings, Offering } from '../lib/api';
+import { publicTopPath, termLabels } from '../lib/public-routing';
 
 interface CategoryPageProps {
   categoryName: string;
   categoryId: string;
+  academicYear: number;
+  term: string;
   onNavigateBack?: () => void;
   onCourseClick?: (courseId: string) => void;
 }
@@ -20,12 +23,17 @@ const levelBadgeClasses: Record<string, string> = {
   C: 'bg-blue-100 text-blue-700',
 };
 
-export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCourseClick }: CategoryPageProps) {
+export function CategoryPage({
+  categoryName,
+  categoryId,
+  academicYear,
+  term,
+  onNavigateBack,
+  onCourseClick,
+}: CategoryPageProps) {
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [academicYear, setAcademicYear] = useState(2026);
-  const [term] = useState('spring');
   const usesTimetable = categoryId === 'general-education';
 
   // 授業データをAPIから取得
@@ -35,10 +43,8 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
     const fetchOfferings = async () => {
       try {
         setLoading(true);
-        const meta = await getDefaultAcademicYear().catch(() => ({ academic_year: academicYear }));
-        const response = await getOfferings(categoryId, meta.academic_year, term);
+        const response = await getOfferings(categoryId, academicYear, term);
         if (!cancelled) {
-          setAcademicYear(meta.academic_year);
           setOfferings(response.items);
           setError(null);
         }
@@ -59,7 +65,7 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
     return () => {
       cancelled = true;
     };
-  }, [categoryId, term]);
+  }, [academicYear, categoryId, term]);
 
   // APIデータを時間割ビュー用のフォーマットに変換
   const convertToTimetableSlots = (offerings: Offering[]) => {
@@ -106,7 +112,7 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
       
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb items={[
-          { label: 'トップ', href: '/' },
+          { label: 'トップ', href: publicTopPath(academicYear, term) },
           { label: categoryName },
         ]} />
 
@@ -120,7 +126,7 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
           <div>
             <h1 className="mb-2">{categoryName}</h1>
             <p className="text-gray-600 text-sm">
-              {academicYear}年度 前期。授業を選択すると詳細が表示されます
+              {academicYear}年度 {termLabels[term] ?? term}。授業を選択すると詳細が表示されます
             </p>
           </div>
         </div>

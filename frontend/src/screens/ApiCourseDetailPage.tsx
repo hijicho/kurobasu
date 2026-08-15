@@ -12,6 +12,7 @@ interface ApiCourseDetailPageProps {
   offeringId: number;
   categoryName: string;
   usesTimetable?: boolean;
+  topHref?: string;
   onNavigateToList?: () => void;
 }
 
@@ -50,6 +51,7 @@ export function ApiCourseDetailPage({
   offeringId,
   categoryName,
   usesTimetable = true,
+  topHref = '/',
   onNavigateToList,
 }: ApiCourseDetailPageProps) {
   const [offering, setOffering] = useState<Offering | null>(null);
@@ -104,7 +106,7 @@ export function ApiCourseDetailPage({
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb
           items={[
-            { label: 'トップ', href: '/' },
+            { label: 'トップ', href: topHref },
             { label: categoryName, onClick: onNavigateToList },
             { label: offering?.subject.title ?? '授業詳細' },
           ]}

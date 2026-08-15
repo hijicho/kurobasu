@@ -13,8 +13,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8
 ## Connected Screens
 
 - `TopPage.tsx`: `GET /categories` で登録済みカテゴリを表示
-- `TopPage.tsx`: `GET /ads?academic_year=...&term=spring` で公開広告を表示
-- `CategoryPage.tsx`: `GET /meta/default-academic-year` と `GET /categories/{slug}/offerings`
+- `TopPage.tsx`: URL の `/:year/:term` を使って `GET /ads?academic_year=...&term=...` で公開広告を表示
+- `CategoryPage.tsx`: URL の `/:year/:term/courses/:category` を使って `GET /categories/{slug}/offerings?academic_year=...&term=...`
 - `ApiCourseDetailPage.tsx`: `GET /offerings/{id}` と `GET /offerings/{id}/reviews`
 - `ReviewSections.tsx`: `POST /reviews`
 - `admin/*`: 管理ユーザー、口コミ承認/削除、広告アップロード/削除
@@ -25,6 +25,6 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8
 
 ## Known Gaps
 
-- 学部別ページは `/courses/{category_slug}` の汎用バックエンド接続へ移行しました。過去レビュー本文を表示するには DB への投入が必要です。
+- 公開ページは `/:year/:term`、`/:year/:term/courses/{category_slug}`、`/:year/:term/courses/{category_slug}/{offering_id}` で年度・学期を URL に含めます。
 - 講義詳細 API は授業名、教員名、年度、学期、授業形態、時間割、レビューを返しますが、評価基準、テスト持ち込み、講義室、授業コード、単位数はまだ返しません。
 - 時間割管理ページから CSV（時間割／集中講義）をアップロードすると自動解析され、確認・修正のうえ公開できます。
