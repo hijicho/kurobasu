@@ -160,7 +160,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     try {
       const result = await signUp(registerData.email, registerData.password, registerData.email);
       if (result.needsEmailConfirmation) {
-        setRegisterSuccessMessage('確認メールを送信しました。メール内のリンクを開いてからログインしてください。');
+        setRegisterSuccessMessage('確認メールを送信しました。既に登録済みの場合は、ログインまたはパスワード再設定をお試しください。');
         setActiveTab('login');
         setLoginData({ email: registerData.email, password: '' });
         setRegisterData({ email: '', password: '', confirmPassword: '' });
