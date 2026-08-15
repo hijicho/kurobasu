@@ -406,7 +406,7 @@ export async function listAds(academicYear?: number, term?: string): Promise<Lis
 }
 
 // ============================
-// Admin: Timetable PDF import (時間割PDFインポート)
+// Admin: Timetable CSV import (時間割CSVインポート)
 // ============================
 
 export interface TimetableImportRow {
@@ -463,17 +463,17 @@ export async function createAdminTimetableImport(
   idToken: string | null | undefined,
   academicYear: number,
   term: string,
-  pdf: File,
+  csv: File,
   categorySlug = 'general-education',
-  intensivePdf?: File | null
+  intensiveCsv?: File | null
 ): Promise<TimetableImportBatch> {
   const formData = new FormData();
   formData.append('academic_year', String(academicYear));
   formData.append('term', term);
   formData.append('category_slug', categorySlug);
-  formData.append('pdf', pdf);
-  if (intensivePdf) {
-    formData.append('intensive_pdf', intensivePdf);
+  formData.append('csv', csv);
+  if (intensiveCsv) {
+    formData.append('intensive_csv', intensiveCsv);
   }
 
   return fetchApi<TimetableImportBatch>('/admin/timetable-imports', {

@@ -4,8 +4,8 @@ go 1.25.0
 
 require (
 	github.com/joho/godotenv v1.5.1
-	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
 	github.com/lib/pq v1.11.2
+	golang.org/x/text v0.40.0
 	google.golang.org/api v0.293.0
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/gorm v1.30.0
@@ -39,7 +39,6 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260807164820-c8921c73eeea // indirect
 	google.golang.org/grpc v1.83.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect

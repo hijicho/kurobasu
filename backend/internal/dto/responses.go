@@ -220,7 +220,7 @@ type ListResponse struct {
 }
 
 // =====================
-// TimetableImport (管理画面: 時間割PDFインポート) Response/Request DTOs
+// TimetableImport (管理画面: 時間割CSVインポート) Response/Request DTOs
 // =====================
 
 type TimetableImportRowResponse struct {

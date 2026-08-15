@@ -27,14 +27,22 @@ function formatDateTime(value: string | null) {
   return new Date(value).toLocaleString('ja-JP', { hour12: false });
 }
 
+function isCsvFile(file: File) {
+  return (
+    file.type === 'text/csv' ||
+    file.type === 'application/vnd.ms-excel' ||
+    file.name.toLowerCase().endsWith('.csv')
+  );
+}
+
 export default function TimetablePage() {
   const router = useRouter();
   const { getIdToken } = useAuth();
 
   const [academicYear, setAcademicYear] = useState<number>(new Date().getFullYear());
   const [term, setTerm] = useState(termOptions[0].key);
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [intensivePdfFile, setIntensivePdfFile] = useState<File | null>(null);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [intensiveCsvFile, setIntensiveCsvFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -71,12 +79,11 @@ export default function TimetablePage() {
   const openFileDialog = () => fileInputRef.current?.click();
 
   const handleFile = (file: File) => {
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    if (!isPdf) {
-      setErrorMessage('PDFファイルを選択してください。');
+    if (!isCsvFile(file)) {
+      setErrorMessage('CSVファイルを選択してください。');
       return;
     }
-    setPdfFile(file);
+    setCsvFile(file);
     setErrorMessage(null);
   };
 
@@ -91,12 +98,11 @@ export default function TimetablePage() {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    if (!isPdf) {
-      setErrorMessage('PDFファイルを選択してください。');
+    if (!isCsvFile(file)) {
+      setErrorMessage('CSVファイルを選択してください。');
       return;
     }
-    setIntensivePdfFile(file);
+    setIntensiveCsvFile(file);
     setErrorMessage(null);
   };
 
@@ -119,8 +125,8 @@ export default function TimetablePage() {
   };
 
   const handleUpload = async () => {
-    if (!pdfFile) {
-      setErrorMessage('PDFを選択してください。');
+    if (!csvFile) {
+      setErrorMessage('CSVを選択してください。');
       return;
     }
     setErrorMessage(null);
@@ -131,17 +137,17 @@ export default function TimetablePage() {
         idToken,
         academicYear,
         term,
-        pdfFile,
+        csvFile,
         'general-education',
-        intensivePdfFile
+        intensiveCsvFile
       );
       router.push(`/admin/timetable/imports/${batch.import_batch_id}`);
     } catch (err) {
-      console.error('Failed to import timetable PDF:', err);
+      console.error('Failed to import timetable CSV:', err);
       setErrorMessage(
         getApiErrorMessage(
           err,
-          'PDFの解析に失敗しました。総合教養科目の時間割PDFであることを確認するか、しばらくしてから再度お試しください。'
+          'CSVの解析に失敗しました。総合教養科目の時間割CSVであることを確認するか、しばらくしてから再度お試しください。'
         )
       );
     } finally {
@@ -153,7 +159,7 @@ export default function TimetablePage() {
     <AdminLayout
       currentPath="/admin/timetable"
       title="時間割"
-      subtitle="総合教養科目の時間割PDFをアップロードすると自動で読み取り、スプレッドシート感覚で確認・修正してから公開できます。"
+      subtitle="総合教養科目の時間割CSVをアップロードすると自動で読み取り、スプレッドシート感覚で確認・修正してから公開できます。"
     >
       <div className="space-y-6">
         {!isHistoryView ? (
@@ -171,17 +177,17 @@ export default function TimetablePage() {
                 dragActive ? 'border-[#2b4dca] bg-[#eff3ff]' : 'border-slate-300 bg-white'
               }`}
             >
-              <p className="text-lg font-semibold text-slate-800">ここにPDFをドラッグ</p>
-              <p className="mt-2 text-sm text-slate-500">クリックまたはドラッグで PDF を選択できます。</p>
+              <p className="text-lg font-semibold text-slate-800">ここにCSVをドラッグ</p>
+              <p className="mt-2 text-sm text-slate-500">クリックまたはドラッグで CSV を選択できます。</p>
               <p className="mt-3 text-sm text-slate-400">
-                対応範囲：総合教養科目の時間割ページ（他の区分・時間割外の一部は自動抽出の対象外です）
+                対応範囲：総合教養科目の時間割CSV（年度,学期,曜日,時限,科目名,担当教員,授業コード,講義室の列を想定。UTF-8/Shift-JIS両対応）
               </p>
             </div>
 
             <input
               ref={fileInputRef}
               type="file"
-              accept="application/pdf"
+              accept="text/csv,.csv"
               className="hidden"
               onChange={handleFileChange}
             />
@@ -192,23 +198,23 @@ export default function TimetablePage() {
               </div>
             ) : null}
 
-            {pdfFile ? (
+            {csvFile ? (
               <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                <p className="font-semibold text-slate-900">選択済みのPDF</p>
-                <p className="mt-2">{pdfFile.name}</p>
-                <p className="mt-1 text-slate-500">サイズ: {(pdfFile.size / 1024).toFixed(1)} KB</p>
+                <p className="font-semibold text-slate-900">選択済みのCSV</p>
+                <p className="mt-2">{csvFile.name}</p>
+                <p className="mt-1 text-slate-500">サイズ: {(csvFile.size / 1024).toFixed(1)} KB</p>
               </div>
             ) : null}
 
             <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white p-4">
-              <p className="text-sm font-semibold text-slate-800">集中講義日程PDF（任意）</p>
+              <p className="text-sm font-semibold text-slate-800">集中講義のCSV（任意）</p>
               <p className="mt-1 text-sm text-slate-500">
-                日付指定で開講される集中講義がある場合は、集中講義日程一覧のPDFも合わせて選択してください。タイムテーブル下の一覧に反映されます。
+                日付指定で開講される集中講義がある場合は、集中講義のCSVも合わせて選択してください。タイムテーブル下の一覧に反映されます。
               </p>
               <input
                 ref={intensiveFileInputRef}
                 type="file"
-                accept="application/pdf"
+                accept="text/csv,.csv"
                 className="hidden"
                 onChange={handleIntensiveFileChange}
               />
@@ -220,14 +226,14 @@ export default function TimetablePage() {
                 >
                   ファイルを選択
                 </button>
-                {intensivePdfFile ? (
+                {intensiveCsvFile ? (
                   <span className="text-sm text-slate-600">
-                    {intensivePdfFile.name}（{(intensivePdfFile.size / 1024).toFixed(1)} KB）
+                    {intensiveCsvFile.name}（{(intensiveCsvFile.size / 1024).toFixed(1)} KB）
                     <button
                       type="button"
-                      onClick={() => setIntensivePdfFile(null)}
+                      onClick={() => setIntensiveCsvFile(null)}
                       className="ml-2 text-slate-400 hover:text-red-600"
-                      aria-label="集中講義日程PDFの選択を解除"
+                      aria-label="集中講義のCSVの選択を解除"
                     >
                       ×
                     </button>
@@ -267,7 +273,7 @@ export default function TimetablePage() {
               <button
                 type="button"
                 onClick={handleUpload}
-                disabled={!pdfFile || uploading}
+                disabled={!csvFile || uploading}
                 className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-6 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {uploading ? '解析中...' : 'アップロードして解析'}

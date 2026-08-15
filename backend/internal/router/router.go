@@ -102,10 +102,10 @@ func SetupRoutes() http.Handler {
 	// 効果：広告画像を物理削除（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/ads/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodDelete, handlers.DeleteAdminAd))))
 	// GET/POST /api/v1/admin/timetable-imports
-	// 効果：時間割PDFインポート（下書き）一覧の取得・新規アップロード（admin/editor ロール）
+	// 効果：時間割CSVインポート（下書き）一覧の取得・新規アップロード（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/timetable-imports", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminTimetableImportsHandler())))
 	// GET /api/v1/admin/timetable-imports/{id}
-	// 効果：時間割PDFインポート1件を行データ付きで取得（admin/editor ロール）
+	// 効果：時間割CSVインポート1件を行データ付きで取得（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/timetable-imports/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminTimetableImportHandler())))
 	// PUT /api/v1/admin/timetable-imports/{id}/rows
 	// 効果：スプレッドシート編集画面での修正を保存（下書き行を全置換）（admin/editor ロール）

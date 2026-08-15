@@ -7,17 +7,17 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hageruto/kurobasu/internal/csvtimetable"
 	"github.com/hageruto/kurobasu/internal/dto"
 	"github.com/hageruto/kurobasu/internal/middleware"
-	"github.com/hageruto/kurobasu/internal/pdftimetable"
 	"github.com/hageruto/kurobasu/internal/repository"
 	"github.com/hageruto/kurobasu/internal/sheets"
 	"github.com/hageruto/kurobasu/models"
 )
 
-const maxTimetableImportPDFBytes = 20 << 20 // 20MB
+const maxTimetableImportCSVBytes = 5 << 20 // 5MB
 
-// Only 総合教養科目 is supported for now — see internal/pdftimetable's doc
+// Only 総合教養科目 is supported for now — see internal/csvtimetable's doc
 // comment for why automatic parsing is scoped to this one table.
 const supportedImportCategorySlug = "general-education"
 
@@ -73,10 +73,10 @@ func toTimetableImportBatchResponse(batch *models.TimetableImportBatch, includeR
 }
 
 // CreateAdminTimetableImport - POST /api/v1/admin/timetable-imports
-// multipart form: pdf (file), academic_year, term, category_slug (optional, defaults to general-education)
+// multipart form: csv (file), academic_year, term, category_slug (optional, defaults to general-education)
 func CreateAdminTimetableImport(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxTimetableImportPDFBytes+(1<<20))
-	if err := r.ParseMultipartForm(maxTimetableImportPDFBytes); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, maxTimetableImportCSVBytes+(1<<20))
+	if err := r.ParseMultipartForm(maxTimetableImportCSVBytes); err != nil {
 		errorResponse(w, http.StatusBadRequest, "Invalid multipart form")
 		return
 	}
@@ -97,38 +97,38 @@ func CreateAdminTimetableImport(w http.ResponseWriter, r *http.Request) {
 		categorySlug = supportedImportCategorySlug
 	}
 	if categorySlug != supportedImportCategorySlug {
-		errorResponse(w, http.StatusBadRequest, "PDF import currently only supports category_slug="+supportedImportCategorySlug)
+		errorResponse(w, http.StatusBadRequest, "CSV import currently only supports category_slug="+supportedImportCategorySlug)
 		return
 	}
 
-	file, header, err := r.FormFile("pdf")
+	file, header, err := r.FormFile("csv")
 	if err != nil {
-		errorResponse(w, http.StatusBadRequest, "pdf file is required")
+		errorResponse(w, http.StatusBadRequest, "csv file is required")
 		return
 	}
 	defer file.Close()
 
-	parsedRows, err := pdftimetable.ParseGeneralEducation(file, header.Size, term)
+	parsedRows, err := csvtimetable.Parse(file, term)
 	if err != nil {
-		errorResponse(w, http.StatusBadRequest, "PDFの解析に失敗しました: "+err.Error())
+		errorResponse(w, http.StatusBadRequest, "CSVの解析に失敗しました: "+err.Error())
 		return
 	}
 	if len(parsedRows) == 0 {
-		errorResponse(w, http.StatusBadRequest, "総合教養科目の時間割データがPDFから見つかりませんでした")
+		errorResponse(w, http.StatusBadRequest, "総合教養科目の時間割データがCSVから見つかりませんでした")
 		return
 	}
 
-	// Optional second file: 集中講義日程一覧 (courses with no fixed weekly
+	// Optional second file: 集中講義のCSV (courses with no fixed weekly
 	// slot, scheduled on specific calendar dates instead). Not having one
 	// is fine — the main timetable import still succeeds without it.
-	if intensiveFile, intensiveHeader, err := r.FormFile("intensive_pdf"); err == nil {
+	if intensiveFile, _, err := r.FormFile("intensive_csv"); err == nil {
 		defer intensiveFile.Close()
-		intensiveRows, err := pdftimetable.ParseIntensiveCourses(intensiveFile, intensiveHeader.Size)
+		intensiveRows, err := csvtimetable.Parse(intensiveFile, term)
 		if err != nil {
-			errorResponse(w, http.StatusBadRequest, "集中講義日程PDFの解析に失敗しました: "+err.Error())
+			errorResponse(w, http.StatusBadRequest, "集中講義のCSVの解析に失敗しました: "+err.Error())
 			return
 		}
-		parsedRows = pdftimetable.MergeIntensiveRows(parsedRows, intensiveRows)
+		parsedRows = csvtimetable.MergeIntensiveRows(parsedRows, intensiveRows)
 	}
 
 	var createdBy *int64

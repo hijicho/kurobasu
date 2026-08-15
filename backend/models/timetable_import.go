@@ -3,9 +3,9 @@ package models
 import "time"
 
 // =====================
-// TimetableImportBatch: 時間割PDFインポートの1回分
+// TimetableImportBatch: 時間割CSVインポートの1回分
 // =====================
-// 管理画面からアップロードされた時間割PDFを解析した結果をひとまとめにするバッチ。
+// 管理画面からアップロードされた時間割CSVを解析した結果をひとまとめにするバッチ。
 // draft の間はスプレッドシート（編集画面）で行を修正でき、
 // publish されると対象カテゴリの subjects/offerings/meetings に反映される。
 type TimetableImportBatch struct {
@@ -31,7 +31,7 @@ func (TimetableImportBatch) TableName() string {
 }
 
 // TimetableImportRow: インポートされた時間割の1コマ分
-// PDF から自動抽出された内容、またはスプレッドシート編集画面で手直しされた内容を保持する。
+// CSV から自動抽出された内容、またはスプレッドシート編集画面で手直しされた内容を保持する。
 type TimetableImportRow struct {
 	ImportRowID   int64 `gorm:"primaryKey;column:import_row_id" json:"import_row_id"`
 	ImportBatchID int64 `gorm:"column:import_batch_id;not null;index" json:"import_batch_id"`

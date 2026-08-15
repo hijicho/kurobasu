@@ -178,7 +178,7 @@ export default function TimetableImportEditPage() {
     <AdminLayout
       currentPath="/admin/timetable"
       title="時間割インポートの編集"
-      subtitle="PDFから自動で読み取った内容です。誤りがあれば直接修正し、確認できたら公開してください。"
+      subtitle="CSVから自動で読み取った内容です。誤りがあれば直接修正し、確認できたら公開してください。"
     >
       {loading ? (
         <AdminLoadingBlock rows={3} />
@@ -249,7 +249,7 @@ export default function TimetableImportEditPage() {
 
           {isPublished ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              公開済みのため表のみ参照できます。内容を変更したい場合はPDFを再アップロードしてください。
+              公開済みのため表のみ参照できます。内容を変更したい場合はCSVを再アップロードしてください。
             </div>
           ) : null}
 
