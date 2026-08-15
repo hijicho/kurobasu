@@ -239,6 +239,12 @@ export async function getMe(idToken: string | null | undefined): Promise<UserPro
   });
 }
 
+export async function getAdminMe(idToken: string | null | undefined): Promise<UserProfile> {
+  return fetchApi<UserProfile>('/admin/me', {
+    headers: authHeaders(idToken),
+  });
+}
+
 export async function logout(idToken: string): Promise<void> {
   return fetchApi<void>('/auth/logout', {
     method: 'POST',

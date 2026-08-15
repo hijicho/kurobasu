@@ -77,6 +77,9 @@ func SetupRoutes() http.Handler {
 	// =====================
 	// 管理者 (Admin) API
 	// =====================
+	// GET /api/v1/admin/me
+	// 効果：管理画面に入れる現在ユーザー情報を取得（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/me", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodGet, handlers.GetCurrentUser))))
 	// GET /api/v1/admin/users
 	// 効果：全ユーザー一覧を取得（admin ロールのみ）
 	mux.HandleFunc("/api/v1/admin/users", middleware.RequireAuth(middleware.RequireRole("admin")(methodHandler(http.MethodGet, handlers.ListUsers))))

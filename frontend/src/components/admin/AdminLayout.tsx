@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CalendarRange, ChevronRight, LogOut, Megaphone, MessageSquareText, ShieldUser, Sparkles, UserRound } from 'lucide-react';
-import { getApiErrorMessage, getMe, type UserProfile } from '@/lib/api';
+import { ApiError, getAdminMe, getApiErrorMessage, type UserProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 type AdminLayoutProps = {
@@ -38,22 +38,31 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
   const { getIdToken } = useAuth();
   const [me, setMe] = useState<UserProfile | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
+  const [meErrorStatus, setMeErrorStatus] = useState<number | null>(null);
+  const [checkingAccess, setCheckingAccess] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadMe() {
       setMeError(null);
+      setMeErrorStatus(null);
+      setCheckingAccess(true);
       try {
         const idToken = await getIdToken();
-        const profile = await getMe(idToken);
+        const profile = await getAdminMe(idToken);
         if (!cancelled) {
           setMe(profile);
         }
       } catch (err) {
         if (!cancelled) {
           setMe(null);
+          setMeErrorStatus(err instanceof ApiError ? err.status : null);
           setMeError(getApiErrorMessage(err, 'ユーザー情報を取得できませんでした。'));
+        }
+      } finally {
+        if (!cancelled) {
+          setCheckingAccess(false);
         }
       }
     }
@@ -64,6 +73,38 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
       cancelled = true;
     };
   }, [getIdToken]);
+
+  if (checkingAccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 text-slate-900">
+        <div className="w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-sm font-semibold text-[#2b4dca]">管理画面</p>
+          <h1 className="mt-2 text-xl font-semibold">権限を確認しています</h1>
+          <p className="mt-2 text-sm text-slate-600">ログイン中のユーザー情報を確認しています。</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!me) {
+    const loginRequired = meErrorStatus === 401;
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 text-slate-900">
+        <div className="w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-sm font-semibold text-[#2b4dca]">管理画面</p>
+          <h1 className="mt-2 text-xl font-semibold">{loginRequired ? 'ログインが必要です' : 'アクセスできません'}</h1>
+          <p className="mt-2 text-sm text-slate-600">{meError ?? 'この管理画面を表示する権限がありません。'}</p>
+          <Link
+            href={loginRequired ? '/login' : '/'}
+            className="mt-5 inline-flex rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white"
+          >
+            {loginRequired ? 'ログインへ' : 'トップへ戻る'}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
