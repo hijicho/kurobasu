@@ -86,7 +86,7 @@ export default function AdminManagementPage() {
                       <button
                         key={role.value}
                         type="button"
-                        disabled={updatingUserId === user.user_id || user.role === role.value}
+                        disabled={updatingUserId === user.user_id}
                         onClick={() => handleRoleChange(user.user_id, role.value)}
                         className={`rounded-full px-6 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
                           role.value === 'admin'

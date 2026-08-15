@@ -161,7 +161,7 @@ export default function ReviewsPage() {
                   <div className="flex shrink-0 flex-wrap gap-3">
                     <button
                       type="button"
-                      disabled={updatingReviewId === item.review_id || item.status === 'approved'}
+                      disabled={updatingReviewId === item.review_id}
                       onClick={() => handleStatusChange(item.review_id, 'approved')}
                       className="rounded-full bg-[#2b4dca] px-6 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
