@@ -44,6 +44,10 @@ func RunMigrations() error {
 		return err
 	}
 
+	if err := syncUICategories(); err != nil {
+		return err
+	}
+
 	// Ensure `role` column exists on users table for existing databases
 	// This is idempotent: `IF NOT EXISTS` prevents errors when the column already exists
 	if err := config.DB.Exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(20) NOT NULL DEFAULT 'user'`).Error; err != nil {
@@ -180,6 +184,71 @@ func RunMigrations() error {
 
 	// All migrations completed successfully
 	// Database schema is now ready for application use
+	return nil
+}
+
+func syncUICategories() error {
+	sql := `
+		DO $$
+		BEGIN
+			CREATE TEMP TABLE desired_categories (
+				slug text PRIMARY KEY,
+				name text NOT NULL,
+				sort_order integer NOT NULL
+			) ON COMMIT DROP;
+
+			INSERT INTO desired_categories (slug, name, sort_order) VALUES
+				('general-education', '総合教養科目（般教）', 1),
+				('first-year-education', '初年次教育科目（初ゼミ）', 2),
+				('foundation-list', '基礎教育科目', 3),
+				('information-literacy', '情報リテラシー科目', 4),
+				('english-japanese', '外国語科目(英語必修)-日本語教師', 5),
+				('english-native', '外国語科目(英語必修)-英語教師', 6),
+				('specialized', '専門科目', 7);
+
+			CREATE TEMP TABLE legacy_category_slugs (
+				old_slug text PRIMARY KEY,
+				new_slug text NOT NULL
+			) ON COMMIT DROP;
+
+			INSERT INTO legacy_category_slugs (old_slug, new_slug) VALUES
+				('science', 'general-education'),
+				('mathematics', 'foundation-list'),
+				('languages', 'english-japanese'),
+				('arts', 'specialized'),
+				('general', 'general-education'),
+				('foundation', 'foundation-list'),
+				('first-year-seminar', 'first-year-education'),
+				('english', 'english-native');
+
+			INSERT INTO categories (slug, name, sort_order)
+			SELECT d.slug, d.name, d.sort_order
+			FROM desired_categories d
+			WHERE NOT EXISTS (
+				SELECT 1 FROM categories c WHERE c.slug = d.slug
+			);
+
+			UPDATE subjects s
+			SET category_id = target.category_id
+			FROM categories legacy
+			JOIN legacy_category_slugs l ON l.old_slug = legacy.slug
+			JOIN categories target ON target.slug = l.new_slug
+			WHERE s.category_id = legacy.category_id;
+
+			DELETE FROM categories c
+			USING legacy_category_slugs l
+			WHERE c.slug = l.old_slug;
+
+			UPDATE categories c
+			SET name = d.name,
+				sort_order = d.sort_order
+			FROM desired_categories d
+			WHERE c.slug = d.slug;
+		END $$;
+	`
+	if err := config.DB.Exec(sql).Error; err != nil {
+		return fmt.Errorf("failed syncing UI categories: %w", err)
+	}
 	return nil
 }
 

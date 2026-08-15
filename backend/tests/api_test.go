@@ -249,7 +249,7 @@ func TestListCategories_InvalidMethod(t *testing.T) {
 func TestListOfferingsByCategory(t *testing.T) {
 	// Test with actual category data would require seeded database
 	// For now, we test that the endpoint returns expected status or 404
-	w := doRequest(t, "GET", "/api/v1/categories/science/offerings?academic_year=2026&term=spring", nil)
+	w := doRequest(t, "GET", "/api/v1/categories/general-education/offerings?academic_year=2026&term=spring", nil)
 
 	// Route not matching due to Go 1.22 router behavior
 	// This is a known limitation with the current routing setup
@@ -260,7 +260,7 @@ func TestListOfferingsByCategory(t *testing.T) {
 
 // TestListOfferingsByCategory_MissingQueryParams - missing query params
 func TestListOfferingsByCategory_MissingQueryParams(t *testing.T) {
-	w := doRequest(t, "GET", "/api/v1/categories/science/offerings", nil)
+	w := doRequest(t, "GET", "/api/v1/categories/general-education/offerings", nil)
 
 	// Route not matching, so expect 404
 	if w.Code != http.StatusNotFound && w.Code != http.StatusBadRequest {

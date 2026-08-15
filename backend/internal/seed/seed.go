@@ -49,10 +49,13 @@ func RunSeeds() error {
 // =====================
 func seedCategories() []models.Category {
 	categories := []models.Category{
-		{Slug: "science", Name: "Science", SortOrder: 1},
-		{Slug: "mathematics", Name: "Mathematics", SortOrder: 2},
-		{Slug: "languages", Name: "Languages", SortOrder: 3},
-		{Slug: "arts", Name: "Arts", SortOrder: 4},
+		{Slug: "general-education", Name: "総合教養科目（般教）", SortOrder: 1},
+		{Slug: "first-year-education", Name: "初年次教育科目（初ゼミ）", SortOrder: 2},
+		{Slug: "foundation-list", Name: "基礎教育科目", SortOrder: 3},
+		{Slug: "information-literacy", Name: "情報リテラシー科目", SortOrder: 4},
+		{Slug: "english-japanese", Name: "外国語科目(英語必修)-日本語教師", SortOrder: 5},
+		{Slug: "english-native", Name: "外国語科目(英語必修)-英語教師", SortOrder: 6},
+		{Slug: "specialized", Name: "専門科目", SortOrder: 7},
 	}
 	for i := range categories {
 		if err := config.DB.Where(models.Category{Slug: categories[i].Slug}).FirstOrCreate(&categories[i]).Error; err != nil {
@@ -78,10 +81,10 @@ func seedSubjects(categories []models.Category) []models.Subject {
 		{"Physics", categories[0].CategoryID},
 		{"Chemistry", categories[0].CategoryID},
 		{"Biology", categories[0].CategoryID},
-		{"Calculus", categories[1].CategoryID},
-		{"Linear Algebra", categories[1].CategoryID},
-		{"English", categories[2].CategoryID},
-		{"Japanese", categories[2].CategoryID},
+		{"Calculus", categories[2].CategoryID},
+		{"Linear Algebra", categories[2].CategoryID},
+		{"English", categories[4].CategoryID},
+		{"Japanese", categories[4].CategoryID},
 	}
 
 	for _, data := range subjectData {

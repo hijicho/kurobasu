@@ -4,17 +4,15 @@ import { useParams, useRouter } from 'next/navigation';
 import { CategoryPage } from '@/screens/CategoryPage';
 
 const categoryNames: Record<string, string> = {
-  general: '総合教養科目（般教）',
+  'general-education': '総合教養科目（般教）',
   'second-language': '第二外国語',
-  foundation: '基礎教育科目',
-  'first-year-seminar': '初年次教育科目（初ゼミ）',
+  'foundation-list': '基礎教育科目',
+  'first-year-education': '初年次教育科目（初ゼミ）',
   'health-sports': '健康・スポーツ科学',
-  english: '英語',
+  'information-literacy': '情報リテラシー科目',
+  'english-japanese': '外国語科目(英語必修)-日本語教師',
+  'english-native': '外国語科目(英語必修)-英語教師',
   specialized: '専門科目',
-  science: 'Science',
-  mathematics: 'Mathematics',
-  languages: 'Languages',
-  arts: 'Arts',
 };
 
 export default function Page() {

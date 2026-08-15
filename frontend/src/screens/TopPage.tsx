@@ -15,6 +15,19 @@ interface TopPageProps {
   isAuthenticated?: boolean;
 }
 
+const categoryHref = (slug: string) => {
+  switch (slug) {
+    case 'information-literacy':
+      return '/instructors/information-literacy';
+    case 'english-japanese':
+      return '/instructors/english-japanese';
+    case 'english-native':
+      return '/instructors/english-native';
+    default:
+      return `/courses/${slug}`;
+  }
+};
+
 export function TopPage({ isAuthenticated = false }: TopPageProps) {
   const [specializedOpen, setSpecializedOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
@@ -216,7 +229,7 @@ export function TopPage({ isAuthenticated = false }: TopPageProps) {
                   {categories.map((category) => (
                     <Link
                       key={category.category_id}
-                      href={`/courses/${category.slug}`}
+                      href={categoryHref(category.slug)}
                       className="px-3 py-2 bg-gray-50 rounded-lg hover:bg-theme-primary-light transition-colors text-center text-xs md:text-sm"
                     >
                       {category.name}
