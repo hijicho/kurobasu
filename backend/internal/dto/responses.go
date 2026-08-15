@@ -34,19 +34,23 @@ type SubjectResponse struct {
 // MeetingResponse: 授業時間割情報のレスポーンス
 // =====================
 type MeetingResponse struct {
-	Day    int16 `json:"day"`    // 曜日 (1=月, 2=火, ..., 7=日)
-	Period int16 `json:"period"` // 時限 (1-10)
+	Day       int16  `json:"day"`    // 曜日 (1=月, 2=火, ..., 7=日)
+	Period    int16  `json:"period"` // 時限 (1-10)
+	Classroom string `json:"classroom,omitempty"`
 }
 
 // =====================
 // OfferingResponse: 開講情報のレスポーンス
 // =====================
 type OfferingResponse struct {
-	OfferingID      int64             `json:"offering_id"`
-	Subject         SubjectResponse   `json:"subject"`
-	AcademicYear    int16             `json:"academic_year"`
-	Term            string            `json:"term"`     // spring, fall, intensive, year
-	Modality        string            `json:"modality"` // onsite, online, hybrid, unknown
+	OfferingID   int64           `json:"offering_id"`
+	Subject      SubjectResponse `json:"subject"`
+	AcademicYear int16           `json:"academic_year"`
+	Term         string          `json:"term"`     // spring, fall, intensive, year
+	Modality     string          `json:"modality"` // onsite, online, hybrid, unknown
+	// CourseCode: 時間割表の授業コード。クラス・学期ごとに異なるため Subject ではなく Offering に紐づく
+	CourseCode      string            `json:"course_code,omitempty"`
+	Note            string            `json:"note,omitempty"`
 	InstructorNames []string          `json:"instructor_names"`
 	Meetings        []MeetingResponse `json:"meetings"` // この開講の授業時間割
 	Rate            *string           `json:"rate,omitempty"`
@@ -210,6 +214,57 @@ type UpdateTimetableRequest struct {
 // Common Response Wrapper
 type ListResponse struct {
 	Items interface{} `json:"items"`
+}
+
+// =====================
+// TimetableImport (管理画面: 時間割PDFインポート) Response/Request DTOs
+// =====================
+
+type TimetableImportRowResponse struct {
+	ImportRowID int64  `json:"import_row_id"`
+	Day         *int16 `json:"day"`
+	Period      *int16 `json:"period"`
+	CourseCode  string `json:"course_code"`
+	CourseName  string `json:"course_name"`
+	Instructor  string `json:"instructor"`
+	Classroom   string `json:"classroom"`
+	Note        string `json:"note"`
+}
+
+type TimetableImportBatchResponse struct {
+	ImportBatchID  int64                        `json:"import_batch_id"`
+	CategorySlug   string                       `json:"category_slug"`
+	AcademicYear   int16                        `json:"academic_year"`
+	Term           string                       `json:"term"`
+	SourceFilename string                       `json:"source_filename"`
+	Status         string                       `json:"status"`
+	SheetURL       string                       `json:"sheet_url"`
+	SheetProvider  string                       `json:"sheet_provider,omitempty"`
+	CreatedAt      time.Time                    `json:"created_at"`
+	UpdatedAt      time.Time                    `json:"updated_at"`
+	PublishedAt    *time.Time                   `json:"published_at,omitempty"`
+	RowCount       int                          `json:"row_count"`
+	Rows           []TimetableImportRowResponse `json:"rows,omitempty"`
+}
+
+type ListTimetableImportBatchesResponse struct {
+	Items []TimetableImportBatchResponse `json:"items"`
+}
+
+// UpdateTimetableImportRowsRequest replaces every row of a draft batch (used
+// by the admin spreadsheet-style row editor's save action).
+type UpdateTimetableImportRowsRequest struct {
+	Rows []TimetableImportRowInput `json:"rows"`
+}
+
+type TimetableImportRowInput struct {
+	Day        *int16 `json:"day"`
+	Period     *int16 `json:"period"`
+	CourseCode string `json:"course_code"`
+	CourseName string `json:"course_name"`
+	Instructor string `json:"instructor"`
+	Classroom  string `json:"classroom"`
+	Note       string `json:"note"`
 }
 
 // Error Response

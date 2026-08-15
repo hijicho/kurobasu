@@ -3,11 +3,10 @@
 import { ReactNode } from 'react';
 import { Star } from 'lucide-react';
 
-interface CourseCard {
+export interface CourseCard {
   id: string;
   name: string;
   instructor: string;
-  format: string; // 対面/遠隔
   level?: 'AA' | 'A' | 'B' | 'C'; // オプショナルに変更
   rating?: number; // 平均評価（1-5）
   ratingCount?: number; // 評価数
@@ -114,13 +113,13 @@ export function TimetableView({ slots, onCourseClick, className = '' }: Timetabl
   return (
     <div className={`bg-white border border-gray-200 rounded-xl overflow-hidden ${className}`}>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse min-w-[600px]">
-          <thead className="bg-gray-50 sticky top-0 z-10">
+        <table className="w-full border-collapse min-w-[820px]">
+          <thead className="bg-[#2B4DCA] sticky top-0 z-10">
             <tr>
-              <th className="border border-gray-200 p-3 text-sm w-16">時限</th>
+              <th className="border border-gray-200 p-3 text-sm font-medium text-white w-16">時限</th>
               {days.map((day, index) => (
-                <th key={index} className="border border-gray-200 p-3 text-sm max-w-[140px]">
-                  {day}
+                <th key={index} className="border border-gray-200 p-3 text-sm font-medium text-white min-w-[190px]">
+                  {day}曜日
                 </th>
               ))}
             </tr>
@@ -140,34 +139,26 @@ export function TimetableView({ slots, onCourseClick, className = '' }: Timetabl
                           <button
                             key={course.id}
                             onClick={() => onCourseClick?.(course.id)}
-                            className={`w-full p-2 rounded-lg border text-left hover:shadow-md transition-all relative ${getLevelColor(course.level || '')}`}
+                            className={`w-full p-3 rounded-lg border text-left hover:shadow-md transition-all relative ${getLevelColor(course.level || '')}`}
                             style={getLevelBackgroundStyle(course.level || '')}
                           >
                             {/* レベルバッジ（右上） */}
                             {course.level && (
-                              <span className={`absolute top-1.5 right-1.5 text-xs font-bold px-2 py-1 rounded border ${getLevelBadgeColor(course.level)}`}>
+                              <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded border ${getLevelBadgeColor(course.level)}`}>
                                 {course.level}
                               </span>
                             )}
 
                             {/* 授業名 */}
-                            <div className="text-[11px] mb-1 line-clamp-2 pr-12">{course.name}</div>
-                            
+                            <div className="text-sm mb-1.5 pr-10">{course.name}</div>
+
                             {/* 担当教員 */}
-                            <div className="text-[10px] text-gray-600 mb-1.5">{course.instructor}</div>
-                            
-                            {/* 対面/遠隔と評価数 */}
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] bg-white px-1.5 py-0.5 rounded">
-                                {course.format}
-                              </span>
-                              {/* レビュー数（右下） */}
-                              {course.ratingCount !== undefined && (
-                                <span className="text-[10px] text-gray-500">
-                                  {course.ratingCount}件
-                                </span>
-                              )}
-                            </div>
+                            <div className="text-xs text-gray-600">{course.instructor}</div>
+
+                            {/* レビュー数 */}
+                            {course.ratingCount !== undefined && (
+                              <div className="mt-1.5 text-xs text-gray-500">レビュー数：{course.ratingCount}</div>
+                            )}
                           </button>
                         ))}
                       </div>
@@ -179,7 +170,7 @@ export function TimetableView({ slots, onCourseClick, className = '' }: Timetabl
           </tbody>
         </table>
       </div>
-      
+
       {/* 注釈 */}
       <div className="border-t border-gray-200 bg-gray-50 p-3">
         <p className="text-xs text-gray-600">

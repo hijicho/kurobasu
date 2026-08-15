@@ -39,6 +39,8 @@ func RunMigrations() error {
 		&models.Timetable{},
 		&models.TimetableItem{},
 		&models.AdImage{},
+		&models.TimetableImportBatch{},
+		&models.TimetableImportRow{},
 	)
 	if err != nil {
 		return err
@@ -178,6 +180,19 @@ func RunMigrations() error {
 		`ALTER TABLE timetable_items
 		 ADD CONSTRAINT fk_timetable_items_offering
 		 FOREIGN KEY (offering_id) REFERENCES offerings(offering_id) ON DELETE CASCADE`,
+	); err != nil {
+		return err
+	}
+
+	// TimetableImportRow -> TimetableImportBatch relationship
+	// One import batch (1回のPDFアップロード) can have many rows.
+	// If the batch is deleted, its rows are deleted too.
+	if err := addConstraintIfNotExists(
+		"timetable_import_rows",
+		"fk_timetable_import_rows_batch",
+		`ALTER TABLE timetable_import_rows
+		 ADD CONSTRAINT fk_timetable_import_rows_batch
+		 FOREIGN KEY (import_batch_id) REFERENCES timetable_import_batches(import_batch_id) ON DELETE CASCADE`,
 	); err != nil {
 		return err
 	}

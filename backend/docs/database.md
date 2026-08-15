@@ -49,6 +49,8 @@
 | academic_year | SMALLINT | NOT NULL（例：2026） |
 | term | term_enum | NOT NULL（例：spring/fall/intensive/year） |
 | modality | modality_enum | NOT NULL, DEFAULT 'unknown'（onsite/online/hybrid/unknown） |
+| course_code | VARCHAR(40) | NOT NULL, DEFAULT ''（時間割表の授業コード。クラス・学期ごとに異なるため subject ではなく offering 側で持つ） |
+| note | VARCHAR(120) | NOT NULL, DEFAULT ''（時間割表の備考欄。例：抽選、不開講、通年） |
 | instructor_names | TEXT[] | NOT NULL, DEFAULT '{}'（教員名配列） |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now()（任意だが推奨） |
 
@@ -71,6 +73,7 @@
 | offering_id | BIGINT | NOT NULL, FK → offerings(offering_id), ON DELETE CASCADE |
 | day | SMALLINT | NOT NULL（1=Mon … 7=Sun） |
 | period | SMALLINT | NOT NULL（1〜10など） |
+| classroom | VARCHAR(120) | NOT NULL, DEFAULT ''（講義室） |
 
 重要制約：
 - `UNIQUE(offering_id, day, period)`
@@ -152,6 +155,42 @@
 
 重要制約：
 - `PRIMARY KEY (timetable_id, offering_id)`（同じ時間割に同じ開講を重複登録させない）
+
+---
+
+## 9) timetable_import_batches / timetable_import_rows（管理画面：時間割PDFインポート）
+
+**用途**：管理画面から時間割PDFをアップロードした際の下書きを保持します。`internal/pdftimetable` が
+PDFから行を自動抽出し（対応範囲は現状「総合教養科目」の時間割ページのみ）、admin が
+編集用リンク（`sheet_url`。Google Sheets 未設定時はアプリ内蔵の編集画面）で内容を確認・修正した上で
+「公開」すると、その時点の行が該当カテゴリ・年度・学期の `subjects` / `offerings` / `meetings` に
+（既存分を置き換える形で）反映されます。実装は `internal/repository/timetable_import.go` を参照。
+
+### timetable_import_batches
+
+| カラム | 型 | 制約/補足 |
+|---|---|---|
+| import_batch_id | BIGSERIAL | PK |
+| category_slug | VARCHAR(60) | NOT NULL（現状 `general-education` のみ対応） |
+| academic_year | SMALLINT | NOT NULL |
+| term | VARCHAR(20) | NOT NULL |
+| source_filename | TEXT | NOT NULL, DEFAULT ''（アップロードされたPDFのファイル名） |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'draft'（draft / published） |
+| sheet_url | TEXT | NOT NULL, DEFAULT ''（編集用リンク） |
+| created_by_user_id | BIGINT | NULL可 |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
+| published_at | TIMESTAMPTZ | NULL可 |
+
+### timetable_import_rows
+
+| カラム | 型 | 制約/補足 |
+|---|---|---|
+| import_row_id | BIGSERIAL | PK |
+| import_batch_id | BIGINT | NOT NULL, FK → timetable_import_batches(import_batch_id), ON DELETE CASCADE |
+| day | SMALLINT | NULL可（1〜7。時間割外/集中講義は NULL） |
+| period | SMALLINT | NULL可（1〜10。day と同様） |
+| course_code / course_name / instructor / classroom / note | TEXT系 | NOT NULL, DEFAULT '' |
+| sort_order | INT | NOT NULL, DEFAULT 0（編集画面での表示順） |
 
 ---
 

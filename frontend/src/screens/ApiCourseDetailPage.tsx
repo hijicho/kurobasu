@@ -84,7 +84,10 @@ export function ApiCourseDetailPage({ offeringId, categoryName, onNavigateToList
       return '時間割未定';
     }
     return offering.meetings
-      .map((meeting) => `${dayLabels[meeting.day - 1] ?? meeting.day}曜 ${meeting.period}限`)
+      .map((meeting) => {
+        const base = `${dayLabels[meeting.day - 1] ?? meeting.day}曜 ${meeting.period}限`;
+        return meeting.classroom ? `${base}（${meeting.classroom}）` : base;
+      })
       .join(' / ');
   }, [offering]);
 

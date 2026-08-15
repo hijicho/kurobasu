@@ -98,6 +98,18 @@ func SetupRoutes() http.Handler {
 	// DELETE /api/v1/admin/ads/{id}
 	// 効果：広告画像を無効化（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/ads/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodDelete, handlers.DeleteAdminAd))))
+	// GET/POST /api/v1/admin/timetable-imports
+	// 効果：時間割PDFインポート（下書き）一覧の取得・新規アップロード（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/timetable-imports", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminTimetableImportsHandler())))
+	// GET /api/v1/admin/timetable-imports/{id}
+	// 効果：時間割PDFインポート1件を行データ付きで取得（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/timetable-imports/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminTimetableImportHandler())))
+	// PUT /api/v1/admin/timetable-imports/{id}/rows
+	// 効果：スプレッドシート編集画面での修正を保存（下書き行を全置換）（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/timetable-imports/{id}/rows", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPut, handlers.UpdateAdminTimetableImportRows))))
+	// POST /api/v1/admin/timetable-imports/{id}/publish
+	// 効果：下書きを総合教養科目の subjects/offerings/meetings に反映（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/timetable-imports/{id}/publish", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPost, handlers.PublishAdminTimetableImport))))
 
 	// =====================
 	// 時間割 (Timetables) API
@@ -183,6 +195,32 @@ func adminAdsHandler() http.HandlerFunc {
 			handlers.ListAdminAds(w, r)
 		case http.MethodPost:
 			handlers.UploadAdminAd(w, r)
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func adminTimetableImportsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.ListAdminTimetableImports(w, r)
+		case http.MethodPost:
+			handlers.CreateAdminTimetableImport(w, r)
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func adminTimetableImportHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetAdminTimetableImport(w, r)
+		case http.MethodDelete:
+			handlers.DeleteAdminTimetableImport(w, r)
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}

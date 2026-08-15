@@ -105,13 +105,13 @@ export async function getDefaultAcademicYear(): Promise<DefaultAcademicYearRespo
 export interface Subject {
   subject_id: number;
   title: string;
-  course_code?: string; // コース番号（例：1GBA001003）
   credits?: number; // 単位数（例：2.0）
 }
 
 export interface Meeting {
   day: number;
   period: number;
+  classroom?: string;
 }
 
 export interface Offering {
@@ -120,6 +120,8 @@ export interface Offering {
   academic_year: number;
   term: string;
   modality: string;
+  course_code?: string; // コース番号（例：1GBA001003）。クラス・学期ごとに異なるため offering 側の値
+  note?: string; // 時間割表の備考（例：抽選、不開講、通年）
   instructor_names: string[];
   rate: string;
   meetings: Meeting[];
@@ -384,4 +386,121 @@ export async function listAds(academicYear?: number, term?: string): Promise<Lis
   }
   const query = params.toString();
   return fetchApi<ListAdImagesResponse>(`/ads${query ? `?${query}` : ''}`);
+}
+
+// ============================
+// Admin: Timetable PDF import (時間割PDFインポート)
+// ============================
+
+export interface TimetableImportRow {
+  import_row_id: number;
+  day: number | null; // 1=月 ... 5=金
+  period: number | null; // 1〜5
+  course_code: string;
+  course_name: string;
+  instructor: string;
+  classroom: string;
+  note: string;
+}
+
+export interface TimetableImportBatch {
+  import_batch_id: number;
+  category_slug: string;
+  academic_year: number;
+  term: string;
+  source_filename: string;
+  status: 'draft' | 'published';
+  sheet_url: string;
+  sheet_provider?: string;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  row_count: number;
+  rows?: TimetableImportRow[];
+}
+
+export interface ListTimetableImportBatchesResponse {
+  items: TimetableImportBatch[];
+}
+
+export async function listAdminTimetableImports(
+  idToken: string,
+  categorySlug = 'general-education'
+): Promise<ListTimetableImportBatchesResponse> {
+  return fetchApi<ListTimetableImportBatchesResponse>(
+    `/admin/timetable-imports?category_slug=${encodeURIComponent(categorySlug)}`,
+    { headers: { Authorization: `Bearer ${idToken}` } }
+  );
+}
+
+export async function getAdminTimetableImport(
+  idToken: string,
+  batchId: number
+): Promise<TimetableImportBatch> {
+  return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+}
+
+export async function createAdminTimetableImport(
+  idToken: string,
+  academicYear: number,
+  term: string,
+  pdf: File,
+  categorySlug = 'general-education',
+  intensivePdf?: File | null
+): Promise<TimetableImportBatch> {
+  const formData = new FormData();
+  formData.append('academic_year', String(academicYear));
+  formData.append('term', term);
+  formData.append('category_slug', categorySlug);
+  formData.append('pdf', pdf);
+  if (intensivePdf) {
+    formData.append('intensive_pdf', intensivePdf);
+  }
+
+  return fetchApi<TimetableImportBatch>('/admin/timetable-imports', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${idToken}` },
+    body: formData,
+  });
+}
+
+export interface TimetableImportRowInput {
+  day: number | null;
+  period: number | null;
+  course_code: string;
+  course_name: string;
+  instructor: string;
+  classroom: string;
+  note: string;
+}
+
+export async function updateAdminTimetableImportRows(
+  idToken: string,
+  batchId: number,
+  rows: TimetableImportRowInput[]
+): Promise<TimetableImportBatch> {
+  return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}/rows`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ rows }),
+  });
+}
+
+export async function publishAdminTimetableImport(
+  idToken: string,
+  batchId: number
+): Promise<TimetableImportBatch> {
+  return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}/publish`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+}
+
+export async function deleteAdminTimetableImport(idToken: string, batchId: number): Promise<void> {
+  return fetchApi<void>(`/admin/timetable-imports/${batchId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
 }

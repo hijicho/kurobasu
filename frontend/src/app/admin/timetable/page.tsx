@@ -1,64 +1,71 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/lib/auth-context';
+import {
+  createAdminTimetableImport,
+  getDefaultAcademicYear,
+  listAdminTimetableImports,
+  type TimetableImportBatch,
+} from '@/lib/api';
 
-const yearOptions = [
-  {
-    label: '2026年度 後期',
-    value: '2026-fall',
-    period: '2026年10月〜2027年3月',
-  },
-  {
-    label: '2027年度 前期',
-    value: '2027-spring',
-    period: '2027年4月〜2027年9月',
-  },
+const termOptions = [
+  { key: 'spring', label: '前期' },
+  { key: 'fall', label: '後期' },
 ];
 
-const historyItems = [
-  {
-    id: '2025-fall',
-    label: '2025年度 後期',
-    period: '2025年10月〜2026年3月',
-    updatedAt: '2026/03/05 15:12',
-    sheetUrl: 'https://example.com/sheet/2025-fall',
-  },
-  {
-    id: '2025-spring',
-    label: '2025年度 前期',
-    period: '2025年4月〜2025年9月',
-    updatedAt: '2025/09/01 10:45',
-    sheetUrl: 'https://example.com/sheet/2025-spring',
-  },
-  {
-    id: '2024-fall',
-    label: '2024年度 後期',
-    period: '2024年10月〜2025年3月',
-    updatedAt: '2025/03/04 14:22',
-    sheetUrl: 'https://example.com/sheet/2024-fall',
-  },
-];
+function statusLabel(batch: TimetableImportBatch) {
+  return batch.status === 'published' ? '公開済み' : '下書き（未公開）';
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return '-';
+  return new Date(value).toLocaleString('ja-JP', { hour12: false });
+}
 
 export default function TimetablePage() {
-  const [selectedYear, setSelectedYear] = useState(yearOptions[0].value);
+  const router = useRouter();
+  const { getIdToken } = useAuth();
+
+  const [academicYear, setAcademicYear] = useState<number>(new Date().getFullYear());
+  const [term, setTerm] = useState(termOptions[0].key);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [isHistoryView, setIsHistoryView] = useState(false);
+  const [intensivePdfFile, setIntensivePdfFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const intensiveFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [batches, setBatches] = useState<TimetableImportBatch[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(true);
+  const [isHistoryView, setIsHistoryView] = useState(false);
 
   useEffect(() => {
-    if (!pdfFile) {
-      setErrorMessage(null);
-    }
-  }, [pdfFile]);
+    getDefaultAcademicYear()
+      .then((res) => setAcademicYear(res.academic_year))
+      .catch(() => undefined);
+  }, []);
 
-  const selectedYearLabel = yearOptions.find((item) => item.value === selectedYear)?.label ?? '';
+  const loadBatches = useCallback(async () => {
+    setLoadingBatches(true);
+    try {
+      const idToken = await getIdToken();
+      if (!idToken) throw new Error('not authenticated');
+      const res = await listAdminTimetableImports(idToken, 'general-education');
+      setBatches(res.items);
+    } catch {
+      // 一覧の取得失敗はアップロードのブロッカーにしない
+    } finally {
+      setLoadingBatches(false);
+    }
+  }, [getIdToken]);
+
+  useEffect(() => {
+    loadBatches();
+  }, [loadBatches]);
 
   const openFileDialog = () => fileInputRef.current?.click();
 
@@ -68,7 +75,6 @@ export default function TimetablePage() {
       setErrorMessage('PDFファイルを選択してください。');
       return;
     }
-
     setPdfFile(file);
     setErrorMessage(null);
   };
@@ -80,42 +86,30 @@ export default function TimetablePage() {
     event.target.value = '';
   };
 
+  const handleIntensiveFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      setErrorMessage('PDFファイルを選択してください。');
+      return;
+    }
+    setIntensivePdfFile(file);
+    setErrorMessage(null);
+  };
+
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragActive(true);
   };
-
-  const handleDragLeave = () => {
-    setDragActive(false);
-  };
-
+  const handleDragLeave = () => setDragActive(false);
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragActive(false);
     const file = event.dataTransfer.files?.[0];
-    if (file) {
-      handleFile(file);
-    }
+    if (file) handleFile(file);
   };
-
-  const handleConfirm = async () => {
-    if (!pdfFile) {
-      setErrorMessage('PDFを選択してください。');
-      return;
-    }
-
-    setErrorMessage(null);
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    setLoading(false);
-    setConfirmed(true);
-    setUpdatedAt(new Date().toLocaleString('ja-JP', { hour12: false }));
-  };
-
-  const handleEdit = () => {
-    setConfirmed(false);
-  };
-
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -123,8 +117,41 @@ export default function TimetablePage() {
     }
   };
 
+  const handleUpload = async () => {
+    if (!pdfFile) {
+      setErrorMessage('PDFを選択してください。');
+      return;
+    }
+    setErrorMessage(null);
+    setUploading(true);
+    try {
+      const idToken = await getIdToken();
+      if (!idToken) throw new Error('not authenticated');
+      const batch = await createAdminTimetableImport(
+        idToken,
+        academicYear,
+        term,
+        pdfFile,
+        'general-education',
+        intensivePdfFile
+      );
+      router.push(`/admin/timetable/imports/${batch.import_batch_id}`);
+    } catch (err) {
+      console.error('Failed to import timetable PDF:', err);
+      setErrorMessage(
+        'PDFの解析に失敗しました。総合教養科目の時間割PDFであることを確認するか、しばらくしてから再度お試しください。'
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
-    <AdminLayout currentPath="/admin/timetable" title="時間割" subtitle="年度を選んでPDFをアップロードし、反映状況を確認できます。">
+    <AdminLayout
+      currentPath="/admin/timetable"
+      title="時間割"
+      subtitle="総合教養科目の時間割PDFをアップロードすると自動で読み取り、スプレッドシート感覚で確認・修正してから公開できます。"
+    >
       <div className="space-y-6">
         {!isHistoryView ? (
           <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 shadow-sm">
@@ -143,7 +170,9 @@ export default function TimetablePage() {
             >
               <p className="text-lg font-semibold text-slate-800">ここにPDFをドラッグ</p>
               <p className="mt-2 text-sm text-slate-500">クリックまたはドラッグで PDF を選択できます。</p>
-              <p className="mt-3 text-sm text-slate-400">アップロード後、決定を押すと画面を更新します。</p>
+              <p className="mt-3 text-sm text-slate-400">
+                対応範囲：総合教養科目の時間割ページ（他の区分・時間割外の一部は自動抽出の対象外です）
+              </p>
             </div>
 
             <input
@@ -168,121 +197,146 @@ export default function TimetablePage() {
               </div>
             ) : null}
 
-            {confirmed ? (
-              <div className="mt-6 rounded-[20px] border border-emerald-200 bg-emerald-50 p-6 text-slate-800">
-                <p className="text-lg font-semibold text-slate-900">ユーザー画面に時間割を反映しました</p>
-                <p className="mt-2 text-sm text-slate-600">
-                  選択年度とアップロードしたPDFが反映済みです。
-                </p>
-
-                <div className="mt-5 grid gap-3 rounded-2xl bg-white p-4 text-sm text-slate-700 shadow-sm sm:grid-cols-3">
-                  <div>
-                    <p className="font-semibold">年度</p>
-                    <p className="mt-1">{selectedYearLabel}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold">アップロード済みPDF</p>
-                    <p className="mt-1 truncate">{pdfFile?.name}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold">更新日時</p>
-                    <p className="mt-1">{updatedAt}</p>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <a
-                    href="https://example.com/google-spreadsheet"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#243f9c]"
-                  >
-                    Googleスプレッドシートを開く
-                  </a>
-                  <button
-                    type="button"
-                    onClick={handleEdit}
-                    className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-                  >
-                    修正
-                  </button>
-                </div>
-
-                <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                  Googleスプレッドシートには、アップロードしたPDFの内容が反映済みです。ユーザー画面には最新の時間割が表示されます。
-                </p>
-              </div>
-            ) : (
-              <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
-                <label className="block text-sm font-medium text-slate-700">
-                  <span className="mb-2 block">年度選択</span>
-                  <select
-                    value={selectedYear}
-                    onChange={(event) => setSelectedYear(event.target.value)}
-                    className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#2b4dca] focus:ring-2 focus:ring-[#2b4dca]/20"
-                  >
-                    {yearOptions.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
+            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white p-4">
+              <p className="text-sm font-semibold text-slate-800">集中講義日程PDF（任意）</p>
+              <p className="mt-1 text-sm text-slate-500">
+                日付指定で開講される集中講義がある場合は、集中講義日程一覧のPDFも合わせて選択してください。タイムテーブル下の一覧に反映されます。
+              </p>
+              <input
+                ref={intensiveFileInputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={handleIntensiveFileChange}
+              />
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={handleConfirm}
-                  disabled={!pdfFile || loading}
-                  className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-6 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
+                  onClick={() => intensiveFileInputRef.current?.click()}
+                  className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
-                  {loading ? '反映中...' : '決定'}
+                  ファイルを選択
                 </button>
+                {intensivePdfFile ? (
+                  <span className="text-sm text-slate-600">
+                    {intensivePdfFile.name}（{(intensivePdfFile.size / 1024).toFixed(1)} KB）
+                    <button
+                      type="button"
+                      onClick={() => setIntensivePdfFile(null)}
+                      className="ml-2 text-slate-400 hover:text-red-600"
+                      aria-label="集中講義日程PDFの選択を解除"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ) : (
+                  <span className="text-sm text-slate-400">未選択</span>
+                )}
               </div>
-            )}
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+              <label className="block text-sm font-medium text-slate-700">
+                <span className="mb-2 block">年度</span>
+                <input
+                  type="number"
+                  value={academicYear}
+                  onChange={(event) => setAcademicYear(Number(event.target.value))}
+                  className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#2b4dca] focus:ring-2 focus:ring-[#2b4dca]/20"
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                <span className="mb-2 block">学期</span>
+                <select
+                  value={term}
+                  onChange={(event) => setTerm(event.target.value)}
+                  className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#2b4dca] focus:ring-2 focus:ring-[#2b4dca]/20"
+                >
+                  {termOptions.map((item) => (
+                    <option key={item.key} value={item.key}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={!pdfFile || uploading}
+                className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-6 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {uploading ? '解析中...' : 'アップロードして解析'}
+              </button>
+            </div>
 
             <button
               type="button"
               onClick={() => setIsHistoryView(true)}
               className="mt-6 inline-flex items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              過去の年度
+              過去のインポート
             </button>
           </div>
         ) : (
           <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-[#2b4dca]">過去の年度</p>
-                <p className="text-sm text-slate-600">過去の登録履歴を確認できます。</p>
+                <p className="text-sm font-semibold text-[#2b4dca]">過去のインポート</p>
+                <p className="text-sm text-slate-600">アップロード履歴と公開状況を確認できます。</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsHistoryView(false)}
                 className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#243f9c]"
               >
-                現在年度の登録画面へ戻る
+                アップロード画面へ戻る
               </button>
             </div>
 
-            <div className="space-y-4">
-              {historyItems.map((item) => (
-                <div key={item.id} className="rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm sm:flex sm:items-center sm:justify-between">
-                  <div className="space-y-2">
-                    <p className="text-base font-semibold text-slate-900">{item.label}</p>
-                    <p className="text-sm text-slate-600">対象期間: {item.period}</p>
-                    <p className="text-sm text-slate-600">更新日: {item.updatedAt}</p>
-                  </div>
-                  <a
-                    href={item.sheetUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#243f9c] sm:mt-0"
+            {loadingBatches ? (
+              <p className="text-sm text-slate-500">読み込み中...</p>
+            ) : batches.length === 0 ? (
+              <p className="text-sm text-slate-500">まだインポート履歴がありません。</p>
+            ) : (
+              <div className="space-y-4">
+                {batches.map((batch) => (
+                  <div
+                    key={batch.import_batch_id}
+                    className="rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm sm:flex sm:items-center sm:justify-between"
                   >
-                    Googleスプレッドシートを開く
-                  </a>
-                </div>
-              ))}
-            </div>
+                    <div className="space-y-2">
+                      <p className="text-base font-semibold text-slate-900">
+                        {batch.academic_year}年度 {termOptions.find((t) => t.key === batch.term)?.label ?? batch.term}
+                        <span
+                          className={`ml-3 rounded-full px-3 py-1 text-xs font-semibold ${
+                            batch.status === 'published'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {statusLabel(batch)}
+                        </span>
+                      </p>
+                      <p className="text-sm text-slate-600">元ファイル: {batch.source_filename || '-'}</p>
+                      <p className="text-sm text-slate-600">行数: {batch.row_count}</p>
+                      <p className="text-sm text-slate-600">
+                        アップロード: {formatDateTime(batch.created_at)}
+                        {batch.published_at ? ` ／ 公開: ${formatDateTime(batch.published_at)}` : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/admin/timetable/imports/${batch.import_batch_id}`)}
+                      className="mt-4 inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#243f9c] sm:mt-0"
+                    >
+                      開く
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

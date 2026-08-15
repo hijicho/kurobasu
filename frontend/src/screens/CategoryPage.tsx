@@ -13,6 +13,13 @@ interface CategoryPageProps {
   onCourseClick?: (courseId: string) => void;
 }
 
+const levelBadgeClasses: Record<string, string> = {
+  AA: 'bg-orange-100 text-orange-700',
+  A: 'bg-red-100 text-red-700',
+  B: 'bg-green-100 text-green-700',
+  C: 'bg-blue-100 text-blue-700',
+};
+
 export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCourseClick }: CategoryPageProps) {
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,11 +83,10 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
         // コースを追加
         slot.courses.push({
           id: String(offering.offering_id),
-          courseCode: offering.subject.course_code,
+          courseCode: offering.course_code,
           name: offering.subject.title,
           instructor: offering.instructor_names.join('、'),
           credits: offering.subject.credits,
-          format: offering.modality === 'onsite' ? '対面' : offering.modality === 'remote' ? '遠隔' : 'ハイブリッド',
           level: offering.rate as 'AA' | 'A' | 'B' | 'C' | 'D' | 'F',
         });
       });
@@ -90,6 +96,8 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
   };
 
   const timetableSlots = convertToTimetableSlots(offerings);
+  // 曜日・時限が定まらない授業（集中講義・時間割外）は時間割表に載らないため別枠で一覧表示する
+  const intensiveOfferings = offerings.filter((offering) => offering.meetings.length === 0);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -151,10 +159,41 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
             このカテゴリの授業データはまだ登録されていません。
           </div>
         ) : (
-          <TimetableView 
-            slots={timetableSlots} 
-            onCourseClick={onCourseClick}
-          />
+          <>
+            <TimetableView
+              slots={timetableSlots}
+              onCourseClick={onCourseClick}
+            />
+
+            {intensiveOfferings.length > 0 && (
+              <div className="mt-8">
+                <h2 className="mb-4 text-lg font-semibold text-gray-900">集中講義・時間割外</h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {intensiveOfferings.map((offering) => {
+                    const level = offering.rate;
+                    return (
+                      <button
+                        key={offering.offering_id}
+                        onClick={() => onCourseClick?.(String(offering.offering_id))}
+                        className="relative rounded-lg border border-gray-200 bg-white p-3 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+                      >
+                        {level && levelBadgeClasses[level] && (
+                          <span className={`absolute top-2 right-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${levelBadgeClasses[level]}`}>
+                            {level}
+                          </span>
+                        )}
+                        <h3 className="mb-1 pr-8 text-sm font-bold text-gray-900">{offering.subject.title}</h3>
+                        <p className="text-xs font-semibold text-gray-600">{offering.instructor_names.join('、')}</p>
+                        {offering.note && (
+                          <p className="mt-1 text-[11px] font-medium leading-snug text-gray-500">{offering.note}</p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 

@@ -6,7 +6,31 @@ import (
 
 	"github.com/hageruto/kurobasu/internal/dto"
 	"github.com/hageruto/kurobasu/internal/repository"
+	"github.com/hageruto/kurobasu/models"
 )
+
+func toOfferingResponse(off models.Offering, meetings []models.Meeting) dto.OfferingResponse {
+	meetingDTOs := make([]dto.MeetingResponse, len(meetings))
+	for j, m := range meetings {
+		meetingDTOs[j] = dto.MeetingResponse{
+			Day:       m.Day,
+			Period:    m.Period,
+			Classroom: m.Classroom,
+		}
+	}
+
+	return dto.OfferingResponse{
+		OfferingID:      off.OfferingID,
+		Subject:         dto.SubjectResponse{SubjectID: off.Subject.SubjectID, Title: off.Subject.Title},
+		AcademicYear:    off.AcademicYear,
+		Term:            off.Term,
+		Modality:        off.Modality,
+		CourseCode:      off.CourseCode,
+		Note:            off.Note,
+		InstructorNames: off.InstructorNames,
+		Meetings:        meetingDTOs,
+	}
+}
 
 // ListOfferingsByCategory - GET /api/v1/categories/{slug}/offerings
 func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
@@ -43,23 +67,7 @@ func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
 	items := make([]dto.OfferingResponse, len(offerings))
 	for i, off := range offerings {
 		meetings, _ := meetRepo.GetMeetingsByOffering(off.OfferingID)
-		meetingDTOs := make([]dto.MeetingResponse, len(meetings))
-		for j, m := range meetings {
-			meetingDTOs[j] = dto.MeetingResponse{
-				Day:    m.Day,
-				Period: m.Period,
-			}
-		}
-
-		items[i] = dto.OfferingResponse{
-			OfferingID:      off.OfferingID,
-			Subject:         dto.SubjectResponse{SubjectID: off.Subject.SubjectID, Title: off.Subject.Title},
-			AcademicYear:    off.AcademicYear,
-			Term:            off.Term,
-			Modality:        off.Modality,
-			InstructorNames: off.InstructorNames,
-			Meetings:        meetingDTOs,
-		}
+		items[i] = toOfferingResponse(off, meetings)
 	}
 
 	successResponse(w, dto.ListResponse{Items: items})
@@ -78,23 +86,6 @@ func GetOffering(w http.ResponseWriter, r *http.Request) {
 
 	meetRepo := &repository.MeetingRepository{}
 	meetings, _ := meetRepo.GetMeetingsByOffering(offering.OfferingID)
-	meetingDTOs := make([]dto.MeetingResponse, len(meetings))
-	for j, m := range meetings {
-		meetingDTOs[j] = dto.MeetingResponse{
-			Day:    m.Day,
-			Period: m.Period,
-		}
-	}
 
-	response := dto.OfferingResponse{
-		OfferingID:      offering.OfferingID,
-		Subject:         dto.SubjectResponse{SubjectID: offering.Subject.SubjectID, Title: offering.Subject.Title},
-		AcademicYear:    offering.AcademicYear,
-		Term:            offering.Term,
-		Modality:        offering.Modality,
-		InstructorNames: offering.InstructorNames,
-		Meetings:        meetingDTOs,
-	}
-
-	successResponse(w, response)
+	successResponse(w, toOfferingResponse(*offering, meetings))
 }
