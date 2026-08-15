@@ -46,7 +46,7 @@ type OfferingResponse struct {
 	OfferingID   int64           `json:"offering_id"`
 	Subject      SubjectResponse `json:"subject"`
 	AcademicYear int16           `json:"academic_year"`
-	Term         string          `json:"term"`     // spring, fall, intensive, year
+	Term         string          `json:"term"`     // spring, fall
 	Modality     string          `json:"modality"` // onsite, online, hybrid, unknown
 	// CourseCode: 時間割表の授業コード。クラス・学期ごとに異なるため Subject ではなく Offering に紐づく
 	CourseCode      string            `json:"course_code,omitempty"`

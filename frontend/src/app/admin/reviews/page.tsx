@@ -20,8 +20,6 @@ const typeLabels: Record<AdminReview['type'], string> = {
 const termLabels: Record<string, string> = {
   spring: '前期',
   fall: '後期',
-  intensive: '集中',
-  year: '通年',
 };
 
 type ReviewFilter = 'pending' | 'approved' | 'all';

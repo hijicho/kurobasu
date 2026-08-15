@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/hageruto/kurobasu/config"
@@ -36,16 +35,6 @@ func getSiteSettingsModel() (*models.SiteSettings, error) {
 	return settings, nil
 }
 
-func normalizeTerm(value string) string {
-	value = strings.ToLower(strings.TrimSpace(value))
-	switch value {
-	case "spring", "fall", "intensive", "year":
-		return value
-	default:
-		return ""
-	}
-}
-
 // GetSiteSettings - GET /api/v1/meta/site-settings
 func GetSiteSettings(w http.ResponseWriter, r *http.Request) {
 	settings, err := getSiteSettingsModel()
@@ -68,9 +57,9 @@ func UpdateSiteSettings(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, http.StatusBadRequest, "default_academic_year must be between 2000 and 2100")
 		return
 	}
-	term := normalizeTerm(req.DefaultTerm)
+	term := normalizeSemesterTerm(req.DefaultTerm)
 	if term == "" {
-		errorResponse(w, http.StatusBadRequest, "default_term must be one of: spring, fall, intensive, year")
+		errorResponse(w, http.StatusBadRequest, "default_term must be one of: spring, fall")
 		return
 	}
 

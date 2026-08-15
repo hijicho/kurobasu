@@ -7,14 +7,12 @@ import (
 	"github.com/lib/pq"
 )
 
-// Term: spring/fall/intensive/year
+// Term: spring/fall
 type Term string
 
 const (
-	TermSpring    Term = "spring"
-	TermFall      Term = "fall"
-	TermIntensive Term = "intensive"
-	TermYear      Term = "year"
+	TermSpring Term = "spring"
+	TermFall   Term = "fall"
 )
 
 func (t Term) Value() (driver.Value, error) {

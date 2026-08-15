@@ -12,8 +12,6 @@ const tolerance = 0.05;
 const adTerms = [
   { key: 'spring', label: '前期' },
   { key: 'fall', label: '後期' },
-  { key: 'intensive', label: '集中' },
-  { key: 'year', label: '通年' },
 ];
 
 const getImageSrc = (imageUrl: string) => {
@@ -66,7 +64,9 @@ export default function AdsPage() {
     getSiteSettings()
       .then((res) => {
         setSelectedAcademicYear(res.default_academic_year);
-        setSelectedTerm(res.default_term);
+        if (adTerms.some((item) => item.key === res.default_term)) {
+          setSelectedTerm(res.default_term);
+        }
       })
       .catch(() => undefined);
   }, []);

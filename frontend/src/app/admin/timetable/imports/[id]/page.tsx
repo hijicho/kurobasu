@@ -32,7 +32,7 @@ const periodOptions = [
   { value: '5', label: '5限' },
 ];
 
-const termLabels: Record<string, string> = { spring: '前期', fall: '後期', intensive: '集中', year: '通年' };
+const termLabels: Record<string, string> = { spring: '前期', fall: '後期' };
 
 interface EditableRow {
   key: string;

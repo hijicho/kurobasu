@@ -3,8 +3,6 @@ export const DEFAULT_PUBLIC_TERM = 'spring';
 export const termLabels: Record<string, string> = {
   spring: '前期',
   fall: '後期',
-  intensive: '集中',
-  year: '通年',
 };
 
 export const categoryNames: Record<string, string> = {

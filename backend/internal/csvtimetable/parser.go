@@ -49,9 +49,8 @@ const unscheduledMarker = "時間割外"
 
 var periodDigitsRe = regexp.MustCompile(`[0-9]+`)
 
-// TermLabel maps the app's internal term key ("spring"/"fall") to the 学期
-// label used in the university's CSV export. Other terms don't get a
-// dedicated 学期 label in this export, so no filter is applied for them.
+// TermLabel maps the app's internal semester key ("spring"/"fall") to the 学期
+// label used in the university's CSV export.
 func TermLabel(term string) string {
 	switch term {
 	case "spring":

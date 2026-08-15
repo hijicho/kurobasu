@@ -47,7 +47,7 @@
 | offering_id | BIGSERIAL | PK |
 | subject_id | BIGINT | NOT NULL, FK → subjects(subject_id) |
 | academic_year | SMALLINT | NOT NULL（例：2026） |
-| term | term_enum | NOT NULL（例：spring/fall/intensive/year） |
+| term | term_enum | NOT NULL（spring/fall） |
 | modality | modality_enum | NOT NULL, DEFAULT 'unknown'（onsite/online/hybrid/unknown） |
 | course_code | VARCHAR(40) | NOT NULL, DEFAULT ''（時間割表の授業コード。クラス・学期ごとに異なるため subject ではなく offering 側で持つ） |
 | note | VARCHAR(120) | NOT NULL, DEFAULT ''（時間割表の備考欄。例：抽選、不開講、通年） |
@@ -200,7 +200,7 @@
 ```sql
 -- enum（不要なら TEXT + CHECK に置き換えでもOKです）
 DO $$ BEGIN
-  CREATE TYPE term_enum AS ENUM ('spring', 'fall', 'intensive', 'year');
+  CREATE TYPE term_enum AS ENUM ('spring', 'fall');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN

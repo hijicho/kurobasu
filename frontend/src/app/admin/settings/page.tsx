@@ -12,8 +12,6 @@ import { publicTopPath, termLabels } from '@/lib/public-routing';
 const termOptions = [
   { key: 'spring', label: '前期' },
   { key: 'fall', label: '後期' },
-  { key: 'intensive', label: '集中' },
-  { key: 'year', label: '通年' },
 ];
 
 export default function SettingsPage() {
@@ -36,7 +34,7 @@ export default function SettingsPage() {
         const settings = await getAdminSiteSettings(idToken);
         if (!cancelled) {
           setAcademicYear(settings.default_academic_year);
-          setTerm(settings.default_term);
+          setTerm(termOptions.some((item) => item.key === settings.default_term) ? settings.default_term : termOptions[0].key);
           setUpdatedAt(settings.updated_at);
         }
       } catch (err) {
@@ -66,7 +64,7 @@ export default function SettingsPage() {
       const idToken = await getIdToken();
       const settings = await updateAdminSiteSettings(idToken, academicYear, term);
       setAcademicYear(settings.default_academic_year);
-      setTerm(settings.default_term);
+      setTerm(termOptions.some((item) => item.key === settings.default_term) ? settings.default_term : termOptions[0].key);
       setUpdatedAt(settings.updated_at);
       setMessage({ tone: 'success', text: '公開設定を更新しました。' });
     } catch (err) {
