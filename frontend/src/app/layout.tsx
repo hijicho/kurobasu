@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { AuthProvider } from '@/lib/auth-context';
-import { AdminRoleProvider } from '@/lib/admin-role-context';
 import { Analytics } from '@vercel/analytics/react';
 import '../index.css';
 
@@ -49,9 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </Script>
       </head>
       <body>
-        <AuthProvider>
-          <AdminRoleProvider>{children}</AdminRoleProvider>
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
         <Analytics />
       </body>
     </html>

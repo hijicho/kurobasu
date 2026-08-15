@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAuth } from '@/lib/auth-context';
-import { listAdminUsers, updateUserRole, type UserProfile } from '@/lib/api';
+import { getApiErrorMessage, listAdminUsers, updateUserRole, type UserProfile } from '@/lib/api';
 
 export default function AdminManagementPage() {
   const { getIdToken } = useAuth();
@@ -17,13 +17,10 @@ export default function AdminManagementPage() {
     setError(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       const res = await listAdminUsers(idToken);
       setUsers(res.items);
-    } catch {
-      setError('ユーザー一覧の取得に失敗しました。');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'ユーザー一覧の取得に失敗しました。'));
     } finally {
       setLoading(false);
     }
@@ -38,13 +35,10 @@ export default function AdminManagementPage() {
     setError(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       await updateUserRole(idToken, userId, role);
       await loadUsers();
-    } catch {
-      setError('ロールの更新に失敗しました。');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'ロールの更新に失敗しました。'));
     } finally {
       setUpdatingUserId(null);
     }
