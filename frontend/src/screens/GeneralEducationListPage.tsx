@@ -7,12 +7,11 @@ import { scheduleCoursesData, ScheduleCourse } from '../lib/generalEducationSche
 import { getLevel, LevelType } from '../lib/generalEducationLevelMapping';
 
 interface GeneralEducationListPageProps {
-  isAuthenticated: boolean;
   onCourseClick?: (courseId: string) => void;
   onNavigateBack?: () => void;
 }
 
-export function GeneralEducationListPage({ isAuthenticated, onCourseClick, onNavigateBack }: GeneralEducationListPageProps) {
+export function GeneralEducationListPage({ onCourseClick, onNavigateBack }: GeneralEducationListPageProps) {
   const days = ['月', '火', '水', '木', '金'];
   const periods = ['1限', '2限', '3限', '4限', '5限'];
 

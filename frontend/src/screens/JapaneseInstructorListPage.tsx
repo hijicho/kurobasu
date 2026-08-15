@@ -5,11 +5,10 @@ import { Search } from 'lucide-react';
 import { useState } from 'react';
 
 interface JapaneseInstructorListPageProps {
-  isAuthenticated?: boolean;
   onInstructorClick?: (instructorId: string) => void;
 }
 
-export function JapaneseInstructorListPage({ isAuthenticated = false, onInstructorClick }: JapaneseInstructorListPageProps) {
+export function JapaneseInstructorListPage({ onInstructorClick }: JapaneseInstructorListPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // 日本語教師データ（フラットリスト化）
@@ -67,7 +66,7 @@ export function JapaneseInstructorListPage({ isAuthenticated = false, onInstruct
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
       
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-4 md:py-6">
         <Breadcrumb items={[

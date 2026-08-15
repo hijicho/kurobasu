@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { API_ORIGIN, deleteAdminAd, getDefaultAcademicYear, listAdminAds, uploadAdminAd, type AdImage } from '@/lib/api';
+import { API_ORIGIN, deleteAdminAd, getApiErrorMessage, getDefaultAcademicYear, listAdminAds, uploadAdminAd, type AdImage } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 const acceptableRatio = 1 / 5;
@@ -48,13 +48,10 @@ export default function AdsPage() {
     setErrorMessage(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       const response = await listAdminAds(idToken);
       setAds(response.items);
-    } catch {
-      setErrorMessage('広告一覧の取得に失敗しました。');
+    } catch (err) {
+      setErrorMessage(getApiErrorMessage(err, '広告一覧の取得に失敗しました。'));
     } finally {
       setLoading(false);
     }
@@ -164,15 +161,12 @@ export default function AdsPage() {
     setSuccessMessage(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       await uploadAdminAd(idToken, selectedAcademicYear, selectedTerm, selectedFile);
       setSuccessMessage('広告画像を保存しました。');
       resetSelection();
       await loadAds();
-    } catch {
-      setErrorMessage('広告画像の保存に失敗しました。');
+    } catch (err) {
+      setErrorMessage(getApiErrorMessage(err, '広告画像の保存に失敗しました。'));
     } finally {
       setSubmitting(false);
     }
@@ -184,14 +178,11 @@ export default function AdsPage() {
     setSuccessMessage(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       await deleteAdminAd(idToken, adId);
       setSuccessMessage('広告画像を削除しました。');
       await loadAds();
-    } catch {
-      setErrorMessage('広告画像の削除に失敗しました。');
+    } catch (err) {
+      setErrorMessage(getApiErrorMessage(err, '広告画像の削除に失敗しました。'));
     } finally {
       setDeletingAdId(null);
     }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAuth } from '@/lib/auth-context';
-import { deleteAdminReview, listAdminReviews, updateReviewStatus, type AdminReview } from '@/lib/api';
+import { deleteAdminReview, getApiErrorMessage, listAdminReviews, updateReviewStatus, type AdminReview } from '@/lib/api';
 
 const statusLabels: Record<AdminReview['status'], string> = {
   pending: '未確認',
@@ -38,14 +38,11 @@ export default function ReviewsPage() {
     setError(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       const status = filter === 'all' ? undefined : filter;
       const res = await listAdminReviews(idToken, status);
       setReviews(res.items);
-    } catch {
-      setError('口コミ一覧の取得に失敗しました。');
+    } catch (err) {
+      setError(getApiErrorMessage(err, '口コミ一覧の取得に失敗しました。'));
     } finally {
       setLoading(false);
     }
@@ -70,13 +67,10 @@ export default function ReviewsPage() {
     setError(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       await updateReviewStatus(idToken, reviewId, status);
       await loadReviews();
-    } catch {
-      setError('口コミステータスの更新に失敗しました。');
+    } catch (err) {
+      setError(getApiErrorMessage(err, '口コミステータスの更新に失敗しました。'));
     } finally {
       setUpdatingReviewId(null);
     }
@@ -87,13 +81,10 @@ export default function ReviewsPage() {
     setError(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       await deleteAdminReview(idToken, reviewId);
       await loadReviews();
-    } catch {
-      setError('口コミの削除に失敗しました。');
+    } catch (err) {
+      setError(getApiErrorMessage(err, '口コミの削除に失敗しました。'));
     } finally {
       setUpdatingReviewId(null);
     }
@@ -170,7 +161,7 @@ export default function ReviewsPage() {
                   <div className="flex shrink-0 flex-wrap gap-3">
                     <button
                       type="button"
-                      disabled={updatingReviewId === item.review_id || item.status === 'approved'}
+                      disabled={updatingReviewId === item.review_id}
                       onClick={() => handleStatusChange(item.review_id, 'approved')}
                       className="rounded-full bg-[#2b4dca] px-6 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >

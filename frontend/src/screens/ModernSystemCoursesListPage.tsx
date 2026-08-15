@@ -6,11 +6,10 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import modernSystemCourses from '../data/modernSystemCourses';
 
 interface ModernSystemCoursesListPageProps {
-  isAuthenticated?: boolean;
   onCourseClick?: (courseId: string) => void;
 }
 
-export function ModernSystemCoursesListPage({ isAuthenticated = false, onCourseClick }: ModernSystemCoursesListPageProps) {
+export function ModernSystemCoursesListPage({ onCourseClick }: ModernSystemCoursesListPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // slugify used to generate stable ids/paths from subject names
@@ -37,7 +36,7 @@ export function ModernSystemCoursesListPage({ isAuthenticated = false, onCourseC
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[{ label: 'トップ', href: '/' }, { label: '現代システム科学域科目一覧' }]} />

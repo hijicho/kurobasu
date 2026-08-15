@@ -19,6 +19,23 @@ export class ApiError extends Error {
   }
 }
 
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401) {
+      return 'ログインが必要です。';
+    }
+    if (error.status === 403) {
+      return 'この操作を行う権限がありません。';
+    }
+    return error.message || fallback;
+  }
+  return fallback;
+}
+
+function authHeaders(idToken: string | null | undefined): HeadersInit | undefined {
+  return idToken ? { Authorization: `Bearer ${idToken}` } : undefined;
+}
+
 // Fetch wrapper with error handling
 async function fetchApi<T>(
   endpoint: string,
@@ -203,14 +220,6 @@ export async function bootstrap(
   });
 }
 
-export async function getMe(idToken: string): Promise<UserProfile> {
-  return fetchApi<UserProfile>('/me', {
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
-  });
-}
-
 export async function updateMe(
   idToken: string,
   displayName: string
@@ -234,31 +243,27 @@ export async function logout(idToken: string): Promise<void> {
 }
 
 // ============================
-// Admin API (admin ロールのみ)
+// Admin API
 // ============================
 
 export interface ListAdminUsersResponse {
   items: UserProfile[];
 }
 
-export async function listAdminUsers(idToken: string): Promise<ListAdminUsersResponse> {
+export async function listAdminUsers(idToken: string | null | undefined): Promise<ListAdminUsersResponse> {
   return fetchApi<ListAdminUsersResponse>('/admin/users', {
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: authHeaders(idToken),
   });
 }
 
 export async function updateUserRole(
-  idToken: string,
+  idToken: string | null | undefined,
   userId: number,
   role: string
 ): Promise<UserProfile> {
   return fetchApi<UserProfile>(`/admin/users/${userId}/role`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: authHeaders(idToken),
     body: JSON.stringify({ role }),
   });
 }
@@ -285,37 +290,31 @@ export interface ListAdminReviewsResponse {
 }
 
 export async function listAdminReviews(
-  idToken: string,
+  idToken: string | null | undefined,
   status?: AdminReview['status']
 ): Promise<ListAdminReviewsResponse> {
   const query = status ? `?status=${encodeURIComponent(status)}` : '';
   return fetchApi<ListAdminReviewsResponse>(`/admin/reviews${query}`, {
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: authHeaders(idToken),
   });
 }
 
 export async function updateReviewStatus(
-  idToken: string,
+  idToken: string | null | undefined,
   reviewId: number,
   status: AdminReview['status']
 ): Promise<AdminReview> {
   return fetchApi<AdminReview>(`/admin/reviews/${reviewId}/status`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: authHeaders(idToken),
     body: JSON.stringify({ status }),
   });
 }
 
-export async function deleteAdminReview(idToken: string, reviewId: number): Promise<void> {
+export async function deleteAdminReview(idToken: string | null | undefined, reviewId: number): Promise<void> {
   return fetchApi<void>(`/admin/reviews/${reviewId}`, {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: authHeaders(idToken),
   });
 }
 
@@ -337,16 +336,14 @@ export interface ListAdImagesResponse {
   count: number;
 }
 
-export async function listAdminAds(idToken: string): Promise<ListAdImagesResponse> {
+export async function listAdminAds(idToken: string | null | undefined): Promise<ListAdImagesResponse> {
   return fetchApi<ListAdImagesResponse>('/admin/ads', {
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: authHeaders(idToken),
   });
 }
 
 export async function uploadAdminAd(
-  idToken: string,
+  idToken: string | null | undefined,
   academicYear: number,
   term: string,
   image: File
@@ -358,19 +355,15 @@ export async function uploadAdminAd(
 
   return fetchApi<AdImage>('/admin/ads', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: authHeaders(idToken),
     body: formData,
   });
 }
 
-export async function deleteAdminAd(idToken: string, adId: number): Promise<void> {
+export async function deleteAdminAd(idToken: string | null | undefined, adId: number): Promise<void> {
   return fetchApi<void>(`/admin/ads/${adId}`, {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: authHeaders(idToken),
   });
 }
 
@@ -422,26 +415,26 @@ export interface ListTimetableImportBatchesResponse {
 }
 
 export async function listAdminTimetableImports(
-  idToken: string,
+  idToken: string | null | undefined,
   categorySlug = 'general-education'
 ): Promise<ListTimetableImportBatchesResponse> {
   return fetchApi<ListTimetableImportBatchesResponse>(
     `/admin/timetable-imports?category_slug=${encodeURIComponent(categorySlug)}`,
-    { headers: { Authorization: `Bearer ${idToken}` } }
+    { headers: authHeaders(idToken) }
   );
 }
 
 export async function getAdminTimetableImport(
-  idToken: string,
+  idToken: string | null | undefined,
   batchId: number
 ): Promise<TimetableImportBatch> {
   return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}`, {
-    headers: { Authorization: `Bearer ${idToken}` },
+    headers: authHeaders(idToken),
   });
 }
 
 export async function createAdminTimetableImport(
-  idToken: string,
+  idToken: string | null | undefined,
   academicYear: number,
   term: string,
   pdf: File,
@@ -459,7 +452,7 @@ export async function createAdminTimetableImport(
 
   return fetchApi<TimetableImportBatch>('/admin/timetable-imports', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${idToken}` },
+    headers: authHeaders(idToken),
     body: formData,
   });
 }
@@ -475,30 +468,30 @@ export interface TimetableImportRowInput {
 }
 
 export async function updateAdminTimetableImportRows(
-  idToken: string,
+  idToken: string | null | undefined,
   batchId: number,
   rows: TimetableImportRowInput[]
 ): Promise<TimetableImportBatch> {
   return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}/rows`, {
     method: 'PUT',
-    headers: { Authorization: `Bearer ${idToken}` },
+    headers: authHeaders(idToken),
     body: JSON.stringify({ rows }),
   });
 }
 
 export async function publishAdminTimetableImport(
-  idToken: string,
+  idToken: string | null | undefined,
   batchId: number
 ): Promise<TimetableImportBatch> {
   return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}/publish`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${idToken}` },
+    headers: authHeaders(idToken),
   });
 }
 
-export async function deleteAdminTimetableImport(idToken: string, batchId: number): Promise<void> {
+export async function deleteAdminTimetableImport(idToken: string | null | undefined, batchId: number): Promise<void> {
   return fetchApi<void>(`/admin/timetable-imports/${batchId}`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${idToken}` },
+    headers: authHeaders(idToken),
   });
 }

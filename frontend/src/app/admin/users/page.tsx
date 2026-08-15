@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAuth } from '@/lib/auth-context';
-import { listAdminUsers, updateUserRole, type UserProfile } from '@/lib/api';
+import { getApiErrorMessage, listAdminUsers, updateUserRole, type UserProfile } from '@/lib/api';
+
+const roleOptions = [
+  { value: 'admin', label: '管理人' },
+  { value: 'editor', label: '編集委員' },
+  { value: 'user', label: '一般ユーザー' },
+] as const;
+
+type RoleValue = (typeof roleOptions)[number]['value'];
 
 export default function AdminManagementPage() {
   const { getIdToken } = useAuth();
@@ -17,13 +25,10 @@ export default function AdminManagementPage() {
     setError(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       const res = await listAdminUsers(idToken);
       setUsers(res.items);
-    } catch {
-      setError('ユーザー一覧の取得に失敗しました。');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'ユーザー一覧の取得に失敗しました。'));
     } finally {
       setLoading(false);
     }
@@ -33,18 +38,15 @@ export default function AdminManagementPage() {
     loadUsers();
   }, [loadUsers]);
 
-  const handleRoleChange = async (userId: number, role: 'editor' | 'user') => {
+  const handleRoleChange = async (userId: number, role: RoleValue) => {
     setUpdatingUserId(userId);
     setError(null);
     try {
       const idToken = await getIdToken();
-      if (!idToken) {
-        throw new Error('not authenticated');
-      }
       await updateUserRole(idToken, userId, role);
       await loadUsers();
-    } catch {
-      setError('ロールの更新に失敗しました。');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'ロールの更新に失敗しました。'));
     } finally {
       setUpdatingUserId(null);
     }
@@ -53,14 +55,14 @@ export default function AdminManagementPage() {
   return (
     <AdminLayout
       currentPath="/admin/users"
-      title="編集委員一覧 / 編集委員追加"
-      subtitle="管理人のみが編集委員の権限を管理できます。"
+      title="ユーザー権限"
+      subtitle="ユーザーのロールを変更します。許可されない操作はAPIが拒否します。"
     >
       <div className="space-y-6">
         <div className="flex items-center justify-between rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-4 shadow-sm">
           <div>
             <p className="text-lg font-semibold text-slate-900">ユーザー一覧</p>
-            <p className="text-sm text-slate-600">編集委員の権限付与・取消ができます。</p>
+            <p className="text-sm text-slate-600">管理人・編集委員・一般ユーザーを選択できます。</p>
           </div>
         </div>
 
@@ -79,28 +81,25 @@ export default function AdminManagementPage() {
                     <p className="text-sm font-semibold text-slate-900">{user.display_name}</p>
                     <p className="mt-1 text-sm text-slate-600">ロール: {user.role}</p>
                   </div>
-                  {user.role === 'admin' ? (
-                    <span className="text-sm text-slate-400">管理人はここから変更できません</span>
-                  ) : (
-                    <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-3">
+                    {roleOptions.map((role) => (
                       <button
+                        key={role.value}
                         type="button"
-                        disabled={updatingUserId === user.user_id || user.role === 'editor'}
-                        onClick={() => handleRoleChange(user.user_id, 'editor')}
-                        className="rounded-full bg-[#2b4dca] px-6 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={updatingUserId === user.user_id}
+                        onClick={() => handleRoleChange(user.user_id, role.value)}
+                        className={`rounded-full px-6 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
+                          role.value === 'admin'
+                            ? 'bg-slate-900 text-white'
+                            : role.value === 'editor'
+                              ? 'bg-[#2b4dca] text-white'
+                              : 'bg-white text-slate-700 ring-1 ring-slate-200'
+                        }`}
                       >
-                        権限付与
+                        {role.label}
                       </button>
-                      <button
-                        type="button"
-                        disabled={updatingUserId === user.user_id || user.role === 'user'}
-                        onClick={() => handleRoleChange(user.user_id, 'user')}
-                        className="rounded-full bg-black px-6 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        取消
-                      </button>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}

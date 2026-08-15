@@ -10,7 +10,7 @@ interface AuthContextValue {
   loading: boolean;
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName: string) => Promise<{ needsEmailConfirmation: boolean }>;
   signInAsGuest: () => Promise<void>;
   signOutUser: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -54,7 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (data.session?.access_token) {
       await bootstrap(data.session.access_token, displayName || email);
+      return { needsEmailConfirmation: false };
     }
+    return { needsEmailConfirmation: true };
   };
 
   const signInAsGuest = async () => {

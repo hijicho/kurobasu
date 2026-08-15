@@ -153,7 +153,6 @@ npm run lint
 ✅ Breadcrumb ナビゲーション  
 ✅ Header検索機能  
 ✅ モバイルメニュー  
-✅ お気に入り機能UI  
 ✅ 時間割表示  
 
 ---

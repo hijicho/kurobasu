@@ -9,11 +9,10 @@ import { ReviewSections } from '../components/course-detail/ReviewSections';
 
 interface GeneralEducationDetailPageProps {
   courseId: string;
-  isAuthenticated: boolean;
   onNavigateToList?: () => void;
 }
 
-export function GeneralEducationDetailPage({ courseId, isAuthenticated, onNavigateToList }: GeneralEducationDetailPageProps) {
+export function GeneralEducationDetailPage({ courseId, onNavigateToList }: GeneralEducationDetailPageProps) {
   // まず既存のデータから検索
   let course = getCourseById(courseId);
   

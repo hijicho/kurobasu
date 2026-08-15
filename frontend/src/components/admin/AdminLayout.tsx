@@ -1,11 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CalendarRange, ChevronRight, LogOut, Megaphone, MessageSquareText, ShieldUser, Sparkles } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
-import { useAdminRole } from '@/lib/admin-role-context';
 
 type AdminLayoutProps = {
   children: React.ReactNode;
@@ -14,58 +10,22 @@ type AdminLayoutProps = {
   subtitle?: string;
 };
 
-type Role = 'admin' | 'editor';
-
 type NavigationItem = {
   href: string;
   label: string;
   icon: React.ComponentType<React.ComponentProps<'svg'>>;
-  visibleRoles: Role[];
 };
 
 const navigationItems: NavigationItem[] = [
-  { href: '/admin', label: '使い方', icon: Sparkles, visibleRoles: ['admin', 'editor'] },
-  { href: '/admin/reviews', label: '口コミ', icon: MessageSquareText, visibleRoles: ['admin', 'editor'] },
-  { href: '/admin/ads', label: '広告', icon: Megaphone, visibleRoles: ['admin', 'editor'] },
-  { href: '/admin/timetable', label: '時間割', icon: CalendarRange, visibleRoles: ['admin', 'editor'] },
-  { href: '/admin/users', label: '管理人', icon: ShieldUser, visibleRoles: ['admin'] },
-  { href: '/logout', label: 'ログアウト', icon: LogOut, visibleRoles: ['admin', 'editor'] },
+  { href: '/admin', label: '使い方', icon: Sparkles },
+  { href: '/admin/reviews', label: '口コミ', icon: MessageSquareText },
+  { href: '/admin/ads', label: '広告', icon: Megaphone },
+  { href: '/admin/timetable', label: '時間割', icon: CalendarRange },
+  { href: '/admin/users', label: '管理人', icon: ShieldUser },
+  { href: '/logout', label: 'ログアウト', icon: LogOut },
 ];
 
-function isAdminRole(role: string | null): role is Role {
-  return role === 'admin' || role === 'editor';
-}
-
 export default function AdminLayout({ children, currentPath, title, subtitle }: AdminLayoutProps) {
-  const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAuth();
-  const { role, loading: roleLoading } = useAdminRole();
-
-  // ロールはバックエンドの /me（DB の users.role）が唯一の情報源。
-  // フロント側で自由に切り替えることはできない。
-  const resolving = authLoading || (isAuthenticated && roleLoading);
-  const hasAdminAccess = isAdminRole(role);
-
-  useEffect(() => {
-    if (resolving) {
-      return;
-    }
-    if (!isAuthenticated || !hasAdminAccess) {
-      router.replace('/login');
-    }
-  }, [resolving, isAuthenticated, hasAdminAccess, router]);
-
-  if (resolving || !isAuthenticated || !hasAdminAccess) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
-        読み込み中...
-      </div>
-    );
-  }
-
-  const currentItem = navigationItems.find((item) => item.href === currentPath);
-  const canViewCurrentPage = !currentItem || currentItem.visibleRoles.includes(role as Role);
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 sm:p-6 lg:flex-row lg:p-8">
@@ -83,11 +43,6 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
           <nav className="space-y-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isVisible = item.visibleRoles.includes(role as Role);
-              if (!isVisible) {
-                return null;
-              }
-
               const isActive = currentPath === item.href;
 
               return (
@@ -116,19 +71,9 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
               <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
               {subtitle ? <p className="mt-1 text-sm text-slate-600">{subtitle}</p> : null}
             </div>
-
-            <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
-              ロール: <span className="font-semibold text-[#2b4dca]">{role}</span>
-            </div>
           </header>
 
-          {canViewCurrentPage ? (
-            children
-          ) : (
-            <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 text-sm text-slate-600 shadow-sm">
-              この画面へのアクセス権がありません。
-            </div>
-          )}
+          {children}
         </main>
       </div>
     </div>

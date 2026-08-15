@@ -5,7 +5,6 @@ import { ReviewSections } from '../components/course-detail/ReviewSections';
 
 interface CommerceCourseDetailPageProps {
   courseId?: string;
-  isAuthenticated?: boolean;
   onNavigateToList?: () => void;
 }
 
@@ -19,7 +18,7 @@ interface CourseData {
   others: string[];
 }
 
-export function CommerceCourseDetailPage({ courseId = 'accounting-basics-asano', isAuthenticated = false, onNavigateToList }: CommerceCourseDetailPageProps) {
+export function CommerceCourseDetailPage({ courseId = 'accounting-basics-asano', onNavigateToList }: CommerceCourseDetailPageProps) {
   const getCourseData = (id: string): CourseData => {
     const courses: Record<string, CourseData> = {
       'accounting-basics-asano': {
@@ -778,7 +777,7 @@ export function CommerceCourseDetailPage({ courseId = 'accounting-basics-asano',
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb items={[

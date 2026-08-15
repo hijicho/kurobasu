@@ -5,11 +5,10 @@ import { Footer } from '../components/Footer';
 import { Breadcrumb } from '../components/Breadcrumb';
 
 interface LawCoursesListPageProps {
-  isAuthenticated?: boolean;
   onCourseClick?: (courseId: string) => void;
 }
 
-export function LawCoursesListPage({ isAuthenticated = false, onCourseClick }: LawCoursesListPageProps) {
+export function LawCoursesListPage({ onCourseClick }: LawCoursesListPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // 法学部の科目データ
@@ -53,7 +52,7 @@ export function LawCoursesListPage({ isAuthenticated = false, onCourseClick }: L
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header isAuthenticated={isAuthenticated} />
+      <Header />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 md:py-8">
         <Breadcrumb items={[
