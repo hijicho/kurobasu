@@ -158,13 +158,14 @@
 
 ---
 
-## 9) timetable_import_batches / timetable_import_rows（管理画面：時間割PDFインポート）
+## 9) timetable_import_batches / timetable_import_rows（管理画面：時間割CSVインポート）
 
-**用途**：管理画面から時間割PDFをアップロードした際の下書きを保持します。`internal/pdftimetable` が
-PDFから行を自動抽出し（対応範囲は現状「総合教養科目」の時間割ページのみ）、admin が
-編集用リンク（`sheet_url`。Google Sheets 未設定時はアプリ内蔵の編集画面）で内容を確認・修正した上で
-「公開」すると、その時点の行が該当カテゴリ・年度・学期の `subjects` / `offerings` / `meetings` に
-（既存分を置き換える形で）反映されます。実装は `internal/repository/timetable_import.go` を参照。
+**用途**：管理画面から時間割CSV（①一般教養科目の時間割CSV／②集中講義のCSV）をアップロードした際の
+下書きを保持します。`internal/csvtimetable` がCSVから行を自動抽出し（対応範囲は現状「総合教養科目」の
+み。UTF-8/Shift-JISいずれの文字コードにも対応）、admin が編集用リンク（`sheet_url`。Google Sheets
+未設定時はアプリ内蔵の編集画面）で内容を確認・修正した上で「公開」すると、その時点の行が該当カテゴリ・
+年度・学期の `subjects` / `offerings` / `meetings` に（既存分を置き換える形で）反映されます。実装は
+`internal/repository/timetable_import.go` を参照。
 
 ### timetable_import_batches
 
@@ -174,7 +175,7 @@ PDFから行を自動抽出し（対応範囲は現状「総合教養科目」�
 | category_slug | VARCHAR(60) | NOT NULL（現状 `general-education` のみ対応） |
 | academic_year | SMALLINT | NOT NULL |
 | term | VARCHAR(20) | NOT NULL |
-| source_filename | TEXT | NOT NULL, DEFAULT ''（アップロードされたPDFのファイル名） |
+| source_filename | TEXT | NOT NULL, DEFAULT ''（アップロードされたCSVのファイル名） |
 | status | VARCHAR(20) | NOT NULL, DEFAULT 'draft'（draft / published） |
 | sheet_url | TEXT | NOT NULL, DEFAULT ''（編集用リンク） |
 | created_by_user_id | BIGINT | NULL可 |

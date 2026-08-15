@@ -3,7 +3,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 const guideItems = [
   { menu: '口コミ', description: '口コミについて、承認・削除ができます。' },
   { menu: '広告', description: '掲載する広告の更新・削除ができます。' },
-  { menu: '時間割', description: '時間割の PDF を使用することで、最新版の時間割が作成できます。' },
+  { menu: '時間割', description: '時間割の CSV を使用することで、最新版の時間割が作成できます。' },
   { menu: 'ログアウト', description: 'ログアウトができます。' },
 ];
 
