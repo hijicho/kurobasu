@@ -106,7 +106,7 @@ export function TopPage() {
           {/* 年度表示 */}
           <div className="text-center mb-6">
               <div className="flex justify-center mb-2">
-              <img src={titleImage.src ?? titleImage} alt="2026年度 前期" className="h-12 md:h-16 w-auto" />
+              <img src={titleImage.src ?? titleImage} alt="2025年度 後期" className="h-12 md:h-16 w-auto" />
             </div>
             <p className="text-xs text-gray-500 mt-3">何かあれば @kurobasu_ocu まで連絡を。<br />落単・情報の誤りには一切責任を負いません。</p>
           </div>
