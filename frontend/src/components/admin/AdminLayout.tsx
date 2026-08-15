@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CalendarRange, Check, ChevronRight, LogOut, Megaphone, MessageSquareText, Pencil, ShieldUser, Sparkles, UserRound, X } from 'lucide-react';
 import { ApiError, getAdminMe, getApiErrorMessage, updateMe, type UserProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import AdminLoadingBlock from './AdminLoadingBlock';
 
 type AdminLayoutProps = {
   children: React.ReactNode;
@@ -58,6 +59,8 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
   const [displayNameDraft, setDisplayNameDraft] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  const accessDenied = !checkingAccess && !me;
+  const loginRequired = meErrorStatus === 401;
 
   useEffect(() => {
     let cancelled = false;
@@ -155,38 +158,6 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
       setSavingName(false);
     }
   };
-
-  if (checkingAccess) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 text-slate-900">
-        <div className="w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-6 text-center shadow-sm">
-          <p className="text-sm font-semibold text-[#2b4dca]">管理画面</p>
-          <h1 className="mt-2 text-xl font-semibold">権限を確認しています</h1>
-          <p className="mt-2 text-sm text-slate-600">ログイン中のユーザー情報を確認しています。</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!me) {
-    const loginRequired = meErrorStatus === 401;
-
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 text-slate-900">
-        <div className="w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-6 text-center shadow-sm">
-          <p className="text-sm font-semibold text-[#2b4dca]">管理画面</p>
-          <h1 className="mt-2 text-xl font-semibold">{loginRequired ? 'ログインが必要です' : 'アクセスできません'}</h1>
-          <p className="mt-2 text-sm text-slate-600">{meError ?? 'この管理画面を表示する権限がありません。'}</p>
-          <Link
-            href={loginRequired ? '/login' : '/'}
-            className="mt-5 inline-flex rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white"
-          >
-            {loginRequired ? 'ログインへ' : 'トップへ戻る'}
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -288,8 +259,14 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
                   </p>
                 ) : null}
               </div>
+            ) : checkingAccess ? (
+              <div className="space-y-3">
+                <div className="h-4 w-32 animate-pulse rounded-full bg-white/25" />
+                <div className="h-3 w-44 animate-pulse rounded-full bg-white/15" />
+                <div className="h-6 w-24 animate-pulse rounded-full bg-white/20" />
+              </div>
             ) : (
-              <p className="text-sm text-blue-100">{meError ?? 'ユーザー情報を読み込んでいます。'}</p>
+              <p className="text-sm text-blue-100">{meError ?? 'ユーザー情報を取得できませんでした。'}</p>
             )}
           </div>
         </aside>
@@ -303,7 +280,28 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
             </div>
           </header>
 
-          {children}
+          {accessDenied ? (
+            <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 text-center shadow-sm">
+              <p className="text-sm font-semibold text-[#2b4dca]">管理画面</p>
+              <h2 className="mt-2 text-xl font-semibold text-slate-900">
+                {loginRequired ? 'ログインが必要です' : 'アクセスできません'}
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">{meError ?? 'この管理画面を表示する権限がありません。'}</p>
+              <Link
+                href={loginRequired ? '/login' : '/'}
+                className="mt-5 inline-flex rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white"
+              >
+                {loginRequired ? 'ログインへ' : 'トップへ戻る'}
+              </Link>
+            </div>
+          ) : checkingAccess && !me ? (
+            <div className="grid gap-4">
+              <AdminLoadingBlock />
+              <AdminLoadingBlock rows={1} />
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>

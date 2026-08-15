@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminLoadingBlock from '@/components/admin/AdminLoadingBlock';
 import { useAuth } from '@/lib/auth-context';
 import {
   getApiErrorMessage,
@@ -180,7 +181,7 @@ export default function TimetableImportEditPage() {
       subtitle="PDFから自動で読み取った内容です。誤りがあれば直接修正し、確認できたら公開してください。"
     >
       {loading ? (
-        <p className="text-sm text-slate-500">読み込み中...</p>
+        <AdminLoadingBlock rows={3} />
       ) : !batch ? (
         <p className="text-sm text-red-600">インポートデータが見つかりませんでした。</p>
       ) : (

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminLoadingBlock from '@/components/admin/AdminLoadingBlock';
 import { useAuth } from '@/lib/auth-context';
 import { getApiErrorMessage, listAdminUsers, updateUserRole, type UserProfile } from '@/lib/api';
 
@@ -71,7 +72,7 @@ export default function AdminManagementPage() {
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-slate-500">読み込み中...</p>
+          <AdminLoadingBlock rows={3} />
         ) : (
           <div className="space-y-4">
             {users.map((user) => (

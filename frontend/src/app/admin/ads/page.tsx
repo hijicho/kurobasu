@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminLoadingBlock from '@/components/admin/AdminLoadingBlock';
 import { API_ORIGIN, deleteAdminAd, getApiErrorMessage, getDefaultAcademicYear, listAdminAds, uploadAdminAd, type AdImage } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
@@ -354,7 +355,7 @@ export default function AdsPage() {
         <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 shadow-sm">
           <p className="text-lg font-semibold text-slate-900">設定済み広告</p>
           {loading ? (
-            <p className="mt-4 text-sm text-slate-500">読み込み中...</p>
+            <AdminLoadingBlock rows={2} className="mt-4" />
           ) : activeAds.length === 0 ? (
             <p className="mt-4 text-sm text-slate-600">設定済みの広告はありません。</p>
           ) : (

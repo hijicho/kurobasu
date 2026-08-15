@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminLoadingBlock from '@/components/admin/AdminLoadingBlock';
 import { useAuth } from '@/lib/auth-context';
 import { deleteAdminReview, getApiErrorMessage, listAdminReviews, updateReviewStatus, type AdminReview } from '@/lib/api';
 
@@ -123,7 +124,7 @@ export default function ReviewsPage() {
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-slate-500">読み込み中...</p>
+          <AdminLoadingBlock rows={3} />
         ) : reviews.length === 0 ? (
           <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 text-sm text-slate-600 shadow-sm">
             表示できる口コミはありません。

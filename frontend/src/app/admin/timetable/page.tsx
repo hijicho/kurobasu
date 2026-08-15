@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminLoadingBlock from '@/components/admin/AdminLoadingBlock';
 import { useAuth } from '@/lib/auth-context';
 import {
   createAdminTimetableImport,
@@ -298,7 +299,7 @@ export default function TimetablePage() {
             </div>
 
             {loadingBatches ? (
-              <p className="text-sm text-slate-500">読み込み中...</p>
+              <AdminLoadingBlock rows={3} />
             ) : batches.length === 0 ? (
               <p className="text-sm text-slate-500">まだインポート履歴がありません。</p>
             ) : (
