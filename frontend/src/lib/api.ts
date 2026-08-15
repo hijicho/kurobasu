@@ -4,7 +4,7 @@ export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1$/, '');
 // CORS対策:
 // バックエンド側で以下の設定が必要です
 // - Access-Control-Allow-Origin: フロントエンドのOrigin
-// - Access-Control-Allow-Methods: GET, POST, PATCH, DELETE
+// - Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE
 // - Access-Control-Allow-Headers: Content-Type, Authorization
 
 // API Error class
@@ -113,6 +113,15 @@ export interface DefaultAcademicYearResponse {
 
 export async function getDefaultAcademicYear(): Promise<DefaultAcademicYearResponse> {
   return fetchApi<DefaultAcademicYearResponse>('/meta/default-academic-year');
+}
+
+export interface DefaultTermResponse {
+  term: 'spring' | 'fall';
+  is_override: boolean;
+}
+
+export async function getDefaultTerm(): Promise<DefaultTermResponse> {
+  return fetchApi<DefaultTermResponse>('/meta/default-term');
 }
 
 // ============================
@@ -519,5 +528,20 @@ export async function deleteAdminTimetableImport(idToken: string | null | undefi
   return fetchApi<void>(`/admin/timetable-imports/${batchId}`, {
     method: 'DELETE',
     headers: authHeaders(idToken),
+  });
+}
+
+// ============================
+// Admin: Site settings (サイト設定)
+// ============================
+
+export async function updateAdminDefaultTerm(
+  idToken: string | null | undefined,
+  term: 'spring' | 'fall' | 'auto'
+): Promise<DefaultTermResponse> {
+  return fetchApi<DefaultTermResponse>('/admin/settings/default-term', {
+    method: 'PUT',
+    headers: authHeaders(idToken),
+    body: JSON.stringify({ term }),
   });
 }

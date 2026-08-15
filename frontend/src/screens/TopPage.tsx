@@ -121,8 +121,6 @@ export function TopPage() {
             </button>
           </div>
 
-          <PublicAdBanner />
-
           {/* カテゴリボタン＆専門科目セクション - 統一背景 */}
           <div 
             className="relative rounded-2xl overflow-hidden mb-6 p-6"
@@ -224,6 +222,12 @@ export function TopPage() {
               }
               label="授業カタログ"
             />
+          </div>
+
+          <div className="flex justify-center mb-6">
+            <div className="w-full md:w-[calc(50%-0.5rem)]">
+              <PublicAdBanner />
+            </div>
           </div>
         </div>
       </main>

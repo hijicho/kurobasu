@@ -1,61 +1,72 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getDefaultAcademicYear, listAds, type AdImage } from '@/lib/api';
+import { API_ORIGIN, getDefaultAcademicYear, listAds, type AdImage } from '../lib/api';
 
 interface PublicAdBannerProps {
   term?: string;
 }
 
+const getImageSrc = (imageUrl: string) => {
+  if (imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
+  return `${API_ORIGIN}${imageUrl}`;
+};
+
 export function PublicAdBanner({ term = 'spring' }: PublicAdBannerProps) {
-  const [ads, setAds] = useState<AdImage[]>([]);
+  const [ad, setAd] = useState<AdImage | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadAds() {
+    async function loadAd() {
       try {
         const { academic_year } = await getDefaultAcademicYear();
         const response = await listAds(academic_year, term);
         if (!cancelled) {
-          setAds(response.items.filter((ad) => ad.is_active));
+          setAd(response.items.find((item) => item.is_active) ?? null);
         }
       } catch (error) {
         console.error('Failed to load ads:', error);
         if (!cancelled) {
-          setAds([]);
+          setAd(null);
         }
       }
     }
 
-    loadAds();
+    loadAd();
     return () => {
       cancelled = true;
     };
   }, [term]);
 
-  if (ads.length === 0) {
-    return null;
-  }
-
+  // 縦横比 1:5（縦:横）の広告枠。未掲載時は枠だけ表示して空きであることを示す。
   return (
-    <section className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4" aria-label="広告">
-      {ads.map((ad) => (
+    <section aria-label="広告">
+      {ad ? (
         <a
-          key={ad.ad_id}
-          href={ad.image_url}
+          href={getImageSrc(ad.image_url)}
           target="_blank"
           rel="noreferrer"
-          className="block overflow-hidden rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
+          className="block w-full overflow-hidden rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
+          style={{ aspectRatio: '5 / 1' }}
         >
           <img
-            src={ad.image_url}
+            src={getImageSrc(ad.image_url)}
             alt={ad.original_filename || '広告'}
-            className="h-28 md:h-36 w-full object-contain bg-white"
+            className="h-full w-full object-contain bg-white"
             loading="lazy"
           />
         </a>
-      ))}
+      ) : (
+        <div
+          className="flex w-full items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-100 text-xs text-gray-400"
+          style={{ aspectRatio: '5 / 1' }}
+        >
+          広告枠（現在未掲載です）
+        </div>
+      )}
     </section>
   );
 }

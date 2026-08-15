@@ -4,7 +4,7 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { TimetableView } from '../components/TimetableView';
 import { Breadcrumb } from '../components/Breadcrumb';
-import { getDefaultAcademicYear, getOfferings, Offering } from '../lib/api';
+import { getDefaultAcademicYear, getDefaultTerm, getOfferings, Offering } from '../lib/api';
 
 interface CategoryPageProps {
   categoryName: string;
@@ -20,15 +20,48 @@ const levelBadgeClasses: Record<string, string> = {
   C: 'bg-blue-100 text-blue-700',
 };
 
+const termOptions = [
+  { key: 'spring', label: '前期' },
+  { key: 'fall', label: '後期' },
+];
+
+// 管理画面での上書きが無い場合のフォールバック: 4〜9月は前期、10〜3月は後期
+const getFallbackTerm = () => {
+  const month = new Date().getMonth() + 1;
+  return month >= 4 && month <= 9 ? 'spring' : 'fall';
+};
+
 export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCourseClick }: CategoryPageProps) {
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [academicYear, setAcademicYear] = useState(2026);
-  const [term] = useState('spring');
+  // null = まだデフォルト学期(管理画面の設定またはカレンダー基準)を取得できていない
+  const [term, setTerm] = useState<string | null>(null);
+
+  // 管理画面で設定されたデフォルト学期を初回のみ取得する
+  useEffect(() => {
+    let cancelled = false;
+
+    getDefaultTerm()
+      .then((res) => {
+        if (!cancelled) setTerm(res.term);
+      })
+      .catch(() => {
+        if (!cancelled) setTerm(getFallbackTerm());
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 授業データをAPIから取得
   useEffect(() => {
+    if (term === null) {
+      return;
+    }
+
     let cancelled = false;
 
     const fetchOfferings = async () => {
@@ -118,7 +151,25 @@ export function CategoryPage({ categoryName, categoryId, onNavigateBack, onCours
           </button>
           <div>
             <h1 className="mb-2">{categoryName}</h1>
-            <p className="text-gray-600 text-sm">{academicYear}年度 前期。授業を選択すると詳細が表示されます</p>
+            <p className="text-gray-600 text-sm">
+              {academicYear}年度 {termOptions.find((t) => t.key === term)?.label ?? term}。授業を選択すると詳細が表示されます
+            </p>
+          </div>
+
+          <div className="ml-auto flex gap-2">
+            {termOptions.map((option) => (
+              <button
+                key={option.key}
+                onClick={() => setTerm(option.key)}
+                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                  term === option.key
+                    ? 'bg-[#2B4DCA] text-white border-[#2B4DCA]'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-[#2B4DCA]'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 

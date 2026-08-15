@@ -113,6 +113,9 @@ func SetupRoutes() http.Handler {
 	// POST /api/v1/admin/timetable-imports/{id}/publish
 	// 効果：下書きを総合教養科目の subjects/offerings/meetings に反映（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/timetable-imports/{id}/publish", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPost, handlers.PublishAdminTimetableImport))))
+	// PUT /api/v1/admin/settings/default-term
+	// 効果：ユーザー画面のデフォルト表示学期を固定表示（spring/fall）または自動判定(auto)に切り替える（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/settings/default-term", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPut, handlers.UpdateAdminDefaultTerm))))
 
 	// =====================
 	// 時間割 (Timetables) API
@@ -132,6 +135,9 @@ func SetupRoutes() http.Handler {
 	// GET /api/v1/meta/default-academic-year
 	// 効果：現在年度のデフォルト値を取得 (例：2026)
 	mux.HandleFunc("/api/v1/meta/default-academic-year", methodHandler(http.MethodGet, handlers.GetDefaultAcademicYear))
+	// GET /api/v1/meta/default-term
+	// 効果：ユーザー画面に表示するデフォルト学期を取得（管理画面での上書きが無ければカレンダー基準で自動計算）
+	mux.HandleFunc("/api/v1/meta/default-term", methodHandler(http.MethodGet, handlers.GetDefaultTerm))
 
 	// 作成したルーターを CORS ミドルウェアでラップして返す
 	return middleware.CORS(mux)

@@ -41,6 +41,7 @@ func RunMigrations() error {
 		&models.AdImage{},
 		&models.TimetableImportBatch{},
 		&models.TimetableImportRow{},
+		&models.AppSetting{},
 	)
 	if err != nil {
 		return err
@@ -48,6 +49,11 @@ func RunMigrations() error {
 
 	if err := syncUICategories(); err != nil {
 		return err
+	}
+
+	// app_settings は常に id=1 の単一行のみを使う設定テーブル。まだ無ければ作成する
+	if err := config.DB.Exec(`INSERT INTO app_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`).Error; err != nil {
+		return fmt.Errorf("failed seeding app_settings row: %w", err)
 	}
 
 	// Ensure `role` column exists on users table for existing databases
