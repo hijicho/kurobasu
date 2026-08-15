@@ -24,7 +24,7 @@ func toSiteSettingsResponse(settings *models.SiteSettings) dto.SiteSettingsRespo
 func getSiteSettingsModel() (*models.SiteSettings, error) {
 	settings := &models.SiteSettings{
 		SettingsID:          siteSettingsID,
-		DefaultAcademicYear: 2026,
+		DefaultAcademicYear: int16(time.Now().Year()),
 		DefaultTerm:         "spring",
 		UpdatedAt:           time.Now(),
 	}

@@ -101,7 +101,7 @@ func RunMigrations() error {
 	// Offering -> Subject relationship
 	// One Subject can have many Offerings (different semesters/instructors of same subject)
 	// If a Subject is deleted, all Offerings for that Subject are automatically deleted
-	// Example: Physics subject deleted -> Spring 2026 Physics offering is deleted
+	// Example: deleting a subject deletes every offering for that subject.
 	if err := addConstraintIfNotExists(
 		"offerings",
 		"fk_offerings_subject",
@@ -115,7 +115,7 @@ func RunMigrations() error {
 	// Meeting -> Offering relationship
 	// One Offering can have many Meetings (lectures, labs, etc. for that offering)
 	// If an Offering is deleted, all its Meetings are automatically deleted
-	// Example: Spring 2026 Physics deleted -> All class meetings for that offering are deleted
+	// Example: deleting an offering deletes all class meetings for that offering.
 	if err := addConstraintIfNotExists(
 		"meetings",
 		"fk_meetings_offering",
@@ -183,7 +183,7 @@ func RunMigrations() error {
 	// One Offering can appear in many TimetableItems (multiple students add same course to schedule)
 	// Unlike previous relationships, deleting an Offering does NOT delete TimetableItems
 	// (A TimetableItem is a "reference" to an offering, not owned by it)
-	// Example: Spring 2026 Physics offering deleted -> TimetableItems reference to it can become stale
+	// Example: deleting an offering can leave stale timetable item references.
 	if err := addConstraintIfNotExists(
 		"timetable_items",
 		"fk_timetable_items_offering",
@@ -215,7 +215,7 @@ func RunMigrations() error {
 func ensureDefaultSiteSettings() error {
 	sql := `
 		INSERT INTO site_settings (settings_id, default_academic_year, default_term, updated_at)
-		VALUES (1, 2026, 'spring', CURRENT_TIMESTAMP)
+		VALUES (1, EXTRACT(YEAR FROM CURRENT_DATE)::smallint, 'spring', CURRENT_TIMESTAMP)
 		ON CONFLICT (settings_id) DO NOTHING
 	`
 	if err := config.DB.Exec(sql).Error; err != nil {

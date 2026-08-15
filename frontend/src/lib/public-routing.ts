@@ -1,4 +1,3 @@
-export const DEFAULT_PUBLIC_YEAR = 2026;
 export const DEFAULT_PUBLIC_TERM = 'spring';
 
 export const termLabels: Record<string, string> = {
@@ -40,6 +39,10 @@ export function publicCategoryPath(year: number | string, term: string, category
 
 export function publicOfferingPath(year: number | string, term: string, categorySlug: string, offeringId: number | string) {
   return `/${year}/${term}/courses/${categorySlug}/${offeringId}`;
+}
+
+export function fallbackPublicYear() {
+  return new Date().getFullYear();
 }
 
 export function isValidPublicTerm(term: string) {

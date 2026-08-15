@@ -13,9 +13,7 @@ export function Footer() {
             />
           </div>
         
-          <div className="text-center text-sm text-gray-500">
-            © 2026 クロバス. All rights reserved.
-          </div>
+          <div className="text-center text-sm text-gray-500">© クロバス. All rights reserved.</div>
         </div>
       </div>
     </footer>

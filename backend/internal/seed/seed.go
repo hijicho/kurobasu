@@ -60,7 +60,7 @@ func RunSeeds() error {
 func seedSiteSettings() {
 	settings := models.SiteSettings{
 		SettingsID:          1,
-		DefaultAcademicYear: 2026,
+		DefaultAcademicYear: currentAcademicYear(),
 		DefaultTerm:         "spring",
 		UpdatedAt:           time.Now(),
 	}
@@ -111,6 +111,7 @@ func seedCategories() []models.Category {
 }
 
 func seedCourses(categories []models.Category) []seededOffering {
+	academicYear := currentAcademicYear()
 	categoryBySlug := make(map[string]models.Category, len(categories))
 	for _, category := range categories {
 		categoryBySlug[category.Slug] = category
@@ -140,7 +141,7 @@ func seedCourses(categories []models.Category) []seededOffering {
 
 		offering := models.Offering{
 			SubjectID:       subject.SubjectID,
-			AcademicYear:    2026,
+			AcademicYear:    academicYear,
 			Term:            data.term,
 			Modality:        data.modality,
 			CourseCode:      data.courseCode,
@@ -223,6 +224,7 @@ func seedTimetables(users []models.User) {
 	if len(users) == 0 {
 		return
 	}
+	academicYear := currentAcademicYear()
 
 	timetableData := []struct {
 		userID   int64
@@ -231,9 +233,9 @@ func seedTimetables(users []models.User) {
 		term     string
 		isPublic bool
 	}{
-		{users[0].UserID, "2026年前期 時間割", 2026, "spring", true},
-		{users[1].UserID, "履修候補", 2026, "spring", false},
-		{users[2].UserID, "般教中心", 2026, "spring", true},
+		{users[0].UserID, "前期 時間割", academicYear, "spring", true},
+		{users[1].UserID, "履修候補", academicYear, "spring", false},
+		{users[2].UserID, "般教中心", academicYear, "spring", true},
 	}
 
 	for _, data := range timetableData {
@@ -378,4 +380,8 @@ func compactReviews(pros string, cons string) []reviewSeed {
 		{reviewType: models.UserReviewTypePros, comment: pros},
 		{reviewType: models.UserReviewTypeCons, comment: cons},
 	}
+}
+
+func currentAcademicYear() int16 {
+	return int16(time.Now().Year())
 }

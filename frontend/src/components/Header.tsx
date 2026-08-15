@@ -31,7 +31,7 @@ export function Header({ onGlossaryOpen }: HeaderProps) {
             rel="noopener noreferrer"
             className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[#2B4DCA] bg-white text-[#2B4DCA] hover:bg-[#2B4DCA] hover:text-white transition-all duration-200 shadow-sm hover:shadow-md"
           >
-            <span className="text-sm whitespace-nowrap">2025年度後期のフォーム入力もお願いします</span>
+            <span className="text-sm whitespace-nowrap">フォーム入力もお願いします</span>
             <ExternalLink className="w-4 h-4 flex-shrink-0" />
           </a>
 
@@ -84,7 +84,7 @@ export function Header({ onGlossaryOpen }: HeaderProps) {
               rel="noopener noreferrer"
               className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl border-2 border-[#2B4DCA] bg-white text-[#2B4DCA] hover:bg-[#2B4DCA] hover:text-white transition-all duration-200"
             >
-              <span className="text-sm">2025年度後期のフォーム入力もお願いします</span>
+              <span className="text-sm">フォーム入力もお願いします</span>
               <ExternalLink className="w-4 h-4 flex-shrink-0" />
             </a>
 
