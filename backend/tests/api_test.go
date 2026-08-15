@@ -296,8 +296,8 @@ func TestListReviews(t *testing.T) {
 func TestCreateReview(t *testing.T) {
 	body := dto.CreateReviewRequest{
 		OfferingID: 1,
-		Pros:       "Well-structured lectures.",
-		Cons:       "Homework load was heavy.",
+		Type:       "pros",
+		Comment:    "Well-structured lectures.",
 	}
 
 	w := doRequest(t, "POST", "/api/v1/reviews", body)

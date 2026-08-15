@@ -7,9 +7,8 @@ import { ReviewItem } from './ReviewItem';
 import { ReviewForm, ReviewCategory } from './ReviewForm';
 
 interface SubmittedReview {
-  pros: string;
-  cons: string;
-  others: string;
+  type: ReviewCategory;
+  comment: string;
   approved: boolean;
 }
 
@@ -69,7 +68,7 @@ export function ReviewSections({ pros, cons, others, offeringId }: ReviewSection
     };
   }, [offeringId]);
 
-  const handleSubmit = async (review: { pros: string; cons: string; others: string }) => {
+  const handleSubmit = async (review: { type: ReviewCategory; comment: string }) => {
     if (!offeringId) {
       throw new Error('review submission is not available');
     }
@@ -157,27 +156,21 @@ export function ReviewSections({ pros, cons, others, offeringId }: ReviewSection
               <div className="space-y-3">
                 {pendingList.map((review, i) => (
                   <div key={i} className="bg-white border border-blue-200 rounded-xl p-3 md:p-4 space-y-3">
-                    {([
-                      ['pros', review.pros],
-                      ['cons', review.cons],
-                      ['others', review.others],
-                    ] as [ReviewCategory, string][]).filter(([, text]) => text).map(([category, text]) => (
-                      <div key={category}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                            <User className="w-3 h-3 text-blue-400" />
-                          </div>
-                          <span className="text-xs text-blue-600 shrink-0">
-                            {CATEGORY_LABELS[category]}
-                          </span>
-                          <span className="ml-auto flex items-center gap-1 text-xs text-blue-400 shrink-0">
-                            <Clock className="w-3 h-3" />
-                            承認待ち
-                          </span>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                          <User className="w-3 h-3 text-blue-400" />
                         </div>
-                        <p className="text-gray-500 text-sm leading-relaxed pl-7">{text}</p>
+                        <span className="text-xs text-blue-600 shrink-0">
+                          {CATEGORY_LABELS[review.type]}
+                        </span>
+                        <span className="ml-auto flex items-center gap-1 text-xs text-blue-400 shrink-0">
+                          <Clock className="w-3 h-3" />
+                          承認待ち
+                        </span>
                       </div>
-                    ))}
+                      <p className="text-gray-500 text-sm leading-relaxed pl-7">{review.comment}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -198,27 +191,21 @@ export function ReviewSections({ pros, cons, others, offeringId }: ReviewSection
               <div className="space-y-3">
                 {approvedList.map((review, i) => (
                   <div key={i} className="bg-white border border-blue-100 rounded-xl p-3 md:p-4 space-y-3">
-                    {([
-                      ['pros', review.pros],
-                      ['cons', review.cons],
-                      ['others', review.others],
-                    ] as [ReviewCategory, string][]).filter(([, text]) => text).map(([category, text]) => (
-                      <div key={category}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                            <User className="w-3 h-3 text-[#2B4DCA]" />
-                          </div>
-                          <span className="text-xs text-[#2B4DCA] shrink-0">
-                            {CATEGORY_LABELS[category]}
-                          </span>
-                          <span className="ml-auto flex items-center gap-1 text-xs text-[#2B4DCA] shrink-0">
-                            <CheckCircle className="w-3 h-3" />
-                            掲載中
-                          </span>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                          <User className="w-3 h-3 text-[#2B4DCA]" />
                         </div>
-                        <p className="text-gray-700 text-sm leading-relaxed pl-7">{text}</p>
+                        <span className="text-xs text-[#2B4DCA] shrink-0">
+                          {CATEGORY_LABELS[review.type]}
+                        </span>
+                        <span className="ml-auto flex items-center gap-1 text-xs text-[#2B4DCA] shrink-0">
+                          <CheckCircle className="w-3 h-3" />
+                          掲載中
+                        </span>
                       </div>
-                    ))}
+                      <p className="text-gray-700 text-sm leading-relaxed pl-7">{review.comment}</p>
+                    </div>
                   </div>
                 ))}
               </div>

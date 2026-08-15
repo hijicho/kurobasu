@@ -20,8 +20,7 @@ const (
 )
 
 // UserReview テーブル: ユーザーが投稿する授業レビュー
-// 1回のレビュー投稿（良い点・悪い点・任意のその他コメント）は、
-// type ごとに複数行（pros/cons/[others]）として保存される
+// 1行が良い点・悪い点・その他のいずれか1件を表す
 type UserReview struct {
 	UserReviewID int64  `gorm:"primaryKey;column:user_review_id" json:"user_review_id"`
 	UserID       *int64 `gorm:"column:user_id;index" json:"user_id,omitempty"`

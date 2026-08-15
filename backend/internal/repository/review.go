@@ -149,8 +149,7 @@ func (r *ReviewRepository) DeleteReview(reviewID int64) error {
 	return nil
 }
 
-// CreateReviews creates the rows (pros/cons/[others]) for a single review
-// submission atomically. All rows must reference the same offering.
+// CreateReviews creates review rows atomically. All rows must reference the same offering.
 func (r *ReviewRepository) CreateReviews(reviews []*models.UserReview) error {
 	if len(reviews) == 0 {
 		return nil

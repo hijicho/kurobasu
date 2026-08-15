@@ -4,30 +4,33 @@ import { Send } from 'lucide-react';
 export type ReviewCategory = 'pros' | 'cons' | 'others';
 
 interface ReviewFormProps {
-  onSubmit: (review: { pros: string; cons: string; others: string }) => Promise<void> | void;
+  onSubmit: (review: { type: ReviewCategory; comment: string }) => Promise<void> | void;
   disabled?: boolean;
   disabledMessage?: string;
 }
 
+const categoryOptions: { value: ReviewCategory; label: string }[] = [
+  { value: 'pros', label: '良かったところ' },
+  { value: 'cons', label: '悪かったところ' },
+  { value: 'others', label: 'その他の情報' },
+];
+
 export function ReviewForm({ onSubmit, disabled = false, disabledMessage }: ReviewFormProps) {
-  const [pros, setPros] = useState('');
-  const [cons, setCons] = useState('');
-  const [others, setOthers] = useState('');
+  const [type, setType] = useState<ReviewCategory>('pros');
+  const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (disabled || !pros.trim() || !cons.trim()) return;
+    if (disabled || !comment.trim()) return;
 
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit({ pros: pros.trim(), cons: cons.trim(), others: others.trim() });
-      setPros('');
-      setCons('');
-      setOthers('');
+      await onSubmit({ type, comment: comment.trim() });
+      setComment('');
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);
     } catch {
@@ -60,37 +63,37 @@ export function ReviewForm({ onSubmit, disabled = false, disabledMessage }: Revi
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <textarea
-          value={pros}
-          onChange={(e) => setPros(e.target.value)}
-          placeholder="良かったところ（必須）"
-          rows={3}
-          disabled={disabled || submitting}
-          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 transition-colors disabled:bg-gray-50 disabled:text-gray-400"
-        />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {categoryOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setType(option.value)}
+              disabled={disabled || submitting}
+              className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
+                type === option.value
+                  ? 'border-[#2B4DCA] bg-blue-50 text-[#2B4DCA]'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-blue-200 hover:bg-blue-50'
+              } disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
 
         <textarea
-          value={cons}
-          onChange={(e) => setCons(e.target.value)}
-          placeholder="悪かったところ（必須）"
-          rows={3}
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder={`${categoryOptions.find((option) => option.value === type)?.label}を入力`}
+          rows={4}
           disabled={disabled || submitting}
           className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 transition-colors disabled:bg-gray-50 disabled:text-gray-400"
-        />
-
-        <textarea
-          value={others}
-          onChange={(e) => setOthers(e.target.value)}
-          placeholder="その他の情報（任意）"
-          rows={3}
-          disabled={disabled || submitting}
-          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 transition-colors"
         />
 
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={disabled || submitting || !pros.trim() || !cons.trim()}
+            disabled={disabled || submitting || !comment.trim()}
             className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-[#2B4DCA] text-white rounded-xl text-sm md:text-base hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4" />

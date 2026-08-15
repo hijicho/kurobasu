@@ -176,13 +176,11 @@ type TimetableItemResponse struct {
 
 // Request DTOs ================================
 
-// CreateReviewRequest
-// pros/cons は必須。others は任意の自由コメント
+// CreateReviewRequest は口コミ1件分の投稿リクエストです。
 type CreateReviewRequest struct {
 	OfferingID int64  `json:"offering_id"`
-	Pros       string `json:"pros"`
-	Cons       string `json:"cons"`
-	Others     string `json:"others,omitempty"`
+	Type       string `json:"type"`
+	Comment    string `json:"comment"`
 }
 
 // BootstrapUserRequest

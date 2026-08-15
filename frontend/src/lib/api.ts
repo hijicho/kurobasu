@@ -174,23 +174,23 @@ export async function getReviews(offeringId: number): Promise<ReviewsResponse> {
 }
 
 export interface CreateReviewResponse {
-  review_ids: number[];
+  review_id: number;
+  type: 'pros' | 'cons' | 'others';
   status: string;
 }
 
 export async function createReview(
   idToken: string | null | undefined,
   offeringId: number,
-  review: { pros: string; cons: string; others?: string }
+  review: { type: 'pros' | 'cons' | 'others'; comment: string }
 ): Promise<CreateReviewResponse> {
   return fetchApi<CreateReviewResponse>('/reviews', {
     method: 'POST',
     headers: idToken ? { Authorization: `Bearer ${idToken}` } : undefined,
     body: JSON.stringify({
       offering_id: offeringId,
-      pros: review.pros,
-      cons: review.cons,
-      others: review.others,
+      type: review.type,
+      comment: review.comment,
     }),
   });
 }

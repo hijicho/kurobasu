@@ -56,8 +56,14 @@ func ListReviews(w http.ResponseWriter, r *http.Request) {
 	successResponse(w, resp)
 }
 
+var validReviewTypes = map[string]models.UserReviewType{
+	"pros":   models.UserReviewTypePros,
+	"cons":   models.UserReviewTypeCons,
+	"others": models.UserReviewTypeOthers,
+}
+
 // CreateReview - POST /api/v1/reviews
-// 1回の投稿から pros/cons（必須）と others（任意）の複数行を作成する
+// 1回の投稿で pros/cons/others のいずれか1行を作成する
 func CreateReview(w http.ResponseWriter, r *http.Request) {
 	var req dto.CreateReviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -65,12 +71,14 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pros := strings.TrimSpace(req.Pros)
-	cons := strings.TrimSpace(req.Cons)
-	others := strings.TrimSpace(req.Others)
-
-	if pros == "" || cons == "" {
-		errorResponse(w, http.StatusBadRequest, "pros and cons are required")
+	reviewType, ok := validReviewTypes[strings.TrimSpace(req.Type)]
+	if !ok {
+		errorResponse(w, http.StatusBadRequest, "type must be one of: pros, cons, others")
+		return
+	}
+	comment := strings.TrimSpace(req.Comment)
+	if comment == "" {
+		errorResponse(w, http.StatusBadRequest, "comment is required")
 		return
 	}
 
@@ -80,28 +88,18 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	newRow := func(reviewType models.UserReviewType, comment string) *models.UserReview {
-		return &models.UserReview{
-			UserID:     userID,
-			OfferingID: req.OfferingID,
-			Comment:    comment,
-			Type:       reviewType,
-			Status:     models.UserReviewStatusPending,
-			CreatedAt:  now,
-			UpdatedAt:  now,
-		}
-	}
-
-	reviews := []*models.UserReview{
-		newRow(models.UserReviewTypePros, pros),
-		newRow(models.UserReviewTypeCons, cons),
-	}
-	if others != "" {
-		reviews = append(reviews, newRow(models.UserReviewTypeOthers, others))
+	review := &models.UserReview{
+		UserID:     userID,
+		OfferingID: req.OfferingID,
+		Comment:    comment,
+		Type:       reviewType,
+		Status:     models.UserReviewStatusPending,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 
 	revRepo := &repository.ReviewRepository{}
-	if err := revRepo.CreateReviews(reviews); err != nil {
+	if err := revRepo.CreateReviews([]*models.UserReview{review}); err != nil {
 		if errors.Is(err, repository.ErrOfferingNotFound) {
 			errorResponse(w, http.StatusNotFound, "Offering not found")
 			return
@@ -110,17 +108,13 @@ func CreateReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reviewIDs := make([]int64, len(reviews))
-	for i, rev := range reviews {
-		reviewIDs[i] = rev.UserReviewID
-	}
-
 	// Return minimal created info (no user details)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{"data": map[string]interface{}{
-		"review_ids": reviewIDs,
-		"status":     string(models.UserReviewStatusPending),
+		"review_id": review.UserReviewID,
+		"type":      string(review.Type),
+		"status":    string(models.UserReviewStatusPending),
 	}})
 }
 
