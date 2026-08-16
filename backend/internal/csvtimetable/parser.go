@@ -4,7 +4,7 @@
 // shared column layout below.
 //
 // Two exports share the same column layout (年度,学期,曜日,時限,科目名,
-// 担当教員,授業コード,講義室):
+// 担当教員,授業コード,講義室, plus an optional 実施キャンパス column):
 //   - the regular weekly timetable, where most rows carry a 曜日/時限 but a
 //     trailing "時間割外" section lists courses with no fixed weekly slot
 //     (on-demand, correspondence, etc.)
@@ -39,6 +39,7 @@ type ParsedRow struct {
 	CourseCode string
 	CourseName string
 	Instructor string
+	Campus     string
 	Classroom  string
 	Note       string
 }
@@ -65,21 +66,22 @@ func TermLabel(term string) string {
 }
 
 type columnIndex struct {
-	term, day, period, courseName, instructor, courseCode, classroom int
+	term, day, period, courseName, instructor, courseCode, campus, classroom int
 }
 
 // buildColumnIndex maps the CSV header to column positions by name, so the
 // parser tolerates column reordering as long as the header labels match.
 func buildColumnIndex(header []string) (columnIndex, error) {
-	idx := columnIndex{term: -1, day: -1, period: -1, courseName: -1, instructor: -1, courseCode: -1, classroom: -1}
+	idx := columnIndex{term: -1, day: -1, period: -1, courseName: -1, instructor: -1, courseCode: -1, campus: -1, classroom: -1}
 	targets := map[string]*int{
-		"学期":    &idx.term,
-		"曜日":    &idx.day,
-		"時限":    &idx.period,
-		"科目名":   &idx.courseName,
-		"担当教員":  &idx.instructor,
-		"授業コード": &idx.courseCode,
-		"講義室":   &idx.classroom,
+		"学期":     &idx.term,
+		"曜日":     &idx.day,
+		"時限":     &idx.period,
+		"科目名":    &idx.courseName,
+		"担当教員":   &idx.instructor,
+		"授業コード":  &idx.courseCode,
+		"実施キャンパス": &idx.campus,
+		"講義室":    &idx.classroom,
 	}
 	for i, col := range header {
 		if p, ok := targets[strings.TrimSpace(col)]; ok {
@@ -156,6 +158,7 @@ func Parse(r io.Reader, term string) ([]ParsedRow, error) {
 			CourseCode: courseCode,
 			CourseName: courseName,
 			Instructor: field(rec, idx.instructor),
+			Campus:     field(rec, idx.campus),
 			Classroom:  field(rec, idx.classroom),
 		})
 	}

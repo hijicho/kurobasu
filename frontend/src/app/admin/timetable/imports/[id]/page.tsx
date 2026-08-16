@@ -13,6 +13,7 @@ import {
   type TimetableImportBatch,
   type TimetableImportRowInput,
 } from '@/lib/api';
+import { publicTopPath } from '@/lib/public-routing';
 
 const dayOptions = [
   { value: '', label: '未定' },
@@ -41,6 +42,7 @@ interface EditableRow {
   course_code: string;
   course_name: string;
   instructor: string;
+  campus: string;
   classroom: string;
   note: string;
 }
@@ -55,6 +57,7 @@ function makeEmptyRow(): EditableRow {
     course_code: '',
     course_name: '',
     instructor: '',
+    campus: '',
     classroom: '',
     note: '',
   };
@@ -68,6 +71,7 @@ function toEditableRows(batch: TimetableImportBatch): EditableRow[] {
     course_code: row.course_code,
     course_name: row.course_name,
     instructor: row.instructor,
+    campus: row.campus,
     classroom: row.classroom,
     note: row.note,
   }));
@@ -80,6 +84,7 @@ function toRowInputs(rows: EditableRow[]): TimetableImportRowInput[] {
     course_code: row.course_code.trim(),
     course_name: row.course_name.trim(),
     instructor: row.instructor.trim(),
+    campus: row.campus.trim(),
     classroom: row.classroom.trim(),
     note: row.note.trim(),
   }));
@@ -161,7 +166,8 @@ export default function TimetableImportEditPage() {
       const published = await publishAdminTimetableImport(idToken, batchId);
       setBatch(published);
       setRows(toEditableRows(published));
-      setMessage({ tone: 'success', text: '公開しました。ユーザー画面の総合教養科目に反映されています。' });
+      setMessage({ tone: 'success', text: '公開しました。ユーザー画面に移動します。' });
+      router.push(publicTopPath(published.academic_year, published.term));
     } catch (err) {
       setMessage({ tone: 'error', text: getApiErrorMessage(err, '公開に失敗しました。') });
     } finally {
@@ -254,7 +260,7 @@ export default function TimetableImportEditPage() {
           ) : null}
 
           <div className="overflow-x-auto rounded-[20px] border border-slate-200 bg-white shadow-sm">
-            <table className="w-full min-w-[960px] border-collapse text-sm">
+            <table className="w-full min-w-[1080px] border-collapse text-sm">
               <thead>
                 <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
                   <th className="w-20 border-b border-slate-200 px-3 py-2">曜日</th>
@@ -262,6 +268,7 @@ export default function TimetableImportEditPage() {
                   <th className="w-32 border-b border-slate-200 px-3 py-2">授業コード</th>
                   <th className="border-b border-slate-200 px-3 py-2">科目名称</th>
                   <th className="w-40 border-b border-slate-200 px-3 py-2">代表教員</th>
+                  <th className="w-32 border-b border-slate-200 px-3 py-2">実施キャンパス</th>
                   <th className="w-40 border-b border-slate-200 px-3 py-2">講義室</th>
                   <th className="w-28 border-b border-slate-200 px-3 py-2">備考</th>
                   {!isPublished && <th className="w-12 border-b border-slate-200 px-2 py-2" />}
@@ -319,6 +326,14 @@ export default function TimetableImportEditPage() {
                         value={row.instructor}
                         disabled={isPublished}
                         onChange={(e) => updateRow(row.key, { instructor: e.target.value })}
+                        className={inputClass}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        value={row.campus}
+                        disabled={isPublished}
+                        onChange={(e) => updateRow(row.key, { campus: e.target.value })}
                         className={inputClass}
                       />
                     </td>

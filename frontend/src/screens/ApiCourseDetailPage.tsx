@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BookOpen, Calendar, Monitor, Users } from 'lucide-react';
+import { ArrowLeft, BookOpen, Calendar, MapPin, Monitor, Users } from 'lucide-react';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
@@ -88,11 +88,19 @@ export function ApiCourseDetailPage({
       return '時間割未定';
     }
     return offering.meetings
-      .map((meeting) => {
-        const base = `${dayLabels[meeting.day - 1] ?? meeting.day}曜 ${meeting.period}限`;
-        return meeting.classroom ? `${base}（${meeting.classroom}）` : base;
-      })
+      .map((meeting) => `${dayLabels[meeting.day - 1] ?? meeting.day}曜 ${meeting.period}限`)
       .join(' / ');
+  }, [offering]);
+
+  const classroomText = useMemo(() => {
+    if (!offering || offering.meetings.length === 0) {
+      return '未定';
+    }
+    const classrooms = offering.meetings.map((meeting) => meeting.classroom).filter((c): c is string => !!c);
+    if (classrooms.length === 0) {
+      return '未定';
+    }
+    return Array.from(new Set(classrooms)).join(' / ');
   }, [offering]);
 
   return (
@@ -162,6 +170,15 @@ export function ApiCourseDetailPage({
                     <div>
                       <p className="text-sm text-gray-600 mb-1">授業形態</p>
                       <p className="font-medium">{modalityLabel(offering.modality)}</p>
+                    </div>
+                  </div>
+                )}
+                {usesTimetable && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-[#2B4DCA] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">実施キャンパス・講義室</p>
+                      <p className="font-medium">{classroomText}</p>
                     </div>
                   </div>
                 )}

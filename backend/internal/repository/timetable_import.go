@@ -144,11 +144,13 @@ func (r *TimetableImportRepository) PublishBatch(batchID int64) (*models.Timetab
 				instructors = []string{name}
 			}
 
+			classroom := strings.TrimSpace(strings.TrimSpace(row.Campus) + strings.TrimSpace(row.Classroom))
+
 			offering := models.Offering{
 				SubjectID:       subjectID,
 				AcademicYear:    batch.AcademicYear,
 				Term:            batch.Term,
-				Modality:        inferModality(row.Classroom),
+				Modality:        inferModality(classroom),
 				CourseCode:      strings.TrimSpace(row.CourseCode),
 				Note:            strings.TrimSpace(row.Note),
 				InstructorNames: instructors,
@@ -162,7 +164,7 @@ func (r *TimetableImportRepository) PublishBatch(batchID int64) (*models.Timetab
 					OfferingID: offering.OfferingID,
 					Day:        *row.Day,
 					Period:     *row.Period,
-					Classroom:  strings.TrimSpace(row.Classroom),
+					Classroom:  classroom,
 				}
 				if err := tx.Create(&meeting).Error; err != nil {
 					return err

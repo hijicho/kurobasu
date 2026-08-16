@@ -448,6 +448,7 @@ export interface TimetableImportRow {
   course_code: string;
   course_name: string;
   instructor: string;
+  campus: string;
   classroom: string;
   note: string;
 }
@@ -521,6 +522,7 @@ export interface TimetableImportRowInput {
   course_code: string;
   course_name: string;
   instructor: string;
+  campus: string;
   classroom: string;
   note: string;
 }

@@ -44,6 +44,7 @@ func toTimetableImportRowResponse(row models.TimetableImportRow) dto.TimetableIm
 		CourseCode:  row.CourseCode,
 		CourseName:  row.CourseName,
 		Instructor:  row.Instructor,
+		Campus:      row.Campus,
 		Classroom:   row.Classroom,
 		Note:        row.Note,
 	}
@@ -150,7 +151,7 @@ func CreateAdminTimetableImport(w http.ResponseWriter, r *http.Request) {
 		batch.Rows = append(batch.Rows, models.TimetableImportRow{
 			Day: row.Day, Period: row.Period,
 			CourseCode: row.CourseCode, CourseName: row.CourseName,
-			Instructor: row.Instructor, Classroom: row.Classroom, Note: row.Note,
+			Instructor: row.Instructor, Campus: row.Campus, Classroom: row.Classroom, Note: row.Note,
 			SortOrder: i,
 		})
 	}
@@ -233,6 +234,7 @@ func UpdateAdminTimetableImportRows(w http.ResponseWriter, r *http.Request) {
 			CourseCode:    strings.TrimSpace(in.CourseCode),
 			CourseName:    strings.TrimSpace(in.CourseName),
 			Instructor:    strings.TrimSpace(in.Instructor),
+			Campus:        strings.TrimSpace(in.Campus),
 			Classroom:     strings.TrimSpace(in.Classroom),
 			Note:          strings.TrimSpace(in.Note),
 		}

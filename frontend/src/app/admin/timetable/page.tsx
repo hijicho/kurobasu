@@ -8,6 +8,7 @@ import AdminLoadingBlock from '@/components/admin/AdminLoadingBlock';
 import { useAuth } from '@/lib/auth-context';
 import {
   createAdminTimetableImport,
+  deleteAdminTimetableImport,
   getApiErrorMessage,
   getSiteSettings,
   listAdminTimetableImports,
@@ -107,6 +108,7 @@ export default function TimetablePage() {
   const [batches, setBatches] = useState<TimetableImportBatch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(true);
   const [isHistoryView, setIsHistoryView] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const selectedCategoryLabel =
     allCategories.find((category) => category.slug === categorySlug)?.label ?? categorySlug;
@@ -138,6 +140,29 @@ export default function TimetablePage() {
   useEffect(() => {
     loadBatches();
   }, [loadBatches]);
+
+  const handleDeleteBatch = async (batch: TimetableImportBatch) => {
+    const confirmed = window.confirm(
+      `${batch.academic_year}年度 ${termOptions.find((t) => t.key === batch.term)?.label ?? batch.term}（${
+        batch.source_filename || '元ファイル不明'
+      }）を削除します。よろしいですか？${
+        batch.status === 'published' ? '\n※公開済みですが、ユーザー画面に反映済みのデータは削除されません。' : ''
+      }`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(batch.import_batch_id);
+    setErrorMessage(null);
+    try {
+      const idToken = await getIdToken();
+      await deleteAdminTimetableImport(idToken, batch.import_batch_id);
+      setBatches((prev) => prev.filter((b) => b.import_batch_id !== batch.import_batch_id));
+    } catch (err) {
+      setErrorMessage(getApiErrorMessage(err, 'インポート履歴の削除に失敗しました。'));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const openFileDialog = () => fileInputRef.current?.click();
 
@@ -428,6 +453,12 @@ export default function TimetablePage() {
               </button>
             </div>
 
+            {errorMessage ? (
+              <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {errorMessage}
+              </div>
+            ) : null}
+
             {loadingBatches ? (
               <AdminLoadingBlock rows={3} />
             ) : batches.length === 0 ? (
@@ -459,13 +490,23 @@ export default function TimetablePage() {
                         {batch.published_at ? ` ／ 公開: ${formatDateTime(batch.published_at)}` : ''}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/admin/timetable/imports/${batch.import_batch_id}`)}
-                      className="mt-4 inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#243f9c] sm:mt-0"
-                    >
-                      開く
-                    </button>
+                    <div className="mt-4 flex gap-2 sm:mt-0">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/admin/timetable/imports/${batch.import_batch_id}`)}
+                        className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#243f9c]"
+                      >
+                        開く
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBatch(batch)}
+                        disabled={deletingId === batch.import_batch_id}
+                        className="inline-flex items-center justify-center rounded-full border border-red-300 bg-white px-5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingId === batch.import_batch_id ? '削除中...' : '削除'}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

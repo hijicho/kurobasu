@@ -82,10 +82,10 @@ func (p *GoogleSheetsProvider) EditLink(batch *models.TimetableImportBatch, rows
 }
 
 func (p *GoogleSheetsProvider) writeRows(spreadsheetID string, rows []models.TimetableImportRow) error {
-	values := [][]interface{}{{"曜日", "時限", "授業コード", "科目名称", "代表教員", "講義室", "備考"}}
+	values := [][]interface{}{{"曜日", "時限", "授業コード", "科目名称", "代表教員", "実施キャンパス", "講義室", "備考"}}
 	for _, row := range rows {
 		values = append(values, []interface{}{
-			dayLabel(row.Day), periodLabel(row.Period), row.CourseCode, row.CourseName, row.Instructor, row.Classroom, row.Note,
+			dayLabel(row.Day), periodLabel(row.Period), row.CourseCode, row.CourseName, row.Instructor, row.Campus, row.Classroom, row.Note,
 		})
 	}
 

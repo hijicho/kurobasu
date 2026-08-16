@@ -47,6 +47,21 @@ func TestParseScheduledRow(t *testing.T) {
 	}
 }
 
+func TestParseCampusColumn(t *testing.T) {
+	csv := "年度,学期,曜日,時限,科目名,担当教員,授業コード,実施キャンパス,講義室\n" +
+		"2026年度,後期,月,2限,数学への招待,山口 智,1GAC002301,森之宮キャンパス,403大教室\n"
+	rows, err := Parse(strings.NewReader(csv), "fall")
+	if err != nil {
+		t.Fatalf("Parse returned error: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row, got %d: %+v", len(rows), rows)
+	}
+	if rows[0].Campus != "森之宮キャンパス" || rows[0].Classroom != "403大教室" {
+		t.Fatalf("unexpected row contents: %+v", rows[0])
+	}
+}
+
 func TestParseUnscheduledRow(t *testing.T) {
 	rows, err := Parse(strings.NewReader(sampleCSV), "fall")
 	if err != nil {

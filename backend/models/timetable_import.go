@@ -42,6 +42,7 @@ type TimetableImportRow struct {
 	CourseCode string `gorm:"column:course_code;type:varchar(40);not null;default:''" json:"course_code"`
 	CourseName string `gorm:"column:course_name;type:text;not null;default:''" json:"course_name"`
 	Instructor string `gorm:"column:instructor;type:text;not null;default:''" json:"instructor"`
+	Campus     string `gorm:"column:campus;type:text;not null;default:''" json:"campus"`
 	Classroom  string `gorm:"column:classroom;type:text;not null;default:''" json:"classroom"`
 	Note       string `gorm:"column:note;type:varchar(120);not null;default:''" json:"note"`
 	SortOrder  int    `gorm:"column:sort_order;not null;default:0" json:"sort_order"`

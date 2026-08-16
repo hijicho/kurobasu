@@ -239,6 +239,7 @@ type TimetableImportRowResponse struct {
 	CourseCode  string `json:"course_code"`
 	CourseName  string `json:"course_name"`
 	Instructor  string `json:"instructor"`
+	Campus      string `json:"campus"`
 	Classroom   string `json:"classroom"`
 	Note        string `json:"note"`
 }
@@ -275,6 +276,7 @@ type TimetableImportRowInput struct {
 	CourseCode string `json:"course_code"`
 	CourseName string `json:"course_name"`
 	Instructor string `json:"instructor"`
+	Campus     string `json:"campus"`
 	Classroom  string `json:"classroom"`
 	Note       string `json:"note"`
 }
