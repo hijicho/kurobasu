@@ -104,6 +104,7 @@ export default function AdminManagementPage() {
       currentPath="/admin/users"
       title="ユーザー権限"
       subtitle="ユーザーのロールを変更します。許可されない操作はAPIが拒否します。"
+      allowedRoles={['admin']}
     >
       <div className="space-y-6">
         <div className="flex flex-col gap-4 rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">

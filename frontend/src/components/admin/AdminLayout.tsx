@@ -12,12 +12,14 @@ type AdminLayoutProps = {
   currentPath: string;
   title: string;
   subtitle?: string;
+  allowedRoles?: string[];
 };
 
 type NavigationItem = {
   href: string;
   label: string;
   icon: React.ComponentType<React.ComponentProps<'svg'>>;
+  allowedRoles?: string[];
 };
 
 const navigationItems: NavigationItem[] = [
@@ -27,7 +29,7 @@ const navigationItems: NavigationItem[] = [
   { href: '/admin/timetable', label: '時間割', icon: CalendarRange },
   { href: '/admin/ratings', label: '評価', icon: Star },
   { href: '/admin/settings', label: '公開設定', icon: Settings },
-  { href: '/admin/users', label: '管理人', icon: ShieldUser },
+  { href: '/admin/users', label: '管理人', icon: ShieldUser, allowedRoles: ['admin'] },
   { href: '/logout', label: 'ログアウト', icon: LogOut },
 ];
 
@@ -42,6 +44,7 @@ type AdminProfileCache = {
   error: string | null;
   errorStatus: number | null;
   checked: boolean;
+  authUID: string | null;
 };
 
 let adminProfileCache: AdminProfileCache = {
@@ -49,30 +52,83 @@ let adminProfileCache: AdminProfileCache = {
   error: null,
   errorStatus: null,
   checked: false,
+  authUID: null,
 };
 
-export default function AdminLayout({ children, currentPath, title, subtitle }: AdminLayoutProps) {
-  const { getIdToken } = useAuth();
-  const [me, setMe] = useState<UserProfile | null>(adminProfileCache.profile);
-  const [meError, setMeError] = useState<string | null>(adminProfileCache.error);
-  const [meErrorStatus, setMeErrorStatus] = useState<number | null>(adminProfileCache.errorStatus);
-  const [checkingAccess, setCheckingAccess] = useState(!adminProfileCache.checked);
+export default function AdminLayout({ children, currentPath, title, subtitle, allowedRoles = ['admin', 'editor'] }: AdminLayoutProps) {
+  return (
+    <AdminLayoutInner currentPath={currentPath} title={title} subtitle={subtitle} allowedRoles={allowedRoles}>
+      {children}
+    </AdminLayoutInner>
+  );
+}
+
+export function AdminLayoutInner({
+  children,
+  currentPath,
+  title,
+  subtitle,
+  allowedRoles = ['admin', 'editor'],
+}: AdminLayoutProps) {
+  const { getIdToken, loading: authLoading, user } = useAuth();
+  const authUID = user?.id ?? null;
+  const cacheMatchesCurrentUser = adminProfileCache.checked && adminProfileCache.authUID === authUID;
+  const [me, setMe] = useState<UserProfile | null>(cacheMatchesCurrentUser ? adminProfileCache.profile : null);
+  const [meError, setMeError] = useState<string | null>(cacheMatchesCurrentUser ? adminProfileCache.error : null);
+  const [meErrorStatus, setMeErrorStatus] = useState<number | null>(cacheMatchesCurrentUser ? adminProfileCache.errorStatus : null);
+  const [checkingAccess, setCheckingAccess] = useState(authLoading || !cacheMatchesCurrentUser);
   const [editingName, setEditingName] = useState(false);
   const [displayNameDraft, setDisplayNameDraft] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
-  const accessDenied = !checkingAccess && !me;
+  const currentMe = authUID && me?.auth_uid === authUID ? me : null;
+  const isAllowed = !!currentMe && allowedRoles.includes(currentMe.role);
+  const accessDenied = !checkingAccess && (!currentMe || !isAllowed);
   const loginRequired = meErrorStatus === 401;
+  const visibleNavigationItems = navigationItems.filter((item) => !item.allowedRoles || (currentMe && item.allowedRoles.includes(currentMe.role)));
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadMe() {
+      if (authLoading) {
+        setCheckingAccess(true);
+        return;
+      }
+
+      if (!authUID) {
+        adminProfileCache = {
+          profile: null,
+          error: 'Authorization header required',
+          errorStatus: 401,
+          checked: true,
+          authUID: null,
+        };
+        if (cancelled) {
+          return;
+        }
+        setMe(null);
+        setMeError('Authorization header required');
+        setMeErrorStatus(401);
+        setCheckingAccess(false);
+        return;
+      }
+
+      if (adminProfileCache.checked && adminProfileCache.authUID === authUID) {
+        if (cancelled) {
+          return;
+        }
+        setMe(adminProfileCache.profile);
+        setMeError(adminProfileCache.error);
+        setMeErrorStatus(adminProfileCache.errorStatus);
+        setCheckingAccess(false);
+        return;
+      }
+
       setMeError(null);
       setMeErrorStatus(null);
-      if (!adminProfileCache.checked) {
-        setCheckingAccess(true);
-      }
+      setMe(null);
+      setCheckingAccess(true);
       try {
         const idToken = await getIdToken();
         const profile = await getAdminMe(idToken);
@@ -81,6 +137,7 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
           error: null,
           errorStatus: null,
           checked: true,
+          authUID,
         };
         if (!cancelled) {
           setMe(profile);
@@ -96,6 +153,7 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
           error,
           errorStatus,
           checked: true,
+          authUID,
         };
         if (!cancelled) {
           setMe(null);
@@ -114,17 +172,17 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
     return () => {
       cancelled = true;
     };
-  }, [getIdToken]);
+  }, [authLoading, authUID, getIdToken]);
 
   const startEditingName = () => {
-    if (!me) return;
-    setDisplayNameDraft(me.display_name);
+    if (!currentMe) return;
+    setDisplayNameDraft(currentMe.display_name);
     setProfileMessage(null);
     setEditingName(true);
   };
 
   const cancelEditingName = () => {
-    setDisplayNameDraft(me?.display_name ?? '');
+    setDisplayNameDraft(currentMe?.display_name ?? '');
     setProfileMessage(null);
     setEditingName(false);
   };
@@ -149,6 +207,7 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
         error: null,
         errorStatus: null,
         checked: true,
+        authUID,
       };
       setMe(updated);
       setDisplayNameDraft(updated.display_name);
@@ -160,6 +219,45 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
       setSavingName(false);
     }
   };
+
+  if (checkingAccess) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-3xl rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#2b4dca]">管理画面</p>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-900">権限を確認しています</h1>
+          <div className="mt-6 grid gap-4">
+            <AdminLoadingBlock />
+            <AdminLoadingBlock rows={1} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-3xl rounded-[24px] border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
+          <p className="text-sm font-semibold text-[#2b4dca]">管理画面</p>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-900">
+            {loginRequired ? 'ログインが必要です' : 'アクセスできません'}
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            {loginRequired
+              ? (meError ?? '管理画面を表示するにはログインしてください。')
+              : 'この管理画面を表示する権限がありません。'}
+          </p>
+          <Link
+            href={loginRequired ? '/login' : '/'}
+            className="mt-6 inline-flex rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white"
+          >
+            {loginRequired ? 'ログインへ' : 'トップへ戻る'}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -176,7 +274,7 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
           </div>
 
           <nav className="space-y-2">
-            {navigationItems.map((item) => {
+            {visibleNavigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentPath === item.href;
 
@@ -203,7 +301,7 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
               <UserRound className="h-4 w-4" />
               ログイン中
             </div>
-            {me ? (
+            {currentMe ? (
               <div className="space-y-2 text-sm">
                 {editingName ? (
                   <div className="space-y-2">
@@ -236,7 +334,7 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <p className="min-w-0 flex-1 truncate font-semibold text-white">{me.display_name || '名前未設定'}</p>
+                    <p className="min-w-0 flex-1 truncate font-semibold text-white">{currentMe.display_name || '名前未設定'}</p>
                     <button
                       type="button"
                       onClick={startEditingName}
@@ -247,25 +345,19 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
                     </button>
                   </div>
                 )}
-                {me.email ? <p className="truncate text-xs text-blue-100">{me.email}</p> : null}
+                {currentMe.email ? <p className="truncate text-xs text-blue-100">{currentMe.email}</p> : null}
                 <div className="flex items-center justify-between gap-3 text-blue-100">
                   <span>ロール</span>
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#2b4dca]">
-                    {roleLabels[me.role] ?? me.role}
+                    {roleLabels[currentMe.role] ?? currentMe.role}
                   </span>
                 </div>
-                <p className="text-xs text-blue-100">User ID: {me.user_id}</p>
+                <p className="text-xs text-blue-100">User ID: {currentMe.user_id}</p>
                 {profileMessage ? (
                   <p className={`text-xs ${profileMessage.tone === 'error' ? 'text-red-100' : 'text-blue-100'}`}>
                     {profileMessage.text}
                   </p>
                 ) : null}
-              </div>
-            ) : checkingAccess ? (
-              <div className="space-y-3">
-                <div className="h-4 w-32 animate-pulse rounded-full bg-white/25" />
-                <div className="h-3 w-44 animate-pulse rounded-full bg-white/15" />
-                <div className="h-6 w-24 animate-pulse rounded-full bg-white/20" />
               </div>
             ) : (
               <p className="text-sm text-blue-100">{meError ?? 'ユーザー情報を取得できませんでした。'}</p>
@@ -282,28 +374,7 @@ export default function AdminLayout({ children, currentPath, title, subtitle }: 
             </div>
           </header>
 
-          {accessDenied ? (
-            <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 text-center shadow-sm">
-              <p className="text-sm font-semibold text-[#2b4dca]">管理画面</p>
-              <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                {loginRequired ? 'ログインが必要です' : 'アクセスできません'}
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">{meError ?? 'この管理画面を表示する権限がありません。'}</p>
-              <Link
-                href={loginRequired ? '/login' : '/'}
-                className="mt-5 inline-flex rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white"
-              >
-                {loginRequired ? 'ログインへ' : 'トップへ戻る'}
-              </Link>
-            </div>
-          ) : checkingAccess && !me ? (
-            <div className="grid gap-4">
-              <AdminLoadingBlock />
-              <AdminLoadingBlock rows={1} />
-            </div>
-          ) : (
-            children
-          )}
+          {children}
         </main>
       </div>
     </div>
