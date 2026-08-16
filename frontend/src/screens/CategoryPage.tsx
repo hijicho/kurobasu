@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft, Search } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { TimetableView } from '../components/TimetableView';
@@ -34,6 +34,7 @@ export function CategoryPage({
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const usesTimetable = categoryId === 'general-education';
 
   // 授業データをAPIから取得
@@ -106,6 +107,22 @@ export function CategoryPage({
   // 曜日・時限が定まらない授業（集中講義・時間割外）は時間割表に載らないため別枠で一覧表示する
   const intensiveOfferings = usesTimetable ? offerings.filter((offering) => offering.meetings.length === 0) : [];
 
+  // 科目名・担当者名で絞り込み（カテゴリごとに取得したofferingsの範囲内で検索）
+  const matchesSearch = (offering: Offering) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      offering.subject.title.toLowerCase().includes(query) ||
+      offering.instructor_names.join('、').toLowerCase().includes(query)
+    );
+  };
+
+  const filteredOfferings = useMemo(() => offerings.filter(matchesSearch), [offerings, searchQuery]);
+  const filteredIntensiveOfferings = useMemo(
+    () => intensiveOfferings.filter(matchesSearch),
+    [intensiveOfferings, searchQuery]
+  );
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
@@ -124,10 +141,24 @@ export function CategoryPage({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="mb-2">{categoryName}</h1>
+            <h1 className="mb-2 text-2xl sm:text-4xl">{categoryName}</h1>
             <p className="text-gray-600 text-sm">
               {academicYear}年度 {termLabels[term] ?? term}。授業を選択すると詳細が表示されます
             </p>
+          </div>
+        </div>
+
+        {/* 検索 */}
+        <div className="mb-6 flex justify-center">
+          <div className="relative w-full max-w-2xl">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="科目名や担当者名で検索"
+              className="w-full rounded-full border border-gray-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition-colors focus:border-[#2B4DCA] focus:ring-2 focus:ring-[#2B4DCA]/20"
+            />
           </div>
         </div>
 
@@ -179,53 +210,63 @@ export function CategoryPage({
             {intensiveOfferings.length > 0 && (
               <div className="mt-8">
                 <h2 className="mb-4 text-lg font-semibold text-gray-900">集中講義・時間割外</h2>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {intensiveOfferings.map((offering) => {
-                    const level = offering.rate;
-                    return (
-                      <button
-                        key={offering.offering_id}
-                        onClick={() => onCourseClick?.(String(offering.offering_id))}
-                        className="relative rounded-lg border border-gray-200 bg-white p-3 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
-                      >
-                        {level && levelBadgeClasses[level] && (
-                          <span className={`absolute top-2 right-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${levelBadgeClasses[level]}`}>
-                            {level}
-                          </span>
-                        )}
-                        <h3 className="mb-1 pr-8 text-sm font-bold text-gray-900">{offering.subject.title}</h3>
-                        <p className="text-xs font-semibold text-gray-600">{offering.instructor_names.join('、')}</p>
-                        {offering.note && (
-                          <p className="mt-1 text-[11px] font-medium leading-snug text-gray-500">{offering.note}</p>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                {filteredIntensiveOfferings.length === 0 ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-6 text-sm text-gray-600">
+                    該当する授業が見つかりませんでした。
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {filteredIntensiveOfferings.map((offering) => {
+                      const level = offering.rate;
+                      return (
+                        <button
+                          key={offering.offering_id}
+                          onClick={() => onCourseClick?.(String(offering.offering_id))}
+                          className="relative flex h-28 flex-col justify-center overflow-hidden rounded-lg border border-gray-200 bg-white p-3 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+                        >
+                          {level && levelBadgeClasses[level] && (
+                            <span className={`absolute top-2 right-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${levelBadgeClasses[level]}`}>
+                              {level}
+                            </span>
+                          )}
+                          <h3 className="mb-1 line-clamp-2 pr-8 text-sm font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
+                          <p className="line-clamp-1 text-xs text-gray-500">{offering.instructor_names.join('、')}</p>
+                          {offering.note && (
+                            <p className="mt-1 line-clamp-1 text-[11px] text-gray-500">{offering.note}</p>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </>
+        ) : filteredOfferings.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 text-sm text-gray-600">
+            該当する授業が見つかりませんでした。
+          </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {offerings.map((offering) => {
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {filteredOfferings.map((offering) => {
               const level = offering.rate;
               return (
                 <button
                   key={offering.offering_id}
                   onClick={() => onCourseClick?.(String(offering.offering_id))}
-                  className="relative rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+                  className="relative flex h-32 flex-col justify-center overflow-hidden rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
                 >
                   {level && levelBadgeClasses[level] && (
                     <span className={`absolute top-3 right-3 rounded px-1.5 py-0.5 text-[10px] font-bold ${levelBadgeClasses[level]}`}>
                       {level}
                     </span>
                   )}
-                  <h3 className="mb-2 pr-10 text-base font-bold text-gray-900">{offering.subject.title}</h3>
-                  <p className="text-sm font-semibold text-gray-600">
+                  <h3 className="mb-1 line-clamp-2 pr-10 text-base font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
+                  <p className="line-clamp-1 text-xs text-gray-500">
                     {offering.instructor_names.join('、') || '担当教員未設定'}
                   </p>
                   {offering.note && (
-                    <p className="mt-2 text-xs font-medium leading-snug text-gray-500">{offering.note}</p>
+                    <p className="mt-1 line-clamp-1 text-xs text-gray-500">{offering.note}</p>
                   )}
                 </button>
               );

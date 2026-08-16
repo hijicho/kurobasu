@@ -125,7 +125,7 @@ export function ApiCourseDetailPage({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="mb-2">{offering?.subject.title ?? '授業詳細'}</h1>
+            <h1 className="mb-2 text-2xl sm:text-4xl">{offering?.subject.title ?? '授業詳細'}</h1>
             <p className="text-gray-600 text-sm">
               {loading ? '読み込み中です' : error ?? offering?.instructor_names.join('、')}
             </p>
@@ -137,7 +137,7 @@ export function ApiCourseDetailPage({
         ) : offering ? (
           <>
             <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-              <h2 className="mb-4">基本情報</h2>
+              <h2 className="mb-4 text-base md:text-lg">基本情報</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
                   <Users className="w-5 h-5 text-[#2B4DCA] mt-0.5 flex-shrink-0" />
