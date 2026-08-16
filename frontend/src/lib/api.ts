@@ -475,12 +475,12 @@ export interface ListTimetableImportBatchesResponse {
 
 export async function listAdminTimetableImports(
   idToken: string | null | undefined,
-  categorySlug = 'general-education'
+  categorySlug?: string
 ): Promise<ListTimetableImportBatchesResponse> {
-  return fetchApi<ListTimetableImportBatchesResponse>(
-    `/admin/timetable-imports?category_slug=${encodeURIComponent(categorySlug)}`,
-    { headers: authHeaders(idToken) }
-  );
+  const query = categorySlug ? `?category_slug=${encodeURIComponent(categorySlug)}` : '';
+  return fetchApi<ListTimetableImportBatchesResponse>(`/admin/timetable-imports${query}`, {
+    headers: authHeaders(idToken),
+  });
 }
 
 export async function getAdminTimetableImport(

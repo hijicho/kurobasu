@@ -134,14 +134,15 @@ export default function TimetablePage() {
     setLoadingBatches(true);
     try {
       const idToken = await getIdToken();
-      const res = await listAdminTimetableImports(idToken, categorySlug);
+      // カテゴリで絞り込まず、全カテゴリのインポート履歴をまとめて取得する
+      const res = await listAdminTimetableImports(idToken);
       setBatches(res.items);
     } catch (err) {
       setErrorMessage(getApiErrorMessage(err, 'アップロード履歴の取得に失敗しました。'));
     } finally {
       setLoadingBatches(false);
     }
-  }, [getIdToken, categorySlug]);
+  }, [getIdToken]);
 
   useEffect(() => {
     loadBatches();
@@ -448,7 +449,7 @@ export default function TimetablePage() {
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-[#2b4dca]">過去のインポート</p>
-                <p className="text-sm text-slate-600">アップロード履歴と公開状況を確認できます。</p>
+                <p className="text-sm text-slate-600">全カテゴリのアップロード履歴と公開状況をまとめて確認できます。</p>
               </div>
               <button
                 type="button"
@@ -488,6 +489,9 @@ export default function TimetablePage() {
                         >
                           {statusLabel(batch)}
                         </span>
+                      </p>
+                      <p className="text-sm font-semibold text-[#2b4dca]">
+                        {allCategories.find((c) => c.slug === batch.category_slug)?.label ?? batch.category_slug}
                       </p>
                       <p className="text-sm text-slate-600">元ファイル: {batch.source_filename || '-'}</p>
                       <p className="text-sm text-slate-600">行数: {batch.row_count}</p>

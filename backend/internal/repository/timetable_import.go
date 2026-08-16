@@ -19,14 +19,16 @@ func (r *TimetableImportRepository) CreateBatch(batch *models.TimetableImportBat
 	return config.DB.Create(batch).Error
 }
 
-// ListBatches returns batches for a category, most recent first, without rows
-// (used for the admin "past uploads" list).
+// ListBatches returns batches, most recent first, without rows (used for the
+// admin "past uploads" list). An empty categorySlug returns batches across
+// every category.
 func (r *TimetableImportRepository) ListBatches(categorySlug string) ([]models.TimetableImportBatch, error) {
 	var batches []models.TimetableImportBatch
-	err := config.DB.
-		Where("category_slug = ?", categorySlug).
-		Order("created_at DESC").
-		Find(&batches).Error
+	query := config.DB.Order("created_at DESC")
+	if categorySlug != "" {
+		query = query.Where("category_slug = ?", categorySlug)
+	}
+	err := query.Find(&batches).Error
 	return batches, err
 }
 

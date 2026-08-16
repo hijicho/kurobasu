@@ -171,11 +171,10 @@ func CreateAdminTimetableImport(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListAdminTimetableImports - GET /api/v1/admin/timetable-imports?category_slug=general-education
+// category_slug is optional: omitting it returns import history across every
+// category (used by the admin "過去のインポート" overview).
 func ListAdminTimetableImports(w http.ResponseWriter, r *http.Request) {
 	categorySlug := strings.TrimSpace(r.URL.Query().Get("category_slug"))
-	if categorySlug == "" {
-		categorySlug = supportedImportCategorySlug
-	}
 
 	importRepo := &repository.TimetableImportRepository{}
 	batches, err := importRepo.ListBatches(categorySlug)
