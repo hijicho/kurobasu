@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -260,10 +261,42 @@ func UpdateAdminTimetableImportRows(w http.ResponseWriter, r *http.Request) {
 
 // PublishAdminTimetableImport - POST /api/v1/admin/timetable-imports/{id}/publish
 // Writes the batch's rows into categories/subjects/offerings/meetings so
-// the public course pages pick them up.
+// the public course pages pick them up. The request body may optionally
+// carry the admin editor's current rows (same shape as
+// UpdateAdminTimetableImportRows) so the "save my edits, then publish" flow
+// is one request instead of two — each request pays its own auth check and
+// DB round trips, so merging them measurably speeds up publishing.
 func PublishAdminTimetableImport(w http.ResponseWriter, r *http.Request) {
 	id := extractID(r, "id")
 	importRepo := &repository.TimetableImportRepository{}
+
+	var req dto.PublishTimetableImportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+		errorResponse(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if len(req.Rows) > 0 {
+		rows := make([]models.TimetableImportRow, len(req.Rows))
+		for i, in := range req.Rows {
+			rows[i] = models.TimetableImportRow{
+				ImportBatchID: id,
+				Day:           in.Day,
+				Period:        in.Period,
+				CourseCode:    strings.TrimSpace(in.CourseCode),
+				CourseName:    strings.TrimSpace(in.CourseName),
+				Instructor:    strings.TrimSpace(in.Instructor),
+				Campus:        strings.TrimSpace(in.Campus),
+				Classroom:     strings.TrimSpace(in.Classroom),
+				Note:          strings.TrimSpace(in.Note),
+			}
+		}
+		if err := importRepo.ReplaceRows(id, rows); err != nil {
+			errorResponse(w, http.StatusInternalServerError, "Failed to save rows")
+			return
+		}
+	}
+
 	published, err := importRepo.PublishBatch(id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Failed to publish import batch: "+err.Error())

@@ -281,6 +281,13 @@ type TimetableImportRowInput struct {
 	Note       string `json:"note"`
 }
 
+// PublishTimetableImportRequest optionally carries the admin editor's
+// in-progress row edits so "save" and "publish" can happen in one request
+// instead of two, saving a full round trip on the publish hot path.
+type PublishTimetableImportRequest struct {
+	Rows []TimetableImportRowInput `json:"rows,omitempty"`
+}
+
 // Error Response
 type ErrorResponse struct {
 	Error string `json:"error"`

@@ -541,11 +541,13 @@ export async function updateAdminTimetableImportRows(
 
 export async function publishAdminTimetableImport(
   idToken: string | null | undefined,
-  batchId: number
+  batchId: number,
+  rows?: TimetableImportRowInput[]
 ): Promise<TimetableImportBatch> {
   return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}/publish`, {
     method: 'POST',
     headers: authHeaders(idToken),
+    body: rows ? JSON.stringify({ rows }) : undefined,
   });
 }
 

@@ -159,11 +159,13 @@ export default function TimetableImportEditPage() {
     setMessage(null);
     try {
       const idToken = await getIdToken();
-      // 公開前に未保存の修正を確実に反映する（公開済みバッチは行を編集できないため対象外）
-      if (!isPublished) {
-        await updateAdminTimetableImportRows(idToken, batchId, toRowInputs(rows));
-      }
-      const published = await publishAdminTimetableImport(idToken, batchId);
+      // 公開前に未保存の修正を確実に反映する（公開済みバッチは行を編集できないため対象外）。
+      // 保存と公開を別リクエストにすると往復が倍になるので、1リクエストにまとめて送る。
+      const published = await publishAdminTimetableImport(
+        idToken,
+        batchId,
+        isPublished ? undefined : toRowInputs(rows)
+      );
       setBatch(published);
       setRows(toEditableRows(published));
       setMessage({ tone: 'success', text: '公開しました。ユーザー画面に移動します。' });

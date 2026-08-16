@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,24 @@ type SupabaseUser struct {
 	ID    string `json:"id"`
 	Email string `json:"email"`
 }
+
+// supabaseTokenCacheTTL bounds how long a verified access token is trusted
+// without re-checking with Supabase. Admin actions like publishing a
+// timetable import fire several authenticated requests back-to-back with the
+// same token (the frontend's getSession() doesn't mint a new one each call),
+// so without this every one of those requests paid a full network round trip
+// to Supabase's Auth API just to re-confirm the same result.
+const supabaseTokenCacheTTL = 60 * time.Second
+
+type supabaseTokenCacheEntry struct {
+	user      SupabaseUser
+	expiresAt time.Time
+}
+
+var (
+	supabaseTokenCacheMu sync.Mutex
+	supabaseTokenCache   = map[string]supabaseTokenCacheEntry{}
+)
 
 func SupabaseURL() string {
 	return strings.TrimRight(os.Getenv("SUPABASE_URL"), "/")
@@ -28,6 +47,10 @@ func SupabaseServiceRoleKey() string {
 }
 
 func VerifySupabaseAccessToken(ctx context.Context, accessToken string) (*SupabaseUser, error) {
+	if user, ok := cachedSupabaseUser(accessToken); ok {
+		return &user, nil
+	}
+
 	baseURL := SupabaseURL()
 	anonKey := SupabaseAnonKey()
 	if baseURL == "" || anonKey == "" {
@@ -60,5 +83,35 @@ func VerifySupabaseAccessToken(ctx context.Context, accessToken string) (*Supaba
 		return nil, fmt.Errorf("missing supabase user id")
 	}
 
+	cacheSupabaseUser(accessToken, user)
 	return &user, nil
+}
+
+func cachedSupabaseUser(accessToken string) (SupabaseUser, bool) {
+	supabaseTokenCacheMu.Lock()
+	defer supabaseTokenCacheMu.Unlock()
+
+	entry, ok := supabaseTokenCache[accessToken]
+	if !ok || time.Now().After(entry.expiresAt) {
+		return SupabaseUser{}, false
+	}
+	return entry.user, true
+}
+
+func cacheSupabaseUser(accessToken string, user SupabaseUser) {
+	supabaseTokenCacheMu.Lock()
+	defer supabaseTokenCacheMu.Unlock()
+
+	supabaseTokenCache[accessToken] = supabaseTokenCacheEntry{user: user, expiresAt: time.Now().Add(supabaseTokenCacheTTL)}
+
+	// Opportunistic cleanup so the map doesn't grow unbounded over the
+	// process lifetime as distinct tokens (logins, refreshes) accumulate.
+	if len(supabaseTokenCache) > 1000 {
+		now := time.Now()
+		for token, entry := range supabaseTokenCache {
+			if now.After(entry.expiresAt) {
+				delete(supabaseTokenCache, token)
+			}
+		}
+	}
 }
