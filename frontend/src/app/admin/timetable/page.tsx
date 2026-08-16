@@ -114,6 +114,12 @@ export default function TimetablePage() {
     allCategories.find((category) => category.slug === categorySlug)?.label ?? categorySlug;
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'history') {
+      setIsHistoryView(true);
+    }
+  }, []);
+
+  useEffect(() => {
     getSiteSettings()
       .then((res) => {
         setAcademicYear(res.default_academic_year);

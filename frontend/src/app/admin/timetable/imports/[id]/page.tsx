@@ -13,7 +13,7 @@ import {
   type TimetableImportBatch,
   type TimetableImportRowInput,
 } from '@/lib/api';
-import { publicTopPath } from '@/lib/public-routing';
+import { publicCategoryPath, publicTopPath } from '@/lib/public-routing';
 
 const dayOptions = [
   { value: '', label: '未定' },
@@ -205,11 +205,19 @@ export default function TimetableImportEditPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => router.push('/admin/timetable')}
+                onClick={() => router.push('/admin/timetable?view=history')}
                 className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 一覧へ戻る
               </button>
+              <a
+                href={publicCategoryPath(batch.academic_year, batch.term, batch.category_slug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                画面を確認
+              </a>
               {batch.sheet_provider === 'google_sheets' && batch.sheet_url && (
                 <a
                   href={batch.sheet_url}
