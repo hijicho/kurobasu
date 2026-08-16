@@ -17,8 +17,9 @@ import (
 
 const maxTimetableImportCSVBytes = 5 << 20 // 5MB
 
-// Only 総合教養科目 is supported for now — see internal/csvtimetable's doc
-// comment for why automatic parsing is scoped to this one table.
+// supportedImportCategorySlug is the default category when none is given.
+// CSV import works for any category (see csvtimetable's doc comment for the
+// shared column layout the parser expects).
 const supportedImportCategorySlug = "general-education"
 
 var (
@@ -96,8 +97,9 @@ func CreateAdminTimetableImport(w http.ResponseWriter, r *http.Request) {
 	if categorySlug == "" {
 		categorySlug = supportedImportCategorySlug
 	}
-	if categorySlug != supportedImportCategorySlug {
-		errorResponse(w, http.StatusBadRequest, "CSV import currently only supports category_slug="+supportedImportCategorySlug)
+	categoryRepo := &repository.CategoryRepository{}
+	if _, err := categoryRepo.GetCategoryBySlug(categorySlug); err != nil {
+		errorResponse(w, http.StatusBadRequest, "Unknown category_slug: "+categorySlug)
 		return
 	}
 
@@ -114,7 +116,7 @@ func CreateAdminTimetableImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(parsedRows) == 0 {
-		errorResponse(w, http.StatusBadRequest, "総合教養科目の時間割データがCSVから見つかりませんでした")
+		errorResponse(w, http.StatusBadRequest, "時間割データがCSVから見つかりませんでした")
 		return
 	}
 

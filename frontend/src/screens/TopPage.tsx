@@ -9,7 +9,8 @@ import { getCategories, Category } from '../lib/api';
 import { publicCategoryPath, termLabels } from '../lib/public-routing';
 import hamubasuLogo from '../assets/59962a0286c10949e8d3fa57e1256b8b69b96d84.png';
 import bgPattern from '../assets/c00c039666ebe180d57a090c8744e0552d438ca4.png';
-import titleImage from '../assets/image-1786800393446.png';
+import titleImageFall from '../assets/image-1786800393446.png';
+import titleImageSpring from '../assets/IMG_7139.png';
 
 const quickLinkConfigs = [
   { slug: 'general-education', icon: <BookOpen className="w-5 h-5" /> },
@@ -26,6 +27,7 @@ interface TopPageProps {
 }
 
 export function TopPage({ academicYear, term }: TopPageProps) {
+  const titleImage = term === 'spring' ? titleImageSpring : titleImageFall;
   const [specializedOpen, setSpecializedOpen] = useState(false);
   const [secondLanguageOpen, setSecondLanguageOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
@@ -120,7 +122,6 @@ export function TopPage({ academicYear, term }: TopPageProps) {
               <div className="flex justify-center mb-2">
               <img src={titleImage.src ?? titleImage} alt={`${academicYear}年度 ${termLabels[term] ?? term}`} className="h-12 md:h-16 w-auto" />
             </div>
-            <p className="text-sm font-bold text-gray-700">{academicYear}年度 {termLabels[term] ?? term}</p>
             <p className="text-xs text-gray-500 mt-3">何かあれば @kurobasu_ocu まで連絡を。<br />落単・情報の誤りには一切責任を負いません。</p>
           </div>
 

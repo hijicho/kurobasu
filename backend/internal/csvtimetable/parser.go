@@ -1,5 +1,7 @@
-// Package csvtimetable extracts 総合教養科目 (general education) schedule
-// rows from the university's official timetable CSV exports.
+// Package csvtimetable extracts timetable schedule rows from the
+// university's official timetable CSV exports. Any category (総合教養科目,
+// 専門科目, 第二外国語, etc.) can be imported as long as its export uses the
+// shared column layout below.
 //
 // Two exports share the same column layout (年度,学期,曜日,時限,科目名,
 // 担当教員,授業コード,講義室):
@@ -108,9 +110,9 @@ func buildColumnIndex(header []string) (columnIndex, error) {
 	return idx, nil
 }
 
-// Parse reads a 総合教養科目 timetable CSV and returns every row matching
-// the given term (rows with no 学期 value, or when term is unrecognized,
-// are not filtered out).
+// Parse reads a timetable CSV and returns every row matching the given term
+// (rows with no 学期 value, or when term is unrecognized, are not filtered
+// out).
 func Parse(r io.Reader, term string) ([]ParsedRow, error) {
 	decoded, err := decodeJapaneseCSV(r)
 	if err != nil {
@@ -159,7 +161,7 @@ func Parse(r io.Reader, term string) ([]ParsedRow, error) {
 	}
 
 	if len(rows) == 0 {
-		return nil, fmt.Errorf("総合教養科目の時間割データがCSVから見つかりませんでした")
+		return nil, fmt.Errorf("時間割データがCSVから見つかりませんでした")
 	}
 	return rows, nil
 }
