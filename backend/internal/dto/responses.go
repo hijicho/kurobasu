@@ -288,6 +288,48 @@ type PublishTimetableImportRequest struct {
 	Rows []TimetableImportRowInput `json:"rows,omitempty"`
 }
 
+// =====================
+// RatingImport (管理画面: 評価/おすすめ度CSVインポート) Response/Request DTOs
+// =====================
+
+type RatingImportRowResponse struct {
+	ImportRowID int64   `json:"import_row_id"`
+	CourseName  string  `json:"course_name"`
+	Score       float64 `json:"score"`
+}
+
+type RatingImportBatchResponse struct {
+	ImportBatchID  int64                       `json:"import_batch_id"`
+	SourceFilename string                      `json:"source_filename"`
+	Status         string                      `json:"status"`
+	CreatedAt      time.Time                   `json:"created_at"`
+	UpdatedAt      time.Time                   `json:"updated_at"`
+	PublishedAt    *time.Time                  `json:"published_at,omitempty"`
+	RowCount       int                         `json:"row_count"`
+	Rows           []RatingImportRowResponse   `json:"rows,omitempty"`
+}
+
+type ListRatingImportBatchesResponse struct {
+	Items []RatingImportBatchResponse `json:"items"`
+}
+
+// UpdateRatingImportRowsRequest replaces every row of a draft batch (used by
+// the admin editor screen's save action).
+type UpdateRatingImportRowsRequest struct {
+	Rows []RatingImportRowInput `json:"rows"`
+}
+
+type RatingImportRowInput struct {
+	CourseName string  `json:"course_name"`
+	Score      float64 `json:"score"`
+}
+
+// PublishRatingImportRequest optionally carries the admin editor's
+// in-progress row edits so "save" and "publish" can happen in one request.
+type PublishRatingImportRequest struct {
+	Rows []RatingImportRowInput `json:"rows,omitempty"`
+}
+
 // Error Response
 type ErrorResponse struct {
 	Error string `json:"error"`

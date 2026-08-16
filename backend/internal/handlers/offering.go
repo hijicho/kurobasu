@@ -9,7 +9,7 @@ import (
 	"github.com/hageruto/kurobasu/models"
 )
 
-func toOfferingResponse(off models.Offering, meetings []models.Meeting) dto.OfferingResponse {
+func toOfferingResponse(off models.Offering, meetings []models.Meeting, rank string) dto.OfferingResponse {
 	meetingDTOs := make([]dto.MeetingResponse, len(meetings))
 	for j, m := range meetings {
 		meetingDTOs[j] = dto.MeetingResponse{
@@ -19,7 +19,7 @@ func toOfferingResponse(off models.Offering, meetings []models.Meeting) dto.Offe
 		}
 	}
 
-	return dto.OfferingResponse{
+	resp := dto.OfferingResponse{
 		OfferingID:      off.OfferingID,
 		Subject:         dto.SubjectResponse{SubjectID: off.Subject.SubjectID, Title: off.Subject.Title},
 		AcademicYear:    off.AcademicYear,
@@ -30,6 +30,10 @@ func toOfferingResponse(off models.Offering, meetings []models.Meeting) dto.Offe
 		InstructorNames: off.InstructorNames,
 		Meetings:        meetingDTOs,
 	}
+	if rank != "" {
+		resp.Rate = &rank
+	}
+	return resp
 }
 
 // ListOfferingsByCategory - GET /api/v1/categories/{slug}/offerings
@@ -64,8 +68,10 @@ func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	offeringIDs := make([]int64, len(offerings))
+	subjectIDs := make([]int64, len(offerings))
 	for i, off := range offerings {
 		offeringIDs[i] = off.OfferingID
+		subjectIDs[i] = off.SubjectID
 	}
 	meetRepo := &repository.MeetingRepository{}
 	meetingsByOffering, err := meetRepo.GetMeetingsByOfferingIDs(offeringIDs)
@@ -74,9 +80,16 @@ func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ratingRepo := &repository.SubjectRatingRepository{}
+	ranksBySubject, err := ratingRepo.GetRankBySubjectIDs(subjectIDs)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to fetch ratings")
+		return
+	}
+
 	items := make([]dto.OfferingResponse, len(offerings))
 	for i, off := range offerings {
-		items[i] = toOfferingResponse(off, meetingsByOffering[off.OfferingID])
+		items[i] = toOfferingResponse(off, meetingsByOffering[off.OfferingID], ranksBySubject[off.SubjectID])
 	}
 
 	successResponse(w, dto.ListResponse{Items: items})
@@ -96,5 +109,8 @@ func GetOffering(w http.ResponseWriter, r *http.Request) {
 	meetRepo := &repository.MeetingRepository{}
 	meetings, _ := meetRepo.GetMeetingsByOffering(offering.OfferingID)
 
-	successResponse(w, toOfferingResponse(*offering, meetings))
+	ratingRepo := &repository.SubjectRatingRepository{}
+	ranksBySubject, _ := ratingRepo.GetRankBySubjectIDs([]int64{offering.SubjectID})
+
+	successResponse(w, toOfferingResponse(*offering, meetings, ranksBySubject[offering.SubjectID]))
 }

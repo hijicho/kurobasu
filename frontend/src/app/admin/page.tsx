@@ -4,6 +4,7 @@ const guideItems = [
   { menu: '口コミ', description: '口コミについて、承認・削除ができます。' },
   { menu: '広告', description: '掲載する広告の更新・削除ができます。' },
   { menu: '時間割', description: '時間割の CSV を使用することで、最新版の時間割が作成できます。' },
+  { menu: '評価', description: '総合教養科目のおすすめ度 CSV を取り込むと、科目ごとの平均値からAA〜Cのランクを自動算出します。' },
   { menu: 'ログアウト', description: 'ログアウトができます。' },
 ];
 

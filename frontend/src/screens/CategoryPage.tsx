@@ -6,6 +6,7 @@ import { TimetableView } from '../components/TimetableView';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { getOfferings, Offering } from '../lib/api';
 import { publicTopPath, termLabels } from '../lib/public-routing';
+import { RateBadge } from '../components/RateBadge';
 
 interface CategoryPageProps {
   categoryName: string;
@@ -15,13 +16,6 @@ interface CategoryPageProps {
   onNavigateBack?: () => void;
   onCourseClick?: (courseId: string) => void;
 }
-
-const levelBadgeClasses: Record<string, string> = {
-  AA: 'bg-orange-100 text-orange-700',
-  A: 'bg-red-100 text-red-700',
-  B: 'bg-green-100 text-green-700',
-  C: 'bg-blue-100 text-blue-700',
-};
 
 export function CategoryPage({
   categoryName,
@@ -215,24 +209,19 @@ export function CategoryPage({
                     該当する授業が見つかりませんでした。
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                     {filteredIntensiveOfferings.map((offering) => {
-                      const level = offering.rate;
                       return (
                         <button
                           key={offering.offering_id}
                           onClick={() => onCourseClick?.(String(offering.offering_id))}
-                          className="relative flex h-28 flex-col justify-center overflow-hidden rounded-lg border border-gray-200 bg-white p-3 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+                          className="relative flex h-20 flex-col justify-center overflow-hidden rounded-lg border border-gray-200 bg-white p-2 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
                         >
-                          {level && levelBadgeClasses[level] && (
-                            <span className={`absolute top-2 right-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${levelBadgeClasses[level]}`}>
-                              {level}
-                            </span>
-                          )}
-                          <h3 className="mb-1 line-clamp-2 pr-8 text-sm font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
+                          <RateBadge rate={offering.rate} className="absolute top-1.5 right-1.5 text-xs" />
+                          <h3 className="line-clamp-2 pr-8 text-sm font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
                           <p className="line-clamp-1 text-xs text-gray-500">{offering.instructor_names.join('、')}</p>
                           {offering.note && (
-                            <p className="mt-1 line-clamp-1 text-[11px] text-gray-500">{offering.note}</p>
+                            <p className="line-clamp-1 text-[11px] text-gray-500">{offering.note}</p>
                           )}
                         </button>
                       );
@@ -247,26 +236,21 @@ export function CategoryPage({
             該当する授業が見つかりませんでした。
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
             {filteredOfferings.map((offering) => {
-              const level = offering.rate;
               return (
                 <button
                   key={offering.offering_id}
                   onClick={() => onCourseClick?.(String(offering.offering_id))}
-                  className="relative flex h-32 flex-col justify-center overflow-hidden rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+                  className="relative flex h-24 flex-col justify-center overflow-hidden rounded-xl border border-gray-200 bg-white p-2.5 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
                 >
-                  {level && levelBadgeClasses[level] && (
-                    <span className={`absolute top-3 right-3 rounded px-1.5 py-0.5 text-[10px] font-bold ${levelBadgeClasses[level]}`}>
-                      {level}
-                    </span>
-                  )}
-                  <h3 className="mb-1 line-clamp-2 pr-10 text-base font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
+                  <RateBadge rate={offering.rate} className="absolute top-2 right-2 text-xs" />
+                  <h3 className="line-clamp-2 pr-10 text-base font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
                   <p className="line-clamp-1 text-xs text-gray-500">
                     {offering.instructor_names.join('、') || '担当教員未設定'}
                   </p>
                   {offering.note && (
-                    <p className="mt-1 line-clamp-1 text-xs text-gray-500">{offering.note}</p>
+                    <p className="line-clamp-1 text-xs text-gray-500">{offering.note}</p>
                   )}
                 </button>
               );

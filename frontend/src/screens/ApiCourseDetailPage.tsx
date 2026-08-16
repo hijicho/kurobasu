@@ -6,6 +6,7 @@ import { Breadcrumb } from '@/components/Breadcrumb';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { ReviewSections } from '@/components/course-detail/ReviewSections';
+import { RateBadge } from '@/components/RateBadge';
 import { getOffering, type Offering } from '@/lib/api';
 
 interface ApiCourseDetailPageProps {
@@ -125,7 +126,10 @@ export function ApiCourseDetailPage({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="mb-2 text-2xl sm:text-4xl">{offering?.subject.title ?? '授業詳細'}</h1>
+            <h1 className="mb-2 flex flex-wrap items-center gap-3 text-2xl sm:text-4xl">
+              {offering?.subject.title ?? '授業詳細'}
+              <RateBadge rate={offering?.rate} className="text-lg sm:text-2xl" />
+            </h1>
             <p className="text-gray-600 text-sm">
               {loading ? '読み込み中です' : error ?? offering?.instructor_names.join('、')}
             </p>

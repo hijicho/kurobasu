@@ -42,6 +42,9 @@ func RunMigrations() error {
 		&models.TimetableImportBatch{},
 		&models.TimetableImportRow{},
 		&models.SiteSettings{},
+		&models.RatingImportBatch{},
+		&models.RatingImportRow{},
+		&models.SubjectRating{},
 	)
 	if err != nil {
 		return err
@@ -206,6 +209,32 @@ func RunMigrations() error {
 		`ALTER TABLE timetable_import_rows
 		 ADD CONSTRAINT fk_timetable_import_rows_batch
 		 FOREIGN KEY (import_batch_id) REFERENCES timetable_import_batches(import_batch_id) ON DELETE CASCADE`,
+	); err != nil {
+		return err
+	}
+
+	// RatingImportRow -> RatingImportBatch relationship
+	// One rating import batch (1回の評価CSVアップロード) can have many rows.
+	// If the batch is deleted, its rows are deleted too.
+	if err := addConstraintIfNotExists(
+		"rating_import_rows",
+		"fk_rating_import_rows_batch",
+		`ALTER TABLE rating_import_rows
+		 ADD CONSTRAINT fk_rating_import_rows_batch
+		 FOREIGN KEY (import_batch_id) REFERENCES rating_import_batches(import_batch_id) ON DELETE CASCADE`,
+	); err != nil {
+		return err
+	}
+
+	// SubjectRating -> Subject relationship
+	// One Subject has at most one published rating (AA/A/B/C rank).
+	// If the Subject is deleted, its rating is deleted too.
+	if err := addConstraintIfNotExists(
+		"subject_ratings",
+		"fk_subject_ratings_subject",
+		`ALTER TABLE subject_ratings
+		 ADD CONSTRAINT fk_subject_ratings_subject
+		 FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE`,
 	); err != nil {
 		return err
 	}

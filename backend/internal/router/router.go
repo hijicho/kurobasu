@@ -116,6 +116,18 @@ func SetupRoutes() http.Handler {
 	// POST /api/v1/admin/timetable-imports/{id}/publish
 	// 効果：下書きを総合教養科目の subjects/offerings/meetings に反映（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/timetable-imports/{id}/publish", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPost, handlers.PublishAdminTimetableImport))))
+	// GET/POST /api/v1/admin/rating-imports
+	// 効果：評価（おすすめ度）CSVインポート（下書き）一覧の取得・新規アップロード（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/rating-imports", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminRatingImportsHandler())))
+	// GET/DELETE /api/v1/admin/rating-imports/{id}
+	// 効果：評価CSVインポート1件を行データ付きで取得・削除（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/rating-imports/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminRatingImportHandler())))
+	// PUT /api/v1/admin/rating-imports/{id}/rows
+	// 効果：編集画面での修正を保存（下書き行を全置換）（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/rating-imports/{id}/rows", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPut, handlers.UpdateAdminRatingImportRows))))
+	// POST /api/v1/admin/rating-imports/{id}/publish
+	// 効果：下書きの平均おすすめ度を算出し、subject_ratings にAA/A/B/Cランクを反映（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/rating-imports/{id}/publish", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPost, handlers.PublishAdminRatingImport))))
 
 	// =====================
 	// 時間割 (Timetables) API
@@ -240,6 +252,32 @@ func adminTimetableImportHandler() http.HandlerFunc {
 			handlers.GetAdminTimetableImport(w, r)
 		case http.MethodDelete:
 			handlers.DeleteAdminTimetableImport(w, r)
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func adminRatingImportsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.ListAdminRatingImports(w, r)
+		case http.MethodPost:
+			handlers.CreateAdminRatingImport(w, r)
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func adminRatingImportHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetAdminRatingImport(w, r)
+		case http.MethodDelete:
+			handlers.DeleteAdminRatingImport(w, r)
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}
