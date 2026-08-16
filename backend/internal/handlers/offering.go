@@ -63,11 +63,20 @@ func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	offeringIDs := make([]int64, len(offerings))
+	for i, off := range offerings {
+		offeringIDs[i] = off.OfferingID
+	}
 	meetRepo := &repository.MeetingRepository{}
+	meetingsByOffering, err := meetRepo.GetMeetingsByOfferingIDs(offeringIDs)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to fetch meetings")
+		return
+	}
+
 	items := make([]dto.OfferingResponse, len(offerings))
 	for i, off := range offerings {
-		meetings, _ := meetRepo.GetMeetingsByOffering(off.OfferingID)
-		items[i] = toOfferingResponse(off, meetings)
+		items[i] = toOfferingResponse(off, meetingsByOffering[off.OfferingID])
 	}
 
 	successResponse(w, dto.ListResponse{Items: items})
