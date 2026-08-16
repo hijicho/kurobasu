@@ -118,57 +118,102 @@ func (r *TimetableImportRepository) PublishBatch(batchID int64) (*models.Timetab
 			}
 		}
 
-		subjectCache := map[string]int64{} // title -> subject_id, avoids repeat lookups within this publish
-		for _, row := range batch.Rows {
+		// Resolve every row's subject in bulk (one SELECT for existing titles,
+		// one INSERT for missing ones) instead of a per-row round trip, since
+		// a several-hundred-row import over a networked DB turns "one round
+		// trip per row" into a very visible multi-second delay.
+		rowTitle := make([]string, len(batch.Rows))
+		var wantedTitles []string
+		seenTitle := map[string]bool{}
+		for i, row := range batch.Rows {
 			title := strings.TrimSpace(row.CourseName)
 			if title == "" {
 				title = strings.TrimSpace(row.CourseCode)
 			}
+			rowTitle[i] = title
+			if title != "" && !seenTitle[title] {
+				seenTitle[title] = true
+				wantedTitles = append(wantedTitles, title)
+			}
+		}
+
+		subjectCache := map[string]int64{} // title -> subject_id
+		if len(wantedTitles) > 0 {
+			var existing []models.Subject
+			if err := tx.Where("category_id = ? AND title IN ?", category.CategoryID, wantedTitles).
+				Find(&existing).Error; err != nil {
+				return err
+			}
+			for _, s := range existing {
+				subjectCache[s.Title] = s.SubjectID
+			}
+
+			var newSubjects []models.Subject
+			for _, title := range wantedTitles {
+				if _, ok := subjectCache[title]; !ok {
+					newSubjects = append(newSubjects, models.Subject{CategoryID: category.CategoryID, Title: title})
+				}
+			}
+			if len(newSubjects) > 0 {
+				if err := tx.Create(&newSubjects).Error; err != nil {
+					return err
+				}
+				for _, s := range newSubjects {
+					subjectCache[s.Title] = s.SubjectID
+				}
+			}
+		}
+
+		// Build every offering up front and insert them in one batch, then do
+		// the same for meetings once offering IDs come back.
+		rowClassroom := make([]string, len(batch.Rows))
+		offerings := make([]models.Offering, 0, len(batch.Rows))
+		offeringRowIdx := make([]int, 0, len(batch.Rows)) // offerings[j] came from batch.Rows[offeringRowIdx[j]]
+		for i, row := range batch.Rows {
+			title := rowTitle[i]
 			if title == "" {
 				continue
 			}
-
-			subjectID, ok := subjectCache[title]
-			if !ok {
-				subject := models.Subject{CategoryID: category.CategoryID, Title: title}
-				if err := tx.Where(models.Subject{CategoryID: category.CategoryID, Title: title}).
-					FirstOrCreate(&subject).Error; err != nil {
-					return err
-				}
-				subjectID = subject.SubjectID
-				subjectCache[title] = subjectID
-			}
+			classroom := strings.TrimSpace(strings.TrimSpace(row.Campus) + strings.TrimSpace(row.Classroom))
+			rowClassroom[i] = classroom
 
 			var instructors []string
 			if name := strings.TrimSpace(row.Instructor); name != "" {
 				instructors = []string{name}
 			}
 
-			classroom := strings.TrimSpace(strings.TrimSpace(row.Campus) + strings.TrimSpace(row.Classroom))
-
-			offering := models.Offering{
-				SubjectID:       subjectID,
+			offerings = append(offerings, models.Offering{
+				SubjectID:       subjectCache[title],
 				AcademicYear:    batch.AcademicYear,
 				Term:            batch.Term,
 				Modality:        inferModality(classroom),
 				CourseCode:      strings.TrimSpace(row.CourseCode),
 				Note:            strings.TrimSpace(row.Note),
 				InstructorNames: instructors,
-			}
-			if err := tx.Create(&offering).Error; err != nil {
+			})
+			offeringRowIdx = append(offeringRowIdx, i)
+		}
+		if len(offerings) > 0 {
+			if err := tx.Create(&offerings).Error; err != nil {
 				return err
 			}
+		}
 
+		var meetings []models.Meeting
+		for j, offering := range offerings {
+			row := batch.Rows[offeringRowIdx[j]]
 			if row.Day != nil && row.Period != nil {
-				meeting := models.Meeting{
+				meetings = append(meetings, models.Meeting{
 					OfferingID: offering.OfferingID,
 					Day:        *row.Day,
 					Period:     *row.Period,
-					Classroom:  classroom,
-				}
-				if err := tx.Create(&meeting).Error; err != nil {
-					return err
-				}
+					Classroom:  rowClassroom[offeringRowIdx[j]],
+				})
+			}
+		}
+		if len(meetings) > 0 {
+			if err := tx.Create(&meetings).Error; err != nil {
+				return err
 			}
 		}
 
