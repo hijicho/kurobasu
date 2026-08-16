@@ -1,19 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminLoadingBlock from '@/components/admin/AdminLoadingBlock';
 import { useAuth } from '@/lib/auth-context';
 import {
-  createAdminTimetableImport,
-  deleteAdminTimetableImport,
   getApiErrorMessage,
   getSiteSettings,
-  listAdminTimetableImports,
-  type TimetableImportBatch,
+  importAdminTimetableRowsCSV,
+  listAdminTimetableRows,
+  saveAdminTimetableRows,
+  type TimetableRow,
 } from '@/lib/api';
+import { publicCategoryPath } from '@/lib/public-routing';
 
 const termOptions = [
   { key: 'spring', label: '前期' },
@@ -72,15 +72,6 @@ function categoryButtonClass(active: boolean) {
   }`;
 }
 
-function statusLabel(batch: TimetableImportBatch) {
-  return batch.status === 'published' ? '公開済み' : '下書き（未公開）';
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('ja-JP', { hour12: false });
-}
-
 function isCsvFile(file: File) {
   return (
     file.type === 'text/csv' ||
@@ -89,8 +80,85 @@ function isCsvFile(file: File) {
   );
 }
 
+const dayOptions = [
+  { value: '', label: '未定' },
+  { value: '1', label: '月' },
+  { value: '2', label: '火' },
+  { value: '3', label: '水' },
+  { value: '4', label: '木' },
+  { value: '5', label: '金' },
+];
+
+const periodOptions = [
+  { value: '', label: '未定' },
+  { value: '1', label: '1限' },
+  { value: '2', label: '2限' },
+  { value: '3', label: '3限' },
+  { value: '4', label: '4限' },
+  { value: '5', label: '5限' },
+];
+
+interface EditableRow {
+  key: string;
+  offeringId?: number;
+  day: string; // select値としては文字列で保持
+  period: string;
+  course_code: string;
+  course_name: string;
+  instructor: string;
+  campus: string;
+  classroom: string;
+  note: string;
+}
+
+let nextTempKey = 0;
+function makeEmptyRow(): EditableRow {
+  nextTempKey += 1;
+  return {
+    key: `new-${nextTempKey}`,
+    day: '',
+    period: '',
+    course_code: '',
+    course_name: '',
+    instructor: '',
+    campus: '',
+    classroom: '',
+    note: '',
+  };
+}
+
+function toEditableRows(rows: TimetableRow[]): EditableRow[] {
+  return rows.map((row, i) => ({
+    key: row.offering_id != null ? `${row.offering_id}-${i}` : `new-${i}`,
+    offeringId: row.offering_id,
+    day: row.day != null ? String(row.day) : '',
+    period: row.period != null ? String(row.period) : '',
+    course_code: row.course_code,
+    course_name: row.course_name,
+    instructor: row.instructor,
+    campus: row.campus,
+    classroom: row.classroom,
+    note: row.note,
+  }));
+}
+
+function toRowInputs(rows: EditableRow[]): TimetableRow[] {
+  return rows.map((row) => ({
+    day: row.day === '' ? null : Number(row.day),
+    period: row.period === '' ? null : Number(row.period),
+    course_code: row.course_code.trim(),
+    course_name: row.course_name.trim(),
+    instructor: row.instructor.trim(),
+    campus: row.campus.trim(),
+    classroom: row.classroom.trim(),
+    note: row.note.trim(),
+  }));
+}
+
+const inputClass =
+  'w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-[#2b4dca] focus:ring-1 focus:ring-[#2b4dca]/30';
+
 export default function TimetablePage() {
-  const router = useRouter();
   const { getIdToken } = useAuth();
 
   const [academicYear, setAcademicYear] = useState<number>(new Date().getFullYear());
@@ -100,24 +168,18 @@ export default function TimetablePage() {
   const [secondLanguageOpen, setSecondLanguageOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [intensiveCsvFile, setIntensiveCsvFile] = useState<File | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const intensiveFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [batches, setBatches] = useState<TimetableImportBatch[]>([]);
-  const [loadingBatches, setLoadingBatches] = useState(true);
-  const [isHistoryView, setIsHistoryView] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [rows, setRows] = useState<EditableRow[]>([]);
+  const [loadingRows, setLoadingRows] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
   const selectedCategoryLabel =
     allCategories.find((category) => category.slug === categorySlug)?.label ?? categorySlug;
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'history') {
-      setIsHistoryView(true);
-    }
-  }, []);
+  const selectedTermLabel = termOptions.find((t) => t.key === term)?.label ?? term;
 
   useEffect(() => {
     getSiteSettings()
@@ -130,63 +192,37 @@ export default function TimetablePage() {
       .catch(() => undefined);
   }, []);
 
-  const loadBatches = useCallback(async () => {
-    setLoadingBatches(true);
+  const loadRows = useCallback(async () => {
+    setLoadingRows(true);
     try {
       const idToken = await getIdToken();
-      // カテゴリで絞り込まず、全カテゴリのインポート履歴をまとめて取得する
-      const res = await listAdminTimetableImports(idToken);
-      setBatches(res.items);
+      const res = await listAdminTimetableRows(idToken, categorySlug, academicYear, term);
+      setRows(toEditableRows(res.items));
     } catch (err) {
-      setErrorMessage(getApiErrorMessage(err, 'アップロード履歴の取得に失敗しました。'));
+      setMessage({ tone: 'error', text: getApiErrorMessage(err, '授業データの取得に失敗しました。') });
     } finally {
-      setLoadingBatches(false);
+      setLoadingRows(false);
     }
-  }, [getIdToken]);
+  }, [getIdToken, categorySlug, academicYear, term]);
 
   useEffect(() => {
-    loadBatches();
-  }, [loadBatches]);
-
-  const handleDeleteBatch = async (batch: TimetableImportBatch) => {
-    const confirmed = window.confirm(
-      `${batch.academic_year}年度 ${termOptions.find((t) => t.key === batch.term)?.label ?? batch.term}（${
-        batch.source_filename || '元ファイル不明'
-      }）を削除します。よろしいですか？${
-        batch.status === 'published' ? '\n※公開済みですが、ユーザー画面に反映済みのデータは削除されません。' : ''
-      }`
-    );
-    if (!confirmed) return;
-
-    setDeletingId(batch.import_batch_id);
-    setErrorMessage(null);
-    try {
-      const idToken = await getIdToken();
-      await deleteAdminTimetableImport(idToken, batch.import_batch_id);
-      setBatches((prev) => prev.filter((b) => b.import_batch_id !== batch.import_batch_id));
-    } catch (err) {
-      setErrorMessage(getApiErrorMessage(err, 'インポート履歴の削除に失敗しました。'));
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const openFileDialog = () => fileInputRef.current?.click();
+    loadRows();
+  }, [loadRows]);
 
   const selectCategory = (slug: string) => {
     setCategorySlug(slug);
     setCsvFile(null);
     setIntensiveCsvFile(null);
-    setErrorMessage(null);
+    setMessage(null);
   };
 
   const handleFile = (file: File) => {
     if (!isCsvFile(file)) {
-      setErrorMessage('CSVファイルを選択してください。');
+      setMessage({ tone: 'error', text: 'CSVファイルを選択してください。' });
       return;
     }
     setCsvFile(file);
-    setErrorMessage(null);
+    setMessage(null);
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,41 +237,89 @@ export default function TimetablePage() {
     event.target.value = '';
     if (!file) return;
     if (!isCsvFile(file)) {
-      setErrorMessage('CSVファイルを選択してください。');
+      setMessage({ tone: 'error', text: 'CSVファイルを選択してください。' });
       return;
     }
     setIntensiveCsvFile(file);
-    setErrorMessage(null);
+    setMessage(null);
   };
 
-  const handleUpload = async () => {
-    if (!csvFile) {
-      setErrorMessage('CSVを選択してください。');
-      return;
-    }
-    setErrorMessage(null);
+  const confirmReplace = () =>
+    window.confirm(
+      `「${selectedCategoryLabel}」の${academicYear}年度${selectedTermLabel}の授業データを全て置き換えます。既存の授業に投稿された評価（おすすめ度）はすべて削除されます。よろしいですか？`
+    );
+
+  const runImport = async (csv: File | null, intensive: File | null) => {
+    if (!confirmReplace()) return;
+
+    setMessage(null);
     setUploading(true);
     try {
       const idToken = await getIdToken();
-      const batch = await createAdminTimetableImport(
-        idToken,
-        academicYear,
-        term,
-        csvFile,
-        categorySlug,
-        intensiveCsvFile
-      );
-      router.push(`/admin/timetable/imports/${batch.import_batch_id}`);
+      const res = await importAdminTimetableRowsCSV(idToken, academicYear, term, csv, categorySlug, intensive);
+      setRows(toEditableRows(res.items));
+      setCsvFile(null);
+      setIntensiveCsvFile(null);
+      setMessage({ tone: 'success', text: `取り込みました（${res.items.length}件）。` });
     } catch (err) {
       console.error('Failed to import timetable CSV:', err);
-      setErrorMessage(
-        getApiErrorMessage(
+      setMessage({
+        tone: 'error',
+        text: getApiErrorMessage(
           err,
-          `CSVの解析に失敗しました。${selectedCategoryLabel}の時間割CSVであることを確認するか、しばらくしてから再度お試しください。`
-        )
-      );
+          `CSVの取り込みに失敗しました。${selectedCategoryLabel}の時間割CSVであることを確認するか、しばらくしてから再度お試しください。`
+        ),
+      });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleUpload = () => {
+    if (!csvFile) {
+      setMessage({ tone: 'error', text: 'CSVを選択してください。' });
+      return;
+    }
+    runImport(csvFile, intensiveCsvFile);
+  };
+
+  // 時間割CSVは既に取り込み済みで、集中講義だけ後から追加したい場合。
+  // 現在保存されているデータに、この集中講義CSVをマージして置き換える
+  // （元の時間割CSVを選び直す必要はない）。
+  const handleAddIntensive = () => {
+    if (!intensiveCsvFile) {
+      setMessage({ tone: 'error', text: '集中講義のCSVを選択してください。' });
+      return;
+    }
+    runImport(null, intensiveCsvFile);
+  };
+
+  const updateRow = (key: string, patch: Partial<EditableRow>) => {
+    setRows((prev) => prev.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+  };
+
+  const removeRow = (key: string) => {
+    setRows((prev) => prev.filter((row) => row.key !== key));
+  };
+
+  const addRow = () => {
+    setRows((prev) => [...prev, makeEmptyRow()]);
+  };
+
+  const handleSave = async () => {
+    if (!confirmReplace()) return;
+
+    setMessage(null);
+    setSaving(true);
+    try {
+      const idToken = await getIdToken();
+      const res = await saveAdminTimetableRows(idToken, categorySlug, academicYear, term, toRowInputs(rows));
+      setRows(toEditableRows(res.items));
+      setMessage({ tone: 'success', text: '保存しました。' });
+    } catch (err) {
+      setMessage({ tone: 'error', text: getApiErrorMessage(err, '保存に失敗しました。') });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -243,107 +327,174 @@ export default function TimetablePage() {
     <AdminLayout
       currentPath="/admin/timetable"
       title="時間割"
-      subtitle="カテゴリを選んで時間割CSVをアップロードすると自動で読み取り、スプレッドシート感覚で確認・修正してから公開できます。"
+      subtitle="カテゴリ・年度・学期を選ぶと、現在公開中の授業データを直接編集できます。CSVをアップロードすると、その内容で丸ごと置き換わります。"
     >
       <div className="space-y-6">
-        {!isHistoryView ? (
-          <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 shadow-sm">
-            <div className="mb-6">
-              <p className="text-sm font-semibold text-slate-900">インポート対象のカテゴリ</p>
-              <p className="mt-1 text-xs text-slate-500">選択中: {selectedCategoryLabel}</p>
+        <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 shadow-sm">
+          <div className="mb-6">
+            <p className="text-sm font-semibold text-slate-900">対象のカテゴリ</p>
+            <p className="mt-1 text-xs text-slate-500">選択中: {selectedCategoryLabel}</p>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                {directCategories.map((category) => (
-                  <button
-                    key={category.slug}
-                    type="button"
-                    onClick={() => selectCategory(category.slug)}
-                    className={categoryButtonClass(categorySlug === category.slug)}
-                  >
-                    {category.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-3 rounded-2xl border border-slate-200 bg-white">
+            <div className="mt-3 flex flex-wrap gap-2">
+              {directCategories.map((category) => (
                 <button
+                  key={category.slug}
                   type="button"
-                  onClick={() => setSpecializedOpen((v) => !v)}
-                  className="flex w-full items-center justify-between px-4 py-2.5 text-xs font-bold text-slate-800"
+                  onClick={() => selectCategory(category.slug)}
+                  className={categoryButtonClass(categorySlug === category.slug)}
                 >
-                  専門科目
-                  {specializedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {category.label}
                 </button>
-                {specializedOpen ? (
-                  <div className="flex flex-wrap gap-2 px-4 pb-4">
-                    {specializedCategories.map((category) => (
-                      <button
-                        key={category.slug}
-                        type="button"
-                        onClick={() => selectCategory(category.slug)}
-                        className={categoryButtonClass(categorySlug === category.slug)}
-                      >
-                        {category.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="mt-3 rounded-2xl border border-slate-200 bg-white">
-                <button
-                  type="button"
-                  onClick={() => setSecondLanguageOpen((v) => !v)}
-                  className="flex w-full items-center justify-between px-4 py-2.5 text-xs font-bold text-slate-800"
-                >
-                  第二外国語
-                  {secondLanguageOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </button>
-                {secondLanguageOpen ? (
-                  <div className="flex flex-wrap gap-2 px-4 pb-4">
-                    {secondLanguageCategories.map((category) => (
-                      <button
-                        key={category.slug}
-                        type="button"
-                        onClick={() => selectCategory(category.slug)}
-                        className={categoryButtonClass(categorySlug === category.slug)}
-                      >
-                        {category.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
+              ))}
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-sm font-semibold text-slate-800">時間割CSV</p>
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-white">
+              <button
+                type="button"
+                onClick={() => setSpecializedOpen((v) => !v)}
+                className="flex w-full items-center justify-between px-4 py-2.5 text-xs font-bold text-slate-800"
+              >
+                専門科目
+                {specializedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+              {specializedOpen ? (
+                <div className="flex flex-wrap gap-2 px-4 pb-4">
+                  {specializedCategories.map((category) => (
+                    <button
+                      key={category.slug}
+                      type="button"
+                      onClick={() => selectCategory(category.slug)}
+                      className={categoryButtonClass(categorySlug === category.slug)}
+                    >
+                      {category.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-white">
+              <button
+                type="button"
+                onClick={() => setSecondLanguageOpen((v) => !v)}
+                className="flex w-full items-center justify-between px-4 py-2.5 text-xs font-bold text-slate-800"
+              >
+                第二外国語
+                {secondLanguageOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+              {secondLanguageOpen ? (
+                <div className="flex flex-wrap gap-2 px-4 pb-4">
+                  {secondLanguageCategories.map((category) => (
+                    <button
+                      key={category.slug}
+                      type="button"
+                      onClick={() => selectCategory(category.slug)}
+                      className={categoryButtonClass(categorySlug === category.slug)}
+                    >
+                      {category.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 md:items-end">
+            <label className="block text-sm font-medium text-slate-700">
+              <span className="mb-2 block">年度</span>
+              <input
+                type="number"
+                value={academicYear}
+                onChange={(event) => setAcademicYear(Number(event.target.value))}
+                className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#2b4dca] focus:ring-2 focus:ring-[#2b4dca]/20"
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              <span className="mb-2 block">学期</span>
+              <select
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#2b4dca] focus:ring-2 focus:ring-[#2b4dca]/20"
+              >
+                {termOptions.map((item) => (
+                  <option key={item.key} value={item.key}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-sm font-semibold text-slate-800">時間割CSVで丸ごと置き換え</p>
+            <p className="mt-1 text-sm text-slate-500">
+              対応範囲：{selectedCategoryLabel}の時間割CSV（年度,学期,曜日,時限,科目名,担当教員,授業コード,講義室の列を想定。UTF-8/Shift-JIS両対応）
+            </p>
+            <input ref={fileInputRef} type="file" accept="text/csv,.csv" className="hidden" onChange={handleFileChange} />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                ファイルを選択
+              </button>
+              {csvFile ? (
+                <span className="text-sm text-slate-600">
+                  {csvFile.name}（{(csvFile.size / 1024).toFixed(1)} KB）
+                  <button
+                    type="button"
+                    onClick={() => setCsvFile(null)}
+                    className="ml-2 text-slate-400 hover:text-red-600"
+                    aria-label="CSVの選択を解除"
+                  >
+                    ×
+                  </button>
+                </span>
+              ) : (
+                <span className="text-sm text-slate-400">未選択</span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleUpload}
+              disabled={!csvFile || uploading}
+              className="mt-4 inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-6 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {uploading ? '取り込み中...' : 'CSVを取り込んで置き換え'}
+            </button>
+
+            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white p-4">
+              <p className="text-sm font-semibold text-slate-800">集中講義のCSV（任意）</p>
               <p className="mt-1 text-sm text-slate-500">
-                対応範囲：{selectedCategoryLabel}の時間割CSV（年度,学期,曜日,時限,科目名,担当教員,授業コード,講義室の列を想定。UTF-8/Shift-JIS両対応）
+                日付指定で開講される集中講義がある場合は、上のCSVと合わせて選択するか、
+                下のボタンで既存データに追加できます。
               </p>
               <input
-                ref={fileInputRef}
+                ref={intensiveFileInputRef}
                 type="file"
                 accept="text/csv,.csv"
                 className="hidden"
-                onChange={handleFileChange}
+                onChange={handleIntensiveFileChange}
               />
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={openFileDialog}
+                  onClick={() => intensiveFileInputRef.current?.click()}
                   className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   ファイルを選択
                 </button>
-                {csvFile ? (
+                {intensiveCsvFile ? (
                   <span className="text-sm text-slate-600">
-                    {csvFile.name}（{(csvFile.size / 1024).toFixed(1)} KB）
+                    {intensiveCsvFile.name}（{(intensiveCsvFile.size / 1024).toFixed(1)} KB）
                     <button
                       type="button"
-                      onClick={() => setCsvFile(null)}
+                      onClick={() => setIntensiveCsvFile(null)}
                       className="ml-2 text-slate-400 hover:text-red-600"
-                      aria-label="CSVの選択を解除"
+                      aria-label="集中講義のCSVの選択を解除"
                     >
                       ×
                     </button>
@@ -352,177 +503,179 @@ export default function TimetablePage() {
                   <span className="text-sm text-slate-400">未選択</span>
                 )}
               </div>
-            </div>
-
-            {errorMessage ? (
-              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {errorMessage}
-              </div>
-            ) : null}
-
-            {categorySlug === 'general-education' || categorySlug === 'foundation-list' ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white p-4">
-                <p className="text-sm font-semibold text-slate-800">集中講義のCSV（任意）</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  日付指定で開講される集中講義がある場合は、集中講義のCSVも合わせて選択してください。タイムテーブル下の一覧に反映されます。
-                </p>
-                <input
-                  ref={intensiveFileInputRef}
-                  type="file"
-                  accept="text/csv,.csv"
-                  className="hidden"
-                  onChange={handleIntensiveFileChange}
-                />
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => intensiveFileInputRef.current?.click()}
-                    className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    ファイルを選択
-                  </button>
-                  {intensiveCsvFile ? (
-                    <span className="text-sm text-slate-600">
-                      {intensiveCsvFile.name}（{(intensiveCsvFile.size / 1024).toFixed(1)} KB）
-                      <button
-                        type="button"
-                        onClick={() => setIntensiveCsvFile(null)}
-                        className="ml-2 text-slate-400 hover:text-red-600"
-                        aria-label="集中講義のCSVの選択を解除"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ) : (
-                    <span className="text-sm text-slate-400">未選択</span>
-                  )}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
-              <label className="block text-sm font-medium text-slate-700">
-                <span className="mb-2 block">年度</span>
-                <input
-                  type="number"
-                  value={academicYear}
-                  onChange={(event) => setAcademicYear(Number(event.target.value))}
-                  className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#2b4dca] focus:ring-2 focus:ring-[#2b4dca]/20"
-                />
-              </label>
-
-              <label className="block text-sm font-medium text-slate-700">
-                <span className="mb-2 block">学期</span>
-                <select
-                  value={term}
-                  onChange={(event) => setTerm(event.target.value)}
-                  className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#2b4dca] focus:ring-2 focus:ring-[#2b4dca]/20"
-                >
-                  {termOptions.map((item) => (
-                    <option key={item.key} value={item.key}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
 
               <button
                 type="button"
-                onClick={handleUpload}
-                disabled={!csvFile || uploading}
-                className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-6 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
+                onClick={handleAddIntensive}
+                disabled={!intensiveCsvFile || uploading}
+                className="mt-3 inline-flex items-center justify-center rounded-full border border-[#2b4dca] bg-white px-5 py-2 text-sm font-semibold text-[#2b4dca] transition hover:bg-[#eff3ff] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {uploading ? '解析中...' : 'アップロードして解析'}
+                {uploading ? '取り込み中...' : '既存データに集中講義CSVを追加'}
               </button>
+              <p className="mt-2 text-xs text-slate-400">
+                上の「時間割CSV」を選ばずにこのボタンだけを押すと、現在保存されている{selectedCategoryLabel}の
+                {academicYear}年度{selectedTermLabel}のデータに、このCSVをマージして置き換えます。
+              </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setIsHistoryView(true)}
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              過去のインポート
-            </button>
           </div>
-        ) : (
-          <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 shadow-sm">
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-[#2b4dca]">過去のインポート</p>
-                <p className="text-sm text-slate-600">全カテゴリのアップロード履歴と公開状況をまとめて確認できます。</p>
-              </div>
+        </div>
+
+        {message ? (
+          <div
+            className={`rounded-2xl border p-4 text-sm ${
+              message.tone === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-red-200 bg-red-50 text-red-700'
+            }`}
+          >
+            {message.text}
+          </div>
+        ) : null}
+
+        <div className="rounded-[24px] border border-slate-200 bg-[#f8f9fa] p-6 shadow-sm">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                {selectedCategoryLabel} ／ {academicYear}年度 {selectedTermLabel} ／ {rows.length}件
+              </p>
+              <p className="mt-1 text-sm text-slate-500">現在公開中の授業データです。直接編集して保存できます。</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href={publicCategoryPath(academicYear, term, categorySlug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                画面を確認
+              </a>
               <button
                 type="button"
-                onClick={() => setIsHistoryView(false)}
-                className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#243f9c]"
+                onClick={handleSave}
+                disabled={saving || loadingRows}
+                className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#243f9c] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                アップロード画面へ戻る
+                {saving ? '保存中...' : '保存'}
               </button>
             </div>
-
-            {errorMessage ? (
-              <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {errorMessage}
-              </div>
-            ) : null}
-
-            {loadingBatches ? (
-              <AdminLoadingBlock rows={3} />
-            ) : batches.length === 0 ? (
-              <p className="text-sm text-slate-500">まだインポート履歴がありません。</p>
-            ) : (
-              <div className="space-y-4">
-                {batches.map((batch) => (
-                  <div
-                    key={batch.import_batch_id}
-                    className="rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm sm:flex sm:items-center sm:justify-between"
-                  >
-                    <div className="space-y-2">
-                      <p className="text-base font-semibold text-slate-900">
-                        {batch.academic_year}年度 {termOptions.find((t) => t.key === batch.term)?.label ?? batch.term}
-                        <span
-                          className={`ml-3 rounded-full px-3 py-1 text-xs font-semibold ${
-                            batch.status === 'published'
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-amber-50 text-amber-700'
-                          }`}
-                        >
-                          {statusLabel(batch)}
-                        </span>
-                      </p>
-                      <p className="text-sm font-semibold text-[#2b4dca]">
-                        {allCategories.find((c) => c.slug === batch.category_slug)?.label ?? batch.category_slug}
-                      </p>
-                      <p className="text-sm text-slate-600">元ファイル: {batch.source_filename || '-'}</p>
-                      <p className="text-sm text-slate-600">行数: {batch.row_count}</p>
-                      <p className="text-sm text-slate-600">
-                        アップロード: {formatDateTime(batch.created_at)}
-                        {batch.published_at ? ` ／ 公開: ${formatDateTime(batch.published_at)}` : ''}
-                      </p>
-                    </div>
-                    <div className="mt-4 flex gap-2 sm:mt-0">
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/admin/timetable/imports/${batch.import_batch_id}`)}
-                        className="inline-flex items-center justify-center rounded-full bg-[#2b4dca] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#243f9c]"
-                      >
-                        開く
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteBatch(batch)}
-                        disabled={deletingId === batch.import_batch_id}
-                        className="inline-flex items-center justify-center rounded-full border border-red-300 bg-white px-5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {deletingId === batch.import_batch_id ? '削除中...' : '削除'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-        )}
+
+          {loadingRows ? (
+            <AdminLoadingBlock rows={3} />
+          ) : (
+            <>
+              <div className="overflow-x-auto rounded-[20px] border border-slate-200 bg-white shadow-sm">
+                <table className="w-full min-w-[1080px] border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
+                      <th className="w-20 border-b border-slate-200 px-3 py-2">曜日</th>
+                      <th className="w-24 border-b border-slate-200 px-3 py-2">時限</th>
+                      <th className="w-32 border-b border-slate-200 px-3 py-2">授業コード</th>
+                      <th className="border-b border-slate-200 px-3 py-2">科目名称</th>
+                      <th className="w-40 border-b border-slate-200 px-3 py-2">代表教員</th>
+                      <th className="w-32 border-b border-slate-200 px-3 py-2">実施キャンパス</th>
+                      <th className="w-40 border-b border-slate-200 px-3 py-2">講義室</th>
+                      <th className="w-28 border-b border-slate-200 px-3 py-2">備考</th>
+                      <th className="w-12 border-b border-slate-200 px-2 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr key={row.key} className="border-b border-slate-100 last:border-0">
+                        <td className="px-2 py-1.5">
+                          <select
+                            value={row.day}
+                            onChange={(e) => updateRow(row.key, { day: e.target.value })}
+                            className={inputClass}
+                          >
+                            {dayOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <select
+                            value={row.period}
+                            onChange={(e) => updateRow(row.key, { period: e.target.value })}
+                            className={inputClass}
+                          >
+                            {periodOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            value={row.course_code}
+                            onChange={(e) => updateRow(row.key, { course_code: e.target.value })}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            value={row.course_name}
+                            onChange={(e) => updateRow(row.key, { course_name: e.target.value })}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            value={row.instructor}
+                            onChange={(e) => updateRow(row.key, { instructor: e.target.value })}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            value={row.campus}
+                            onChange={(e) => updateRow(row.key, { campus: e.target.value })}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            value={row.classroom}
+                            onChange={(e) => updateRow(row.key, { classroom: e.target.value })}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            value={row.note}
+                            onChange={(e) => updateRow(row.key, { note: e.target.value })}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeRow(row.key)}
+                            className="text-slate-400 transition hover:text-red-600"
+                            aria-label="この行を削除"
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <button
+                type="button"
+                onClick={addRow}
+                className="mt-4 inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                + 行を追加
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </AdminLayout>
   );

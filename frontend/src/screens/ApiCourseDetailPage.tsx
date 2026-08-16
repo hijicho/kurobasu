@@ -90,12 +90,18 @@ export function ApiCourseDetailPage({
   }, [offeringId]);
 
   const meetingText = useMemo(() => {
-    if (!offering || offering.meetings.length === 0) {
+    if (!offering) {
       return '時間割未定';
     }
-    return offering.meetings
-      .map((meeting) => `${dayLabels[meeting.day - 1] ?? meeting.day}曜 ${meeting.period}限`)
-      .join(' / ');
+    // 集中講義・時間割外は day/period が null（講義室だけ持つ）
+    const scheduled = offering.meetings.filter(
+      (meeting): meeting is typeof meeting & { day: number; period: number } =>
+        meeting.day != null && meeting.period != null
+    );
+    if (scheduled.length === 0) {
+      return '日程未定';
+    }
+    return scheduled.map((meeting) => `${dayLabels[meeting.day - 1] ?? meeting.day}曜 ${meeting.period}限`).join(' / ');
   }, [offering]);
 
   const classroomText = useMemo(() => {

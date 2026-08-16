@@ -158,8 +158,17 @@ func CreateOfferingRating(w http.ResponseWriter, r *http.Request) {
 		userID = &user.UserID
 	}
 
+	var voterKey string
+	if userID == nil {
+		if !allowRatingSubmission(clientIP(r)) {
+			errorResponse(w, http.StatusTooManyRequests, "評価の投稿が多すぎます。しばらくしてから再度お試しください。")
+			return
+		}
+		voterKey = voterKeyFromRequest(w, r)
+	}
+
 	ratingRepo := &repository.OfferingRatingRepository{}
-	summary, err := ratingRepo.SaveRating(offeringID, userID, req.Score)
+	summary, err := ratingRepo.SaveRating(offeringID, userID, voterKey, req.Score)
 	if err != nil {
 		if errors.Is(err, repository.ErrOfferingNotFound) {
 			errorResponse(w, http.StatusNotFound, "Offering not found")

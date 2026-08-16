@@ -68,15 +68,20 @@ export function CategoryPage({
     
     offerings.forEach((offering) => {
       offering.meetings.forEach((meeting) => {
+        // 集中講義・時間割外（day/period が null）は週間グリッドに置けないのでスキップ
+        const { day, period } = meeting;
+        if (day == null || period == null) {
+          return;
+        }
         // 既存のslotを探す
         let slot = slots.find(
-          (s) => s.period === meeting.period && s.day === meeting.day - 1 // APIのdayは1始まり、UIは0始まり
+          (s) => s.period === period && s.day === day - 1 // APIのdayは1始まり、UIは0始まり
         );
 
         if (!slot) {
           slot = {
-            period: meeting.period,
-            day: meeting.day - 1,
+            period: period,
+            day: day - 1,
             courses: [],
           };
           slots.push(slot);
@@ -101,7 +106,9 @@ export function CategoryPage({
 
   const timetableSlots = usesTimetable ? convertToTimetableSlots(offerings) : [];
   // 曜日・時限が定まらない授業（集中講義・時間割外）は時間割表に載らないため別枠で一覧表示する
-  const intensiveOfferings = usesTimetable ? offerings.filter((offering) => offering.meetings.length === 0) : [];
+  const intensiveOfferings = usesTimetable
+    ? offerings.filter((offering) => !offering.meetings.some((m) => m.day != null))
+    : [];
 
   // 科目名・担当者名で絞り込み（カテゴリごとに取得したofferingsの範囲内で検索）
   const matchesSearch = (offering: Offering) => {

@@ -177,14 +177,15 @@ func seedCourses(categories []models.Category) []seededOffering {
 
 func seedMeetings(offeringID int64, meetings []meetingSeed) {
 	for _, data := range meetings {
+		day, period := data.day, data.period
 		meeting := models.Meeting{
 			OfferingID: offeringID,
-			Day:        data.day,
-			Period:     data.period,
+			Day:        &day,
+			Period:     &period,
 			Classroom:  data.classroom,
 		}
 		if err := config.DB.
-			Where(models.Meeting{OfferingID: meeting.OfferingID, Day: meeting.Day, Period: meeting.Period}).
+			Where("offering_id = ? AND day = ? AND period = ?", offeringID, day, period).
 			Assign(models.Meeting{Classroom: meeting.Classroom}).
 			FirstOrCreate(&meeting).Error; err != nil {
 			log.Printf("Error seeding meeting for offering %d: %v", offeringID, err)

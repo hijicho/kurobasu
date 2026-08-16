@@ -47,7 +47,13 @@ func (r *OfferingRatingRepository) GetSummariesByOfferingIDs(offeringIDs []int64
 	return result, nil
 }
 
-func (r *OfferingRatingRepository) SaveRating(offeringID int64, userID *int64, score int16) (OfferingRatingSummary, error) {
+// SaveRating records a score for an offering. Logged-in submissions
+// (userID set) are deduped per (offering, user); anonymous submissions
+// (userID nil) are deduped per (offering, voterKey) instead, where voterKey
+// is an opaque id from the caller's anonymous-voter cookie. An anonymous
+// submission with no voterKey at all (cookie blocked/unavailable) always
+// inserts a new row, same as before this dedup existed.
+func (r *OfferingRatingRepository) SaveRating(offeringID int64, userID *int64, voterKey string, score int16) (OfferingRatingSummary, error) {
 	var summary OfferingRatingSummary
 	err := config.DB.Transaction(func(tx *gorm.DB) error {
 		var offering models.Offering
@@ -59,7 +65,8 @@ func (r *OfferingRatingRepository) SaveRating(offeringID int64, userID *int64, s
 		}
 
 		now := time.Now()
-		if userID != nil {
+		switch {
+		case userID != nil:
 			var existing models.OfferingRating
 			err := tx.Where("offering_id = ? AND user_id = ?", offeringID, *userID).First(&existing).Error
 			if err == nil {
@@ -81,7 +88,29 @@ func (r *OfferingRatingRepository) SaveRating(offeringID int64, userID *int64, s
 			} else {
 				return err
 			}
-		} else {
+		case voterKey != "":
+			var existing models.OfferingRating
+			err := tx.Where("offering_id = ? AND voter_key = ?", offeringID, voterKey).First(&existing).Error
+			if err == nil {
+				existing.Score = score
+				existing.UpdatedAt = now
+				if err := tx.Save(&existing).Error; err != nil {
+					return err
+				}
+			} else if errors.Is(err, gorm.ErrRecordNotFound) {
+				if err := tx.Create(&models.OfferingRating{
+					OfferingID: offeringID,
+					VoterKey:   voterKey,
+					Score:      score,
+					CreatedAt:  now,
+					UpdatedAt:  now,
+				}).Error; err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		default:
 			if err := tx.Create(&models.OfferingRating{
 				OfferingID: offeringID,
 				Score:      score,

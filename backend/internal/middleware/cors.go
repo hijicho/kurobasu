@@ -20,6 +20,11 @@ func CORS(next http.Handler) http.Handler {
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			// Needed so the browser sends/keeps the anonymous rating
+			// voter cookie (see internal/handlers/rating_guard.go) on
+			// cross-origin requests. Safe alongside the exact-origin
+			// echo above (never "*", which credentialed CORS forbids).
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		}
 
 		if r.Method == http.MethodOptions {

@@ -45,6 +45,9 @@ async function fetchApi<T>(
 
   try {
     const response = await fetch(url, {
+      // Lets the anonymous rating voter cookie (set by the backend on
+      // POST /offerings/{id}/ratings) round-trip across origins.
+      credentials: 'include',
       ...options,
       headers: {
         ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
@@ -158,8 +161,9 @@ export interface Subject {
 }
 
 export interface Meeting {
-  day: number;
-  period: number;
+  // 曜日・時限が定まらない集中講義・時間割外は null（講義室だけ入っている）
+  day: number | null;
+  period: number | null;
   classroom?: string;
 }
 
@@ -459,11 +463,14 @@ export async function listAds(academicYear?: number, term?: string): Promise<Lis
 }
 
 // ============================
-// Admin: Timetable CSV import (時間割CSVインポート)
+// Admin: Timetable rows (時間割の直接編集・CSVインポート)
 // ============================
+// 下書き/公開の2段階は廃止。CSVインポートも手動編集の保存も、対象の
+// カテゴリ・年度・学期の授業データを丸ごと入れ替える1本の経路を通る
+// （バックエンド: OfferingRepository.ReplaceForScope）。
 
-export interface TimetableImportRow {
-  import_row_id: number;
+export interface TimetableRow {
+  offering_id?: number;
   day: number | null; // 1=月 ... 5=金
   period: number | null; // 1〜5
   course_code: string;
@@ -474,108 +481,66 @@ export interface TimetableImportRow {
   note: string;
 }
 
-export interface TimetableImportBatch {
-  import_batch_id: number;
-  category_slug: string;
-  academic_year: number;
-  term: string;
-  source_filename: string;
-  status: 'draft' | 'published';
-  sheet_url: string;
-  sheet_provider?: string;
-  created_at: string;
-  updated_at: string;
-  published_at: string | null;
-  row_count: number;
-  rows?: TimetableImportRow[];
+export interface ListTimetableRowsResponse {
+  items: TimetableRow[];
 }
 
-export interface ListTimetableImportBatchesResponse {
-  items: TimetableImportBatch[];
-}
-
-export async function listAdminTimetableImports(
+export async function listAdminTimetableRows(
   idToken: string | null | undefined,
-  categorySlug?: string
-): Promise<ListTimetableImportBatchesResponse> {
-  const query = categorySlug ? `?category_slug=${encodeURIComponent(categorySlug)}` : '';
-  return fetchApi<ListTimetableImportBatchesResponse>(`/admin/timetable-imports${query}`, {
+  categorySlug: string,
+  academicYear: number,
+  term: string
+): Promise<ListTimetableRowsResponse> {
+  const params = new URLSearchParams({
+    category_slug: categorySlug,
+    academic_year: String(academicYear),
+    term,
+  });
+  return fetchApi<ListTimetableRowsResponse>(`/admin/timetable-rows?${params}`, {
     headers: authHeaders(idToken),
   });
 }
 
-export async function getAdminTimetableImport(
+export async function saveAdminTimetableRows(
   idToken: string | null | undefined,
-  batchId: number
-): Promise<TimetableImportBatch> {
-  return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}`, {
+  categorySlug: string,
+  academicYear: number,
+  term: string,
+  rows: TimetableRow[]
+): Promise<ListTimetableRowsResponse> {
+  return fetchApi<ListTimetableRowsResponse>('/admin/timetable-rows', {
+    method: 'PUT',
     headers: authHeaders(idToken),
+    body: JSON.stringify({ category_slug: categorySlug, academic_year: academicYear, term, rows }),
   });
 }
 
-export async function createAdminTimetableImport(
+// csv is optional: passing only intensiveCsv merges it into the scope's
+// current live data instead of replacing everything from a fresh CSV, so
+// intensive courses can be added after the main timetable is already in.
+export async function importAdminTimetableRowsCSV(
   idToken: string | null | undefined,
   academicYear: number,
   term: string,
-  csv: File,
+  csv: File | null,
   categorySlug = 'general-education',
   intensiveCsv?: File | null
-): Promise<TimetableImportBatch> {
+): Promise<ListTimetableRowsResponse> {
   const formData = new FormData();
   formData.append('academic_year', String(academicYear));
   formData.append('term', term);
   formData.append('category_slug', categorySlug);
-  formData.append('csv', csv);
+  if (csv) {
+    formData.append('csv', csv);
+  }
   if (intensiveCsv) {
     formData.append('intensive_csv', intensiveCsv);
   }
 
-  return fetchApi<TimetableImportBatch>('/admin/timetable-imports', {
+  return fetchApi<ListTimetableRowsResponse>('/admin/timetable-rows/import', {
     method: 'POST',
     headers: authHeaders(idToken),
     body: formData,
-  });
-}
-
-export interface TimetableImportRowInput {
-  day: number | null;
-  period: number | null;
-  course_code: string;
-  course_name: string;
-  instructor: string;
-  campus: string;
-  classroom: string;
-  note: string;
-}
-
-export async function updateAdminTimetableImportRows(
-  idToken: string | null | undefined,
-  batchId: number,
-  rows: TimetableImportRowInput[]
-): Promise<TimetableImportBatch> {
-  return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}/rows`, {
-    method: 'PUT',
-    headers: authHeaders(idToken),
-    body: JSON.stringify({ rows }),
-  });
-}
-
-export async function publishAdminTimetableImport(
-  idToken: string | null | undefined,
-  batchId: number,
-  rows?: TimetableImportRowInput[]
-): Promise<TimetableImportBatch> {
-  return fetchApi<TimetableImportBatch>(`/admin/timetable-imports/${batchId}/publish`, {
-    method: 'POST',
-    headers: authHeaders(idToken),
-    body: rows ? JSON.stringify({ rows }) : undefined,
-  });
-}
-
-export async function deleteAdminTimetableImport(idToken: string | null | undefined, batchId: number): Promise<void> {
-  return fetchApi<void>(`/admin/timetable-imports/${batchId}`, {
-    method: 'DELETE',
-    headers: authHeaders(idToken),
   });
 }
 

@@ -172,40 +172,20 @@
 
 ---
 
-## 10) timetable_import_batches / timetable_import_rows（管理画面：時間割CSVインポート）
+## 10) 管理画面：時間割CSVインポート・直接編集（専用テーブルなし）
 
-**用途**：管理画面から時間割CSV（①一般教養科目の時間割CSV／②集中講義のCSV）をアップロードした際の
-下書きを保持します。`internal/csvtimetable` がCSVから行を自動抽出し（対応範囲は現状「総合教養科目」の
-み。UTF-8/Shift-JISいずれの文字コードにも対応）、admin が編集用リンク（`sheet_url`。Google Sheets
-未設定時はアプリ内蔵の編集画面）で内容を確認・修正した上で「公開」すると、その時点の行が該当カテゴリ・
-年度・学期の `subjects` / `offerings` / `meetings` に（既存分を置き換える形で）反映されます。実装は
-`internal/repository/timetable_import.go` を参照。
+**用途**：管理画面から時間割CSVをアップロードすると、`internal/csvtimetable` がCSVから行を自動抽出し
+（UTF-8/Shift-JISいずれの文字コードにも対応、任意で集中講義CSVとマージ）、下書きを経由せず**直接**
+該当カテゴリ・年度・学期の `subjects` / `offerings` / `meetings`（上記2〜4節）に反映します。管理画面
+の編集テーブルも同じライブデータを直接読み書きします。
 
-### timetable_import_batches
+いずれの経路も `OfferingRepository.ReplaceForScope`（`internal/repository/offering.go`）という1本の
+処理を通り、対象スコープ（category × academic_year × term）の `offerings`/`meetings` を全削除してから
+作り直します。**このスコープの `offering_ratings` は `offering_id` への `ON DELETE CASCADE` により
+毎回削除される**ため、管理画面はCSVインポート・保存の実行前に必ず警告を表示します。
 
-| カラム | 型 | 制約/補足 |
-|---|---|---|
-| import_batch_id | BIGSERIAL | PK |
-| category_slug | VARCHAR(60) | NOT NULL（現状 `general-education` のみ対応） |
-| academic_year | SMALLINT | NOT NULL |
-| term | VARCHAR(20) | NOT NULL |
-| source_filename | TEXT | NOT NULL, DEFAULT ''（アップロードされたCSVのファイル名） |
-| status | VARCHAR(20) | NOT NULL, DEFAULT 'draft'（draft / published） |
-| sheet_url | TEXT | NOT NULL, DEFAULT ''（編集用リンク） |
-| created_by_user_id | BIGINT | NULL可 |
-| created_at / updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
-| published_at | TIMESTAMPTZ | NULL可 |
-
-### timetable_import_rows
-
-| カラム | 型 | 制約/補足 |
-|---|---|---|
-| import_row_id | BIGSERIAL | PK |
-| import_batch_id | BIGINT | NOT NULL, FK → timetable_import_batches(import_batch_id), ON DELETE CASCADE |
-| day | SMALLINT | NULL可（1〜7。時間割外/集中講義は NULL） |
-| period | SMALLINT | NULL可（1〜10。day と同様） |
-| course_code / course_name / instructor / classroom / note | TEXT系 | NOT NULL, DEFAULT '' |
-| sort_order | INT | NOT NULL, DEFAULT 0（編集画面での表示順） |
+以前存在した `timetable_import_batches` / `timetable_import_rows`（下書きステージング用テーブル）と
+`internal/sheets`（Google Sheets編集リンク発行）は、この直接書き込み方式への移行に伴い廃止しました。
 
 ---
 

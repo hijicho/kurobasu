@@ -13,7 +13,7 @@
 //     calendar dates instead of a weekly slot.
 //
 // Both are parsed with the same Parse function; the caller (see
-// internal/handlers/timetable_import.go) merges the two files via
+// internal/handlers/timetable_rows.go) merges the two files via
 // MergeIntensiveRows.
 package csvtimetable
 

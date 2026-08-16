@@ -39,8 +39,6 @@ func RunMigrations() error {
 		&models.Timetable{},
 		&models.TimetableItem{},
 		&models.AdImage{},
-		&models.TimetableImportBatch{},
-		&models.TimetableImportRow{},
 		&models.SiteSettings{},
 		&models.OfferingRating{},
 	)
@@ -77,6 +75,16 @@ func RunMigrations() error {
 	}
 	if err := config.DB.Exec(`ALTER TABLE user_reviews ALTER COLUMN user_id DROP NOT NULL`).Error; err != nil {
 		return fmt.Errorf("failed allowing anonymous user reviews: %w", err)
+	}
+
+	// meetings: 集中講義/時間割外（曜日・時限が定まらない授業）にも講義室情報を
+	// 持たせられるよう、day/period を NULL 許容にする。NULLはCHECK制約
+	// (day>=1 AND day<=7 等)を素通りするので制約自体はそのままでよい。
+	if err := config.DB.Exec(`ALTER TABLE meetings ALTER COLUMN day DROP NOT NULL`).Error; err != nil {
+		return fmt.Errorf("failed allowing null day on meetings: %w", err)
+	}
+	if err := config.DB.Exec(`ALTER TABLE meetings ALTER COLUMN period DROP NOT NULL`).Error; err != nil {
+		return fmt.Errorf("failed allowing null period on meetings: %w", err)
 	}
 
 	// Add foreign key constraints using raw SQL
@@ -198,19 +206,6 @@ func RunMigrations() error {
 		return err
 	}
 
-	// TimetableImportRow -> TimetableImportBatch relationship
-	// One import batch (1回のPDFアップロード) can have many rows.
-	// If the batch is deleted, its rows are deleted too.
-	if err := addConstraintIfNotExists(
-		"timetable_import_rows",
-		"fk_timetable_import_rows_batch",
-		`ALTER TABLE timetable_import_rows
-		 ADD CONSTRAINT fk_timetable_import_rows_batch
-		 FOREIGN KEY (import_batch_id) REFERENCES timetable_import_batches(import_batch_id) ON DELETE CASCADE`,
-	); err != nil {
-		return err
-	}
-
 	// OfferingRating -> Offering relationship
 	// One Offering can have many recommendation ratings.
 	// If the Offering is deleted, all related ratings are deleted too.
@@ -236,6 +231,9 @@ func RunMigrations() error {
 	}
 
 	if err := dropRatingImportTables(); err != nil {
+		return err
+	}
+	if err := dropTimetableImportTables(); err != nil {
 		return err
 	}
 
@@ -264,6 +262,20 @@ func dropRatingImportTables() error {
 	`
 	if err := config.DB.Exec(sql).Error; err != nil {
 		return fmt.Errorf("failed dropping rating import tables: %w", err)
+	}
+	return nil
+}
+
+// dropTimetableImportTables removes the old draft/publish staging tables
+// (CSV import now writes directly into subjects/offerings/meetings — see
+// OfferingRepository.ReplaceForScope — so there's no draft to stage).
+func dropTimetableImportTables() error {
+	sql := `
+		DROP TABLE IF EXISTS timetable_import_rows CASCADE;
+		DROP TABLE IF EXISTS timetable_import_batches CASCADE;
+	`
+	if err := config.DB.Exec(sql).Error; err != nil {
+		return fmt.Errorf("failed dropping timetable import tables: %w", err)
 	}
 	return nil
 }
@@ -430,7 +442,6 @@ func ensureSemesterTermConstraints() error {
 	}{
 		{"offerings", "term"},
 		{"timetables", "term"},
-		{"timetable_import_batches", "term"},
 		{"ad_images", "term"},
 		{"site_settings", "default_term"},
 	}
@@ -452,7 +463,6 @@ func ensureSemesterTermConstraints() error {
 	}{
 		{"offerings", "chk_offerings_term_semester", `ALTER TABLE offerings ADD CONSTRAINT chk_offerings_term_semester CHECK (term IN ('spring', 'fall'))`},
 		{"timetables", "chk_timetables_term_semester", `ALTER TABLE timetables ADD CONSTRAINT chk_timetables_term_semester CHECK (term IN ('spring', 'fall'))`},
-		{"timetable_import_batches", "chk_timetable_import_batches_term_semester", `ALTER TABLE timetable_import_batches ADD CONSTRAINT chk_timetable_import_batches_term_semester CHECK (term IN ('spring', 'fall'))`},
 		{"ad_images", "chk_ad_images_term_semester", `ALTER TABLE ad_images ADD CONSTRAINT chk_ad_images_term_semester CHECK (term IN ('spring', 'fall'))`},
 		{"site_settings", "chk_site_settings_default_term_semester", `ALTER TABLE site_settings ADD CONSTRAINT chk_site_settings_default_term_semester CHECK (default_term IN ('spring', 'fall'))`},
 	}

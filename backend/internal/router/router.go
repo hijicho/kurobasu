@@ -107,18 +107,12 @@ func SetupRoutes() http.Handler {
 	// GET/PATCH /api/v1/admin/site-settings
 	// 効果：公開画面のデフォルト年度・学期を取得/更新（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/site-settings", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminSiteSettingsHandler())))
-	// GET/POST /api/v1/admin/timetable-imports
-	// 効果：時間割CSVインポート（下書き）一覧の取得・新規アップロード（admin/editor ロール）
-	mux.HandleFunc("/api/v1/admin/timetable-imports", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminTimetableImportsHandler())))
-	// GET /api/v1/admin/timetable-imports/{id}
-	// 効果：時間割CSVインポート1件を行データ付きで取得（admin/editor ロール）
-	mux.HandleFunc("/api/v1/admin/timetable-imports/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminTimetableImportHandler())))
-	// PUT /api/v1/admin/timetable-imports/{id}/rows
-	// 効果：スプレッドシート編集画面での修正を保存（下書き行を全置換）（admin/editor ロール）
-	mux.HandleFunc("/api/v1/admin/timetable-imports/{id}/rows", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPut, handlers.UpdateAdminTimetableImportRows))))
-	// POST /api/v1/admin/timetable-imports/{id}/publish
-	// 効果：下書きを総合教養科目の subjects/offerings/meetings に反映（admin/editor ロール）
-	mux.HandleFunc("/api/v1/admin/timetable-imports/{id}/publish", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPost, handlers.PublishAdminTimetableImport))))
+	// GET/PUT /api/v1/admin/timetable-rows
+	// 効果：カテゴリ・年度・学期の現在のライブ授業データを取得／編集内容で全置換保存（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/timetable-rows", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminTimetableRowsHandler())))
+	// POST /api/v1/admin/timetable-rows/import
+	// 効果：時間割CSVを直接データベースに取り込み、対象スコープを全置換（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/timetable-rows/import", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPost, handlers.ImportAdminTimetableRowsCSV))))
 	// =====================
 	// 時間割 (Timetables) API
 	// =====================
@@ -222,26 +216,13 @@ func adminAdsHandler() http.HandlerFunc {
 	}
 }
 
-func adminTimetableImportsHandler() http.HandlerFunc {
+func adminTimetableRowsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			handlers.ListAdminTimetableImports(w, r)
-		case http.MethodPost:
-			handlers.CreateAdminTimetableImport(w, r)
-		default:
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		}
-	}
-}
-
-func adminTimetableImportHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.GetAdminTimetableImport(w, r)
-		case http.MethodDelete:
-			handlers.DeleteAdminTimetableImport(w, r)
+			handlers.ListAdminTimetableRows(w, r)
+		case http.MethodPut:
+			handlers.SaveAdminTimetableRows(w, r)
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}

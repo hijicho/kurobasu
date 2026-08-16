@@ -34,8 +34,8 @@ type SubjectResponse struct {
 // MeetingResponse: 授業時間割情報のレスポーンス
 // =====================
 type MeetingResponse struct {
-	Day       int16  `json:"day"`    // 曜日 (1=月, 2=火, ..., 7=日)
-	Period    int16  `json:"period"` // 時限 (1-10)
+	Day       *int16 `json:"day"`    // 曜日 (1=月, 2=火, ..., 7=日)。曜日・時限が定まらない集中講義/時間割外は null
+	Period    *int16 `json:"period"` // 時限 (1-10)。day と同様 null になりうる
 	Classroom string `json:"classroom,omitempty"`
 }
 
@@ -242,48 +242,14 @@ type ListResponse struct {
 }
 
 // =====================
-// TimetableImport (管理画面: 時間割CSVインポート) Response/Request DTOs
+// TimetableRows (管理画面: 時間割の直接編集・CSVインポート) Response/Request DTOs
 // =====================
+// 下書き/公開の2段階は廃止。CSVインポートも手動編集の保存も、対象の
+// (category, academic_year, term) の授業データを丸ごと入れ替える1本の
+// 経路（OfferingRepository.ReplaceForScope）を通る。
 
-type TimetableImportRowResponse struct {
-	ImportRowID int64  `json:"import_row_id"`
-	Day         *int16 `json:"day"`
-	Period      *int16 `json:"period"`
-	CourseCode  string `json:"course_code"`
-	CourseName  string `json:"course_name"`
-	Instructor  string `json:"instructor"`
-	Campus      string `json:"campus"`
-	Classroom   string `json:"classroom"`
-	Note        string `json:"note"`
-}
-
-type TimetableImportBatchResponse struct {
-	ImportBatchID  int64                        `json:"import_batch_id"`
-	CategorySlug   string                       `json:"category_slug"`
-	AcademicYear   int16                        `json:"academic_year"`
-	Term           string                       `json:"term"`
-	SourceFilename string                       `json:"source_filename"`
-	Status         string                       `json:"status"`
-	SheetURL       string                       `json:"sheet_url"`
-	SheetProvider  string                       `json:"sheet_provider,omitempty"`
-	CreatedAt      time.Time                    `json:"created_at"`
-	UpdatedAt      time.Time                    `json:"updated_at"`
-	PublishedAt    *time.Time                   `json:"published_at,omitempty"`
-	RowCount       int                          `json:"row_count"`
-	Rows           []TimetableImportRowResponse `json:"rows,omitempty"`
-}
-
-type ListTimetableImportBatchesResponse struct {
-	Items []TimetableImportBatchResponse `json:"items"`
-}
-
-// UpdateTimetableImportRowsRequest replaces every row of a draft batch (used
-// by the admin spreadsheet-style row editor's save action).
-type UpdateTimetableImportRowsRequest struct {
-	Rows []TimetableImportRowInput `json:"rows"`
-}
-
-type TimetableImportRowInput struct {
+type TimetableRowResponse struct {
+	OfferingID int64  `json:"offering_id,omitempty"`
 	Day        *int16 `json:"day"`
 	Period     *int16 `json:"period"`
 	CourseCode string `json:"course_code"`
@@ -294,11 +260,28 @@ type TimetableImportRowInput struct {
 	Note       string `json:"note"`
 }
 
-// PublishTimetableImportRequest optionally carries the admin editor's
-// in-progress row edits so "save" and "publish" can happen in one request
-// instead of two, saving a full round trip on the publish hot path.
-type PublishTimetableImportRequest struct {
-	Rows []TimetableImportRowInput `json:"rows,omitempty"`
+type ListTimetableRowsResponse struct {
+	Items []TimetableRowResponse `json:"items"`
+}
+
+// SaveTimetableRowsRequest replaces every row of a (category, academic_year,
+// term) scope with the admin's edited rows.
+type SaveTimetableRowsRequest struct {
+	CategorySlug string              `json:"category_slug"`
+	AcademicYear int16               `json:"academic_year"`
+	Term         string              `json:"term"`
+	Rows         []TimetableRowInput `json:"rows"`
+}
+
+type TimetableRowInput struct {
+	Day        *int16 `json:"day"`
+	Period     *int16 `json:"period"`
+	CourseCode string `json:"course_code"`
+	CourseName string `json:"course_name"`
+	Instructor string `json:"instructor"`
+	Campus     string `json:"campus"`
+	Classroom  string `json:"classroom"`
+	Note       string `json:"note"`
 }
 
 // Error Response
