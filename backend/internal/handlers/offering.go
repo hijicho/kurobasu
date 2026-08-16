@@ -1,15 +1,18 @@
 package handlers
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/hageruto/kurobasu/internal/dto"
+	"github.com/hageruto/kurobasu/internal/middleware"
 	"github.com/hageruto/kurobasu/internal/repository"
 	"github.com/hageruto/kurobasu/models"
 )
 
-func toOfferingResponse(off models.Offering, meetings []models.Meeting, rank string) dto.OfferingResponse {
+func toOfferingResponse(off models.Offering, meetings []models.Meeting, rating repository.OfferingRatingSummary) dto.OfferingResponse {
 	meetingDTOs := make([]dto.MeetingResponse, len(meetings))
 	for j, m := range meetings {
 		meetingDTOs[j] = dto.MeetingResponse{
@@ -19,7 +22,18 @@ func toOfferingResponse(off models.Offering, meetings []models.Meeting, rank str
 		}
 	}
 
-	resp := dto.OfferingResponse{
+	var ratingAverage *float64
+	if rating.SampleCount > 0 {
+		value := rating.AverageScore
+		ratingAverage = &value
+	}
+	var ratingRank *string
+	if rating.SampleCount > 0 {
+		rank := ratingRankForScore(rating.AverageScore)
+		ratingRank = &rank
+	}
+
+	return dto.OfferingResponse{
 		OfferingID:      off.OfferingID,
 		Subject:         dto.SubjectResponse{SubjectID: off.Subject.SubjectID, Title: off.Subject.Title},
 		AcademicYear:    off.AcademicYear,
@@ -29,11 +43,23 @@ func toOfferingResponse(off models.Offering, meetings []models.Meeting, rank str
 		Note:            off.Note,
 		InstructorNames: off.InstructorNames,
 		Meetings:        meetingDTOs,
+		RatingAverage:   ratingAverage,
+		RatingCount:     rating.SampleCount,
+		RatingRank:      ratingRank,
 	}
-	if rank != "" {
-		resp.Rate = &rank
+}
+
+func ratingRankForScore(score float64) string {
+	switch {
+	case score >= 4:
+		return "AA"
+	case score >= 2:
+		return "A"
+	case score >= 1:
+		return "B"
+	default:
+		return "C"
 	}
-	return resp
 }
 
 // ListOfferingsByCategory - GET /api/v1/categories/{slug}/offerings
@@ -68,10 +94,8 @@ func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	offeringIDs := make([]int64, len(offerings))
-	subjectIDs := make([]int64, len(offerings))
 	for i, off := range offerings {
 		offeringIDs[i] = off.OfferingID
-		subjectIDs[i] = off.SubjectID
 	}
 	meetRepo := &repository.MeetingRepository{}
 	meetingsByOffering, err := meetRepo.GetMeetingsByOfferingIDs(offeringIDs)
@@ -80,8 +104,8 @@ func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ratingRepo := &repository.SubjectRatingRepository{}
-	ranksBySubject, err := ratingRepo.GetRankBySubjectIDs(subjectIDs)
+	ratingRepo := &repository.OfferingRatingRepository{}
+	ratingsByOffering, err := ratingRepo.GetSummariesByOfferingIDs(offeringIDs)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Failed to fetch ratings")
 		return
@@ -89,7 +113,7 @@ func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
 
 	items := make([]dto.OfferingResponse, len(offerings))
 	for i, off := range offerings {
-		items[i] = toOfferingResponse(off, meetingsByOffering[off.OfferingID], ranksBySubject[off.SubjectID])
+		items[i] = toOfferingResponse(off, meetingsByOffering[off.OfferingID], ratingsByOffering[off.OfferingID])
 	}
 
 	successResponse(w, dto.ListResponse{Items: items})
@@ -109,8 +133,50 @@ func GetOffering(w http.ResponseWriter, r *http.Request) {
 	meetRepo := &repository.MeetingRepository{}
 	meetings, _ := meetRepo.GetMeetingsByOffering(offering.OfferingID)
 
-	ratingRepo := &repository.SubjectRatingRepository{}
-	ranksBySubject, _ := ratingRepo.GetRankBySubjectIDs([]int64{offering.SubjectID})
+	ratingRepo := &repository.OfferingRatingRepository{}
+	ratingsByOffering, _ := ratingRepo.GetSummariesByOfferingIDs([]int64{offering.OfferingID})
 
-	successResponse(w, toOfferingResponse(*offering, meetings, ranksBySubject[offering.SubjectID]))
+	successResponse(w, toOfferingResponse(*offering, meetings, ratingsByOffering[offering.OfferingID]))
+}
+
+// CreateOfferingRating - POST /api/v1/offerings/{id}/ratings
+func CreateOfferingRating(w http.ResponseWriter, r *http.Request) {
+	offeringID := extractID(r, "id")
+
+	var req dto.CreateOfferingRatingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		errorResponse(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	if req.Score < 1 || req.Score > 5 {
+		errorResponse(w, http.StatusBadRequest, "score must be between 1 and 5")
+		return
+	}
+
+	var userID *int64
+	if user, ok := middleware.CurrentUser(r); ok {
+		userID = &user.UserID
+	}
+
+	ratingRepo := &repository.OfferingRatingRepository{}
+	summary, err := ratingRepo.SaveRating(offeringID, userID, req.Score)
+	if err != nil {
+		if errors.Is(err, repository.ErrOfferingNotFound) {
+			errorResponse(w, http.StatusNotFound, "Offering not found")
+			return
+		}
+		errorResponse(w, http.StatusInternalServerError, "Failed to save rating")
+		return
+	}
+
+	average := summary.AverageScore
+	rank := ratingRankForScore(summary.AverageScore)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": dto.OfferingRatingResponse{
+		OfferingID:    offeringID,
+		RatingAverage: &average,
+		RatingCount:   summary.SampleCount,
+		RatingRank:    &rank,
+	}})
 }

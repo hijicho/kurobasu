@@ -6,8 +6,9 @@ import { Breadcrumb } from '@/components/Breadcrumb';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { ReviewSections } from '@/components/course-detail/ReviewSections';
-import { RateBadge } from '@/components/RateBadge';
-import { getOffering, type Offering } from '@/lib/api';
+import { OfferingRatingStars } from '@/components/OfferingRatingStars';
+import { createOfferingRating, getApiErrorMessage, getOffering, type Offering } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 interface ApiCourseDetailPageProps {
   offeringId: number;
@@ -51,9 +52,13 @@ export function ApiCourseDetailPage({
   topHref = '/',
   onNavigateToList,
 }: ApiCourseDetailPageProps) {
+  const { getIdToken } = useAuth();
   const [offering, setOffering] = useState<Offering | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedScore, setSelectedScore] = useState<number | null>(null);
+  const [savingRating, setSavingRating] = useState(false);
+  const [ratingMessage, setRatingMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,6 +109,28 @@ export function ApiCourseDetailPage({
     return Array.from(new Set(classrooms)).join(' / ');
   }, [offering]);
 
+  const handleRate = async (score: number) => {
+    if (!offering) return;
+    setSelectedScore(score);
+    setSavingRating(true);
+    setRatingMessage(null);
+    try {
+      const idToken = await getIdToken();
+      const rating = await createOfferingRating(offering.offering_id, score, idToken);
+      setOffering({
+        ...offering,
+        rating_average: rating.rating_average,
+        rating_count: rating.rating_count,
+        rating_rank: rating.rating_rank,
+      });
+      setRatingMessage('おすすめ度を保存しました。');
+    } catch (err) {
+      setRatingMessage(getApiErrorMessage(err, 'おすすめ度の保存に失敗しました。'));
+    } finally {
+      setSavingRating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
@@ -128,7 +155,6 @@ export function ApiCourseDetailPage({
           <div>
             <h1 className="mb-2 flex flex-wrap items-center gap-3 text-2xl sm:text-4xl">
               {offering?.subject.title ?? '授業詳細'}
-              <RateBadge rate={offering?.rate} className="text-lg sm:text-2xl" />
             </h1>
             <p className="text-gray-600 text-sm">
               {loading ? '読み込み中です' : error ?? offering?.instructor_names.join('、')}
@@ -186,6 +212,35 @@ export function ApiCourseDetailPage({
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-base md:text-lg">おすすめ度</h2>
+                  <p className="mt-1 text-sm text-gray-600">1〜5 の星でこの授業のおすすめ度を投稿できます。</p>
+                </div>
+                <OfferingRatingStars
+                  rating={offering.rating_average}
+                  count={offering.rating_count}
+                  rank={offering.rating_rank}
+                  size="lg"
+                />
+              </div>
+              <div className="mt-5 rounded-xl bg-gray-50 p-4">
+                <p className="mb-2 text-sm font-medium text-gray-700">あなたのおすすめ度</p>
+                <OfferingRatingStars
+                  rating={offering.rating_average}
+                  count={offering.rating_count}
+                  rank={offering.rating_rank}
+                  size="lg"
+                  interactive
+                  selectedScore={selectedScore}
+                  disabled={savingRating}
+                  onSelect={handleRate}
+                />
+                {ratingMessage ? <p className="mt-2 text-sm text-gray-600">{ratingMessage}</p> : null}
               </div>
             </div>
 

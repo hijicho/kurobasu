@@ -6,7 +6,7 @@ import { TimetableView } from '../components/TimetableView';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { getOfferings, Offering } from '../lib/api';
 import { publicTopPath, termLabels } from '../lib/public-routing';
-import { RateBadge } from '../components/RateBadge';
+import { OfferingRatingStars } from '../components/OfferingRatingStars';
 
 interface CategoryPageProps {
   categoryName: string;
@@ -89,7 +89,9 @@ export function CategoryPage({
           name: offering.subject.title,
           instructor: offering.instructor_names.join('、'),
           credits: offering.subject.credits,
-          level: offering.rate as 'AA' | 'A' | 'B' | 'C' | 'D' | 'F',
+          ratingAverage: offering.rating_average,
+          ratingCount: offering.rating_count,
+          ratingRank: offering.rating_rank,
         });
       });
     });
@@ -156,26 +158,26 @@ export function CategoryPage({
           </div>
         </div>
 
-        {/* 凡例 */}
+        {/* おすすめ度 */}
         {usesTimetable && (
           <div className="border border-[#2B4DCA] rounded-xl p-4 mb-6 bg-[#ffffff]">
-            <h3 className="text-sm mb-2">Lv（難易度・推奨度）</h3>
+            <h3 className="text-sm mb-2">おすすめ度</h3>
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
-                <span className="text-gray-700">楽単！！</span>
+                <span className="text-gray-700">4〜5点</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
-                <span className="text-gray-700">普通</span>
+                <span className="text-gray-700">2〜4点</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
-                <span className="text-gray-700">興味があれば</span>
+                <span className="text-gray-700">1〜2点</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
-                <span className="text-gray-700">よほど興味があれば</span>
+                <span className="text-gray-700">0〜1点</span>
               </div>
             </div>
           </div>
@@ -217,9 +219,14 @@ export function CategoryPage({
                           onClick={() => onCourseClick?.(String(offering.offering_id))}
                           className="relative flex h-20 flex-col justify-center overflow-hidden rounded-lg border border-gray-200 bg-white p-2 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
                         >
-                          <RateBadge rate={offering.rate} className="absolute top-1.5 right-1.5 text-xs" />
-                          <h3 className="line-clamp-2 pr-8 text-sm font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
+                          <h3 className="line-clamp-2 text-sm font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
                           <p className="line-clamp-1 text-xs text-gray-500">{offering.instructor_names.join('、')}</p>
+                          <OfferingRatingStars
+                            rating={offering.rating_average}
+                            count={offering.rating_count}
+                            rank={offering.rating_rank}
+                            className="mt-1"
+                          />
                           {offering.note && (
                             <p className="line-clamp-1 text-[11px] text-gray-500">{offering.note}</p>
                           )}
@@ -244,11 +251,16 @@ export function CategoryPage({
                   onClick={() => onCourseClick?.(String(offering.offering_id))}
                   className="relative flex h-24 flex-col justify-center overflow-hidden rounded-xl border border-gray-200 bg-white p-2.5 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
                 >
-                  <RateBadge rate={offering.rate} className="absolute top-2 right-2 text-xs" />
-                  <h3 className="line-clamp-2 pr-10 text-base font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
+                  <h3 className="line-clamp-2 text-base font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
                   <p className="line-clamp-1 text-xs text-gray-500">
                     {offering.instructor_names.join('、') || '担当教員未設定'}
                   </p>
+                  <OfferingRatingStars
+                    rating={offering.rating_average}
+                    count={offering.rating_count}
+                    rank={offering.rating_rank}
+                    className="mt-1.5"
+                  />
                   {offering.note && (
                     <p className="line-clamp-1 text-xs text-gray-500">{offering.note}</p>
                   )}

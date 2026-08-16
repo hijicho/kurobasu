@@ -89,7 +89,7 @@
 | カラム | 型 | 制約/補足 |
 |---|---|---|
 | user_review_id | BIGSERIAL | PK |
-| user_id | BIGINT | NOT NULL, FK → users(user_id), ON DELETE CASCADE |
+| user_id | BIGINT | NULL可, FK → users(user_id), ON DELETE CASCADE（匿名投稿は NULL） |
 | offering_id | BIGINT | NOT NULL, FK → offerings(offering_id), ON DELETE CASCADE |
 | comment | TEXT | NOT NULL |
 | type | TEXT | NOT NULL（pros/cons/others） |
@@ -99,7 +99,28 @@
 
 ---
 
-## 6) users（ユーザー）
+## 6) offering_ratings（開講おすすめ度）
+
+**用途**：各 offering に対する 1〜5 のおすすめ度を保持し、公開画面では平均点と件数から AA/A/B/C を表示します。
+
+ランク：
+- `AA`: 4〜5点
+- `A`: 2〜4点
+- `B`: 1〜2点
+- `C`: 0〜1点
+
+| カラム | 型 | 制約/補足 |
+|---|---|---|
+| offering_rating_id | BIGSERIAL | PK |
+| offering_id | BIGINT | NOT NULL, FK → offerings(offering_id), ON DELETE CASCADE |
+| user_id | BIGINT | NULL可, FK → users(user_id), ON DELETE CASCADE（匿名評価は NULL） |
+| score | SMALLINT | NOT NULL, CHECK 1〜5 |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
+
+---
+
+## 7) users（ユーザー）
 
 | カラム | 型 | 制約/補足 |
 |---|---|---|
@@ -113,16 +134,9 @@
 - カラム：`role` `varchar(20)`、`NOT NULL`、デフォルト `'user'`
 - 例：`'user'`, `'admin'`。アプリ側では文字列比較か列挙でチェックします。
 
-## 追加
-
-| カラム | 型 | 制約/補足 |
-|---|---|---|
-| user_id
-| offer_id 
-
 ---
 
-## 7) timetables（作成タイムテーブル）
+## 8) timetables（作成タイムテーブル）
 
 一人一つのタイムテーブルしか作成できない
 
@@ -138,7 +152,7 @@
 
 ---
 
-## 8) timetable_items（タイムテーブルアイテム）
+## 9) timetable_items（タイムテーブルアイテム）
 
 方針：
 - `offering_id` をキーに登録（表示時に `meetings` を参照してコマに展開します）
@@ -158,7 +172,7 @@
 
 ---
 
-## 9) timetable_import_batches / timetable_import_rows（管理画面：時間割CSVインポート）
+## 10) timetable_import_batches / timetable_import_rows（管理画面：時間割CSVインポート）
 
 **用途**：管理画面から時間割CSV（①一般教養科目の時間割CSV／②集中講義のCSV）をアップロードした際の
 下書きを保持します。`internal/csvtimetable` がCSVから行を自動抽出し（対応範囲は現状「総合教養科目」の

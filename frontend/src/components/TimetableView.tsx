@@ -7,9 +7,9 @@ export interface CourseCard {
   id: string;
   name: string;
   instructor: string;
-  level?: 'AA' | 'A' | 'B' | 'C'; // オプショナルに変更
-  rating?: number; // 平均評価（1-5）
-  ratingCount?: number; // 評価数
+  ratingAverage?: number;
+  ratingCount: number;
+  ratingRank?: 'AA' | 'A' | 'B' | 'C';
   courseCode?: string; // コース番号（例：1GBA001003）
   credits?: number; // 単位数（例：2.0）
 }
@@ -26,8 +26,8 @@ interface TimetableViewProps {
   className?: string;
 }
 
-const getLevelColor = (level: string) => {
-  switch (level) {
+const getLevelColor = (rank?: string) => {
+  switch (rank) {
     case 'AA':
       return 'border-[#fc9c5a]';
     case 'A':
@@ -41,8 +41,8 @@ const getLevelColor = (level: string) => {
   }
 };
 
-const getLevelBackgroundStyle = (level: string) => {
-  switch (level) {
+const getLevelBackgroundStyle = (rank?: string) => {
+  switch (rank) {
     case 'AA':
       return { backgroundColor: 'rgba(252, 156, 90, 0.05)' };
     case 'A':
@@ -56,8 +56,8 @@ const getLevelBackgroundStyle = (level: string) => {
   }
 };
 
-const getLevelBadgeColor = (level: string) => {
-  switch (level) {
+const getLevelBadgeColor = (rank?: string) => {
+  switch (rank) {
     case 'AA':
       return 'bg-[#fc9c5a] border-[#fc9c5a] text-white';
     case 'A':
@@ -72,12 +72,12 @@ const getLevelBadgeColor = (level: string) => {
 };
 
 // 星評価を表示するコンポーネント
-function StarRating({ rating, count }: { rating?: number; count?: number }) {
-  if (!count || count < 4) {
+function StarRating({ rating, count }: { rating?: number; count: number }) {
+  if (!count || rating === undefined) {
     return (
       <div className="flex items-center gap-1 text-xs text-gray-400">
         <Star className="w-3 h-3" />
-        <span>評価数不足</span>
+        <span>未評価</span>
       </div>
     );
   }
@@ -139,13 +139,12 @@ export function TimetableView({ slots, onCourseClick, className = '' }: Timetabl
                           <button
                             key={course.id}
                             onClick={() => onCourseClick?.(course.id)}
-                            className={`w-full p-3 rounded-lg border text-left hover:shadow-md transition-all relative ${getLevelColor(course.level || '')}`}
-                            style={getLevelBackgroundStyle(course.level || '')}
+                            className={`w-full p-3 rounded-lg border text-left hover:shadow-md transition-all relative ${getLevelColor(course.ratingRank)}`}
+                            style={getLevelBackgroundStyle(course.ratingRank)}
                           >
-                            {/* レベルバッジ（右上） */}
-                            {course.level && (
-                              <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded border ${getLevelBadgeColor(course.level)}`}>
-                                {course.level}
+                            {course.ratingRank && (
+                              <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded border ${getLevelBadgeColor(course.ratingRank)}`}>
+                                {course.ratingRank}
                               </span>
                             )}
 
@@ -155,10 +154,14 @@ export function TimetableView({ slots, onCourseClick, className = '' }: Timetabl
                             {/* 担当教員 */}
                             <div className="text-xs text-gray-600">{course.instructor}</div>
 
-                            {/* レビュー数 */}
-                            {course.ratingCount !== undefined && (
-                              <div className="mt-1.5 text-xs text-gray-500">レビュー数：{course.ratingCount}</div>
-                            )}
+                            <div className="mt-2">
+                              <StarRating rating={course.ratingAverage} count={course.ratingCount} />
+                              {course.ratingAverage !== undefined ? (
+                                <div className="mt-1 text-xs text-gray-500">
+                                  おすすめ度 {course.ratingAverage.toFixed(1)} / 5（{course.ratingCount}件）
+                                </div>
+                              ) : null}
+                            </div>
                           </button>
                         ))}
                       </div>

@@ -42,9 +42,7 @@ func RunMigrations() error {
 		&models.TimetableImportBatch{},
 		&models.TimetableImportRow{},
 		&models.SiteSettings{},
-		&models.RatingImportBatch{},
-		&models.RatingImportRow{},
-		&models.SubjectRating{},
+		&models.OfferingRating{},
 	)
 	if err != nil {
 		return err
@@ -213,29 +211,31 @@ func RunMigrations() error {
 		return err
 	}
 
-	// RatingImportRow -> RatingImportBatch relationship
-	// One rating import batch (1回の評価CSVアップロード) can have many rows.
-	// If the batch is deleted, its rows are deleted too.
+	// OfferingRating -> Offering relationship
+	// One Offering can have many recommendation ratings.
+	// If the Offering is deleted, all related ratings are deleted too.
 	if err := addConstraintIfNotExists(
-		"rating_import_rows",
-		"fk_rating_import_rows_batch",
-		`ALTER TABLE rating_import_rows
-		 ADD CONSTRAINT fk_rating_import_rows_batch
-		 FOREIGN KEY (import_batch_id) REFERENCES rating_import_batches(import_batch_id) ON DELETE CASCADE`,
+		"offering_ratings",
+		"fk_offering_ratings_offering",
+		`ALTER TABLE offering_ratings
+		 ADD CONSTRAINT fk_offering_ratings_offering
+		 FOREIGN KEY (offering_id) REFERENCES offerings(offering_id) ON DELETE CASCADE`,
 	); err != nil {
 		return err
 	}
 
-	// SubjectRating -> Subject relationship
-	// One Subject has at most one published rating (AA/A/B/C rank).
-	// If the Subject is deleted, its rating is deleted too.
+	// OfferingRating -> User relationship. Anonymous ratings keep user_id NULL.
 	if err := addConstraintIfNotExists(
-		"subject_ratings",
-		"fk_subject_ratings_subject",
-		`ALTER TABLE subject_ratings
-		 ADD CONSTRAINT fk_subject_ratings_subject
-		 FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE`,
+		"offering_ratings",
+		"fk_offering_ratings_user",
+		`ALTER TABLE offering_ratings
+		 ADD CONSTRAINT fk_offering_ratings_user
+		 FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE`,
 	); err != nil {
+		return err
+	}
+
+	if err := dropRatingImportTables(); err != nil {
 		return err
 	}
 
@@ -252,6 +252,18 @@ func ensureDefaultSiteSettings() error {
 	`
 	if err := config.DB.Exec(sql).Error; err != nil {
 		return fmt.Errorf("failed ensuring default site settings: %w", err)
+	}
+	return nil
+}
+
+func dropRatingImportTables() error {
+	sql := `
+		DROP TABLE IF EXISTS rating_import_rows CASCADE;
+		DROP TABLE IF EXISTS rating_import_batches CASCADE;
+		DROP TABLE IF EXISTS subject_ratings CASCADE;
+	`
+	if err := config.DB.Exec(sql).Error; err != nil {
+		return fmt.Errorf("failed dropping rating import tables: %w", err)
 	}
 	return nil
 }

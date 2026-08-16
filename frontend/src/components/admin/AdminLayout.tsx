@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarRange, Check, ChevronRight, LogOut, Megaphone, MessageSquareText, Pencil, Settings, ShieldUser, Sparkles, Star, UserRound, X } from 'lucide-react';
+import { CalendarRange, Check, ChevronRight, LogOut, Megaphone, MessageSquareText, Pencil, Settings, ShieldUser, Sparkles, UserRound, X } from 'lucide-react';
 import { ApiError, getAdminMe, getApiErrorMessage, updateMe, type UserProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import AdminLoadingBlock from './AdminLoadingBlock';
@@ -27,7 +27,6 @@ const navigationItems: NavigationItem[] = [
   { href: '/admin/reviews', label: '口コミ', icon: MessageSquareText },
   { href: '/admin/ads', label: '広告', icon: Megaphone },
   { href: '/admin/timetable', label: '時間割', icon: CalendarRange },
-  { href: '/admin/ratings', label: '評価', icon: Star },
   { href: '/admin/settings', label: '公開設定', icon: Settings },
   { href: '/admin/users', label: '管理人', icon: ShieldUser, allowedRoles: ['admin'] },
   { href: '/logout', label: 'ログアウト', icon: LogOut },

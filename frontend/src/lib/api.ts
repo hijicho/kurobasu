@@ -172,7 +172,9 @@ export interface Offering {
   course_code?: string; // コース番号（例：1GBA001003）。クラス・学期ごとに異なるため offering 側の値
   note?: string; // 時間割表の備考（例：抽選、不開講、通年）
   instructor_names: string[];
-  rate?: string; // おすすめ度ランク（AA/A/B/C）。評価CSVが未取り込みの科目では未設定
+  rating_average?: number;
+  rating_count: number;
+  rating_rank?: 'AA' | 'A' | 'B' | 'C';
   meetings: Meeting[];
 }
 
@@ -192,6 +194,25 @@ export async function getOfferings(
 
 export async function getOffering(offeringId: number): Promise<Offering> {
   return fetchApi<Offering>(`/offerings/${offeringId}`);
+}
+
+export interface OfferingRatingResponse {
+  offering_id: number;
+  rating_average?: number;
+  rating_count: number;
+  rating_rank?: 'AA' | 'A' | 'B' | 'C';
+}
+
+export async function createOfferingRating(
+  offeringId: number,
+  score: number,
+  idToken?: string | null
+): Promise<OfferingRatingResponse> {
+  return fetchApi<OfferingRatingResponse>(`/offerings/${offeringId}/ratings`, {
+    method: 'POST',
+    headers: authHeaders(idToken),
+    body: JSON.stringify({ score }),
+  });
 }
 
 export interface ReviewsResponse {
@@ -553,98 +574,6 @@ export async function publishAdminTimetableImport(
 
 export async function deleteAdminTimetableImport(idToken: string | null | undefined, batchId: number): Promise<void> {
   return fetchApi<void>(`/admin/timetable-imports/${batchId}`, {
-    method: 'DELETE',
-    headers: authHeaders(idToken),
-  });
-}
-
-// ============================
-// Admin: Rating CSV import (評価/おすすめ度CSVインポート)
-// ============================
-
-export interface RatingImportRow {
-  import_row_id: number;
-  course_name: string;
-  score: number;
-}
-
-export interface RatingImportBatch {
-  import_batch_id: number;
-  source_filename: string;
-  status: 'draft' | 'published';
-  created_at: string;
-  updated_at: string;
-  published_at: string | null;
-  row_count: number;
-  rows?: RatingImportRow[];
-}
-
-export interface ListRatingImportBatchesResponse {
-  items: RatingImportBatch[];
-}
-
-export async function listAdminRatingImports(
-  idToken: string | null | undefined
-): Promise<ListRatingImportBatchesResponse> {
-  return fetchApi<ListRatingImportBatchesResponse>('/admin/rating-imports', {
-    headers: authHeaders(idToken),
-  });
-}
-
-export async function getAdminRatingImport(
-  idToken: string | null | undefined,
-  batchId: number
-): Promise<RatingImportBatch> {
-  return fetchApi<RatingImportBatch>(`/admin/rating-imports/${batchId}`, {
-    headers: authHeaders(idToken),
-  });
-}
-
-export async function createAdminRatingImport(
-  idToken: string | null | undefined,
-  csv: File
-): Promise<RatingImportBatch> {
-  const formData = new FormData();
-  formData.append('csv', csv);
-
-  return fetchApi<RatingImportBatch>('/admin/rating-imports', {
-    method: 'POST',
-    headers: authHeaders(idToken),
-    body: formData,
-  });
-}
-
-export interface RatingImportRowInput {
-  course_name: string;
-  score: number;
-}
-
-export async function updateAdminRatingImportRows(
-  idToken: string | null | undefined,
-  batchId: number,
-  rows: RatingImportRowInput[]
-): Promise<RatingImportBatch> {
-  return fetchApi<RatingImportBatch>(`/admin/rating-imports/${batchId}/rows`, {
-    method: 'PUT',
-    headers: authHeaders(idToken),
-    body: JSON.stringify({ rows }),
-  });
-}
-
-export async function publishAdminRatingImport(
-  idToken: string | null | undefined,
-  batchId: number,
-  rows?: RatingImportRowInput[]
-): Promise<RatingImportBatch> {
-  return fetchApi<RatingImportBatch>(`/admin/rating-imports/${batchId}/publish`, {
-    method: 'POST',
-    headers: authHeaders(idToken),
-    body: rows ? JSON.stringify({ rows }) : undefined,
-  });
-}
-
-export async function deleteAdminRatingImport(idToken: string | null | undefined, batchId: number): Promise<void> {
-  return fetchApi<void>(`/admin/rating-imports/${batchId}`, {
     method: 'DELETE',
     headers: authHeaders(idToken),
   });
