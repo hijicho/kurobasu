@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hageruto/kurobasu/config"
 	"github.com/hageruto/kurobasu/models"
@@ -101,23 +102,24 @@ func (r *TimetableImportRepository) PublishBatch(batchID int64) (*models.Timetab
 			return fmt.Errorf("category %q not found: %w", batch.CategorySlug, err)
 		}
 
-		// Replace whatever this (category, year, term) previously published:
-		// find its offerings, delete their meetings, then the offerings.
-		var offeringIDs []int64
-		if err := tx.Model(&models.Offering{}).
-			Joins("JOIN subjects ON offerings.subject_id = subjects.subject_id").
-			Where("subjects.category_id = ? AND offerings.academic_year = ? AND offerings.term = ?",
-				category.CategoryID, batch.AcademicYear, batch.Term).
-			Pluck("offerings.offering_id", &offeringIDs).Error; err != nil {
+		// Replace whatever this (category, year, term) previously published.
+		// Deleting via a subquery instead of first Pluck-ing the offering IDs
+		// into Go and then deleting by that list saves a round trip; running
+		// these unconditionally (even when there's nothing to delete) is
+		// still a net win since most publishes are re-publishes of an
+		// already-populated scope.
+		const offeringScopeSQL = `
+			SELECT o.offering_id FROM offerings o
+			JOIN subjects s ON s.subject_id = o.subject_id
+			WHERE s.category_id = ? AND o.academic_year = ? AND o.term = ?
+		`
+		if err := tx.Exec("DELETE FROM meetings WHERE offering_id IN ("+offeringScopeSQL+")",
+			category.CategoryID, batch.AcademicYear, batch.Term).Error; err != nil {
 			return err
 		}
-		if len(offeringIDs) > 0 {
-			if err := tx.Where("offering_id IN ?", offeringIDs).Delete(&models.Meeting{}).Error; err != nil {
-				return err
-			}
-			if err := tx.Where("offering_id IN ?", offeringIDs).Delete(&models.Offering{}).Error; err != nil {
-				return err
-			}
+		if err := tx.Exec("DELETE FROM offerings WHERE offering_id IN ("+offeringScopeSQL+")",
+			category.CategoryID, batch.AcademicYear, batch.Term).Error; err != nil {
+			return err
 		}
 
 		// Resolve every row's subject in bulk (one SELECT for existing titles,
@@ -219,16 +221,22 @@ func (r *TimetableImportRepository) PublishBatch(batchID int64) (*models.Timetab
 			}
 		}
 
+		now := time.Now()
 		if err := tx.Model(&batch).Updates(map[string]interface{}{
 			"status":       "published",
-			"published_at": gorm.Expr("current_timestamp"),
+			"published_at": now,
 		}).Error; err != nil {
 			return err
 		}
 
-		return tx.Preload("Rows", func(db *gorm.DB) *gorm.DB {
-			return db.Order("sort_order ASC, import_row_id ASC")
-		}).First(&published, batchID).Error
+		// batch.Rows is untouched by everything above, so the response can
+		// be built from what's already in memory instead of paying another
+		// two round trips (batch + Rows) to re-fetch what we just wrote.
+		batch.Status = "published"
+		batch.PublishedAt = &now
+		batch.UpdatedAt = now
+		published = batch
+		return nil
 	})
 	if err != nil {
 		return nil, err
