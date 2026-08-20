@@ -56,6 +56,10 @@ type OfferingResponse struct {
 	RatingAverage   *float64          `json:"rating_average,omitempty"`
 	RatingCount     int               `json:"rating_count"`
 	RatingRank      *string           `json:"rating_rank,omitempty"`
+	// ReviewCount: 承認済みの口コミ（良かった/悪かった/その他）の件数合計
+	ReviewCount int `json:"review_count"`
+	// LatestReviewAt: 最新の承認済み口コミの投稿日時（口コミ順ソート用、口コミが無ければnil）
+	LatestReviewAt *time.Time `json:"latest_review_at,omitempty"`
 }
 
 // Review Response

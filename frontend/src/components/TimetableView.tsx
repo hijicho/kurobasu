@@ -10,6 +10,7 @@ export interface CourseCard {
   ratingAverage?: number;
   ratingCount: number;
   ratingRank?: 'AA' | 'A' | 'B' | 'C';
+  reviewCount?: number; // 口コミ（良かった/悪かった/その他）の件数合計
   courseCode?: string; // コース番号（例：1GBA001003）
   credits?: number; // 単位数（例：2.0）
 }
@@ -160,6 +161,9 @@ export function TimetableView({ slots, onCourseClick, className = '' }: Timetabl
                                 <div className="mt-1 text-xs text-gray-500">
                                   おすすめ度 {course.ratingAverage.toFixed(1)} / 5（{course.ratingCount}件）
                                 </div>
+                              ) : null}
+                              {course.reviewCount ? (
+                                <div className="mt-0.5 text-xs text-gray-500">口コミ{course.reviewCount}件</div>
                               ) : null}
                             </div>
                           </button>

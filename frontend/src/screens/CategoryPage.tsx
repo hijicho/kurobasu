@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Search } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { TimetableView } from '../components/TimetableView';
@@ -97,6 +97,7 @@ export function CategoryPage({
           ratingAverage: offering.rating_average,
           ratingCount: offering.rating_count,
           ratingRank: offering.rating_rank,
+          reviewCount: offering.review_count,
         });
       });
     });
@@ -120,7 +121,39 @@ export function CategoryPage({
     );
   };
 
-  const filteredOfferings = useMemo(() => offerings.filter(matchesSearch), [offerings, searchQuery]);
+  // 外国語科目（英語必修・日本語教師/英語教師）向けの表示調整：
+  // 口コミがある授業を先頭に、口コミが新しい順で並べる／カードは科目名より担当教員を目立たせる
+  const isEnglishRequiredCategory = categoryId === 'english-japanese' || categoryId === 'english-native';
+  // 外国語科目・基礎教育科目はおすすめ度を表示しない（口コミ件数は表示する）
+  const hidesRating = isEnglishRequiredCategory || categoryId === 'foundation-list';
+  const byLatestReview = (a: Offering, b: Offering) => {
+    const aTime = a.latest_review_at ? new Date(a.latest_review_at).getTime() : 0;
+    const bTime = b.latest_review_at ? new Date(b.latest_review_at).getTime() : 0;
+    return bTime - aTime;
+  };
+
+  const filteredOfferings = useMemo(() => {
+    const items = offerings.filter(matchesSearch);
+    return isEnglishRequiredCategory ? [...items].sort(byLatestReview) : items;
+  }, [offerings, searchQuery, isEnglishRequiredCategory]);
+
+  // 外国語科目は同じ担当教員が複数クラス（曜日・時限違い）を持つのが普通で、
+  // データとしては別々の正当な授業。ただし一覧表示は教員名しか出さないため
+  // 同じ名前が何度も並んで見えてしまう。データは消さず、表示だけ1教員1行に
+  // まとめる（口コミが多い方のクラスを代表として残す）。
+  const displayedOfferings = useMemo(() => {
+    if (!isEnglishRequiredCategory) return filteredOfferings;
+    const byInstructor = new Map<string, Offering>();
+    for (const offering of filteredOfferings) {
+      const key = offering.instructor_names.join('、') || `__no_instructor_${offering.offering_id}`;
+      const existing = byInstructor.get(key);
+      if (!existing || offering.review_count > existing.review_count) {
+        byInstructor.set(key, offering);
+      }
+    }
+    return Array.from(byInstructor.values());
+  }, [filteredOfferings, isEnglishRequiredCategory]);
+
   const filteredIntensiveOfferings = useMemo(
     () => intensiveOfferings.filter(matchesSearch),
     [intensiveOfferings, searchQuery]
@@ -232,6 +265,7 @@ export function CategoryPage({
                             rating={offering.rating_average}
                             count={offering.rating_count}
                             rank={offering.rating_rank}
+                            reviewCount={offering.review_count}
                             className="mt-1"
                           />
                           {offering.note && (
@@ -248,6 +282,26 @@ export function CategoryPage({
         ) : filteredOfferings.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-sm text-gray-600">
             該当する授業が見つかりませんでした。
+          </div>
+        ) : isEnglishRequiredCategory ? (
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+            {displayedOfferings.map((offering) => (
+              <button
+                key={offering.offering_id}
+                onClick={() => onCourseClick?.(String(offering.offering_id))}
+                className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+              >
+                <span className="flex flex-col overflow-hidden">
+                  <span className="line-clamp-1 text-base font-bold text-[#2B4DCA]">
+                    {offering.instructor_names.join('、') || '担当教員未設定'}
+                  </span>
+                  {offering.review_count > 0 && (
+                    <span className="text-xs text-gray-500">口コミ{offering.review_count}件</span>
+                  )}
+                </span>
+                <ChevronRight className="h-5 w-5 flex-shrink-0 text-gray-300" />
+              </button>
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
@@ -266,6 +320,9 @@ export function CategoryPage({
                     rating={offering.rating_average}
                     count={offering.rating_count}
                     rank={offering.rating_rank}
+                    reviewCount={offering.review_count}
+                    showWhenUnrated={false}
+                    hideRating={hidesRating}
                     className="mt-1.5"
                   />
                   {offering.note && (

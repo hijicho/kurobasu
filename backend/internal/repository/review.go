@@ -45,6 +45,42 @@ func (r *ReviewRepository) GetReviewsByOffering(offeringID int64) ([]models.User
 	return reviews, err
 }
 
+// ReviewSummary is the per-offering aggregate used on course listing cards:
+// how many approved reviews exist and when the most recent one landed.
+type ReviewSummary struct {
+	Count           int
+	LatestCreatedAt time.Time
+}
+
+// GetApprovedSummariesByOfferingIDs returns, per offering, the number of
+// approved reviews (pros+cons+others rows combined) and the most recent
+// review's created_at — used to show a review count on listing cards and to
+// sort by "most recently reviewed" without a per-offering round trip.
+func (r *ReviewRepository) GetApprovedSummariesByOfferingIDs(offeringIDs []int64) (map[int64]ReviewSummary, error) {
+	result := make(map[int64]ReviewSummary, len(offeringIDs))
+	if len(offeringIDs) == 0 {
+		return result, nil
+	}
+
+	var rows []struct {
+		OfferingID      int64
+		Count           int
+		LatestCreatedAt time.Time
+	}
+	if err := config.DB.
+		Model(&models.UserReview{}).
+		Select("offering_id, COUNT(*) AS count, MAX(created_at) AS latest_created_at").
+		Where("offering_id IN ? AND status = ?", offeringIDs, string(models.UserReviewStatusApproved)).
+		Group("offering_id").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		result[row.OfferingID] = ReviewSummary{Count: row.Count, LatestCreatedAt: row.LatestCreatedAt}
+	}
+	return result, nil
+}
+
 // GetReviewsByUser returns all reviews created by the given user.
 func (r *ReviewRepository) GetReviewsByUser(userID int64) ([]models.UserReview, error) {
 	var reviews []models.UserReview

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/hageruto/kurobasu/internal/dto"
 	"github.com/hageruto/kurobasu/internal/middleware"
@@ -12,7 +13,7 @@ import (
 	"github.com/hageruto/kurobasu/models"
 )
 
-func toOfferingResponse(off models.Offering, meetings []models.Meeting, rating repository.OfferingRatingSummary) dto.OfferingResponse {
+func toOfferingResponse(off models.Offering, meetings []models.Meeting, rating repository.OfferingRatingSummary, reviews repository.ReviewSummary) dto.OfferingResponse {
 	meetingDTOs := make([]dto.MeetingResponse, len(meetings))
 	for j, m := range meetings {
 		meetingDTOs[j] = dto.MeetingResponse{
@@ -46,7 +47,17 @@ func toOfferingResponse(off models.Offering, meetings []models.Meeting, rating r
 		RatingAverage:   ratingAverage,
 		RatingCount:     rating.SampleCount,
 		RatingRank:      ratingRank,
+		ReviewCount:     reviews.Count,
+		LatestReviewAt:  latestReviewAtPtr(reviews),
 	}
+}
+
+func latestReviewAtPtr(reviews repository.ReviewSummary) *time.Time {
+	if reviews.Count == 0 || reviews.LatestCreatedAt.IsZero() {
+		return nil
+	}
+	t := reviews.LatestCreatedAt
+	return &t
 }
 
 func ratingRankForScore(score float64) string {
@@ -111,9 +122,16 @@ func ListOfferingsByCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	reviewRepo := &repository.ReviewRepository{}
+	reviewSummariesByOffering, err := reviewRepo.GetApprovedSummariesByOfferingIDs(offeringIDs)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to fetch review counts")
+		return
+	}
+
 	items := make([]dto.OfferingResponse, len(offerings))
 	for i, off := range offerings {
-		items[i] = toOfferingResponse(off, meetingsByOffering[off.OfferingID], ratingsByOffering[off.OfferingID])
+		items[i] = toOfferingResponse(off, meetingsByOffering[off.OfferingID], ratingsByOffering[off.OfferingID], reviewSummariesByOffering[off.OfferingID])
 	}
 
 	successResponse(w, dto.ListResponse{Items: items})
@@ -136,7 +154,10 @@ func GetOffering(w http.ResponseWriter, r *http.Request) {
 	ratingRepo := &repository.OfferingRatingRepository{}
 	ratingsByOffering, _ := ratingRepo.GetSummariesByOfferingIDs([]int64{offering.OfferingID})
 
-	successResponse(w, toOfferingResponse(*offering, meetings, ratingsByOffering[offering.OfferingID]))
+	reviewRepo := &repository.ReviewRepository{}
+	reviewSummariesByOffering, _ := reviewRepo.GetApprovedSummariesByOfferingIDs([]int64{offering.OfferingID})
+
+	successResponse(w, toOfferingResponse(*offering, meetings, ratingsByOffering[offering.OfferingID], reviewSummariesByOffering[offering.OfferingID]))
 }
 
 // CreateOfferingRating - POST /api/v1/offerings/{id}/ratings

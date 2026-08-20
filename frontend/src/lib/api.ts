@@ -179,6 +179,8 @@ export interface Offering {
   rating_average?: number;
   rating_count: number;
   rating_rank?: 'AA' | 'A' | 'B' | 'C';
+  review_count: number; // 承認済みの口コミ（良かった/悪かった/その他）の件数合計
+  latest_review_at?: string; // 最新の承認済み口コミの投稿日時（口コミが無ければ未設定）
   meetings: Meeting[];
 }
 
