@@ -1,7 +1,12 @@
-// Command import_reviews is a one-off CLI that loads a 基礎教育科目 course
-// evaluation survey export (Google Forms-style CSV) into the existing
-// user_reviews table, matching each response to the offering already on
-// file (imported earlier via the admin timetable CSV importer).
+// Command import_reviews is a one-off CLI that loads a course evaluation
+// survey export (Google Forms-style CSV) into the existing user_reviews
+// table, matching each response to the offering already on file (imported
+// earlier via the admin timetable CSV importer). -category selects which
+// category's offerings to match against (default: foundation-list).
+//
+// Imported reviews land as pending by default, same as a normal user
+// submission, so they go through the existing admin review queue before
+// showing up publicly — pass -approve to skip that and publish immediately.
 //
 // The form asks about one course per response, but which column group holds
 // the answer depends on a department branch the respondent took earlier in
@@ -21,7 +26,7 @@
 // inserted as approved user_reviews so they show up on the course detail
 // page immediately.
 //
-// Usage: go run ./cmd/import_reviews [-dry-run] <csv-path>
+// Usage: go run ./cmd/import_reviews [-dry-run] [-category=slug] [-approve] <csv-path>
 package main
 
 import (
@@ -44,7 +49,7 @@ import (
 	"golang.org/x/text/encoding/japanese"
 )
 
-const categorySlug = "foundation-list"
+const defaultCategorySlug = "foundation-list"
 
 // colGroup is one repeated block of course-detail columns in the survey
 // export. score is -1 for every group but the first: the 「おすすめ度」
@@ -86,12 +91,19 @@ type reviewDraft struct {
 
 func main() {
 	dryRun := flag.Bool("dry-run", false, "report matches without writing to the database")
+	category := flag.String("category", defaultCategorySlug, "category slug to match offerings against")
+	approve := flag.Bool("approve", false, "insert reviews as already-approved (default: pending, for admin review before they go public)")
 	flag.Parse()
 	args := flag.Args()
 	if len(args) < 1 {
-		log.Fatal("usage: import_reviews <csv-path> [-dry-run]")
+		log.Fatal("usage: import_reviews [-dry-run] [-category=slug] [-approve] <csv-path>")
 	}
 	csvPath := args[0]
+
+	status := models.UserReviewStatusPending
+	if *approve {
+		status = models.UserReviewStatusApproved
+	}
 
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: .env file not found, using environment variables")
@@ -103,7 +115,7 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	candidates, err := loadOfferingCandidates()
+	candidates, err := loadOfferingCandidates(*category)
 	if err != nil {
 		log.Fatalf("Failed to load offerings: %v", err)
 	}
@@ -170,7 +182,7 @@ func main() {
 						UserID:     nil,
 						Comment:    d.comment,
 						Type:       d.reviewType,
-						Status:     models.UserReviewStatusApproved,
+						Status:     status,
 					}
 					if err := config.DB.Create(&review).Error; err != nil {
 						log.Printf("row %d: insert failed: %v", i+2, err)
@@ -329,9 +341,9 @@ func field(rec []string, i int) string {
 	return strings.TrimSpace(rec[i])
 }
 
-// loadOfferingCandidates loads every foundation-list (基礎教育科目) offering
-// as a match target.
-func loadOfferingCandidates() ([]offeringCandidate, error) {
+// loadOfferingCandidates loads every offering in the given category as a
+// match target.
+func loadOfferingCandidates(categorySlug string) ([]offeringCandidate, error) {
 	var rows []struct {
 		OfferingID      int64
 		Title           string

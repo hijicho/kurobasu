@@ -124,18 +124,28 @@ export function CategoryPage({
   // 外国語科目（英語必修・日本語教師/英語教師）向けの表示調整：
   // 口コミがある授業を先頭に、口コミが新しい順で並べる／カードは科目名より担当教員を目立たせる
   const isEnglishRequiredCategory = categoryId === 'english-japanese' || categoryId === 'english-native';
+  // 基礎教育科目も同じ「幅の狭いカード」表示にし、口コミが多い授業を先頭に並べる
+  const isFoundationList = categoryId === 'foundation-list';
+  const usesNarrowCards = isEnglishRequiredCategory || isFoundationList;
   // 外国語科目・基礎教育科目はおすすめ度を表示しない（口コミ件数は表示する）
-  const hidesRating = isEnglishRequiredCategory || categoryId === 'foundation-list';
+  const hidesRating = usesNarrowCards;
   const byLatestReview = (a: Offering, b: Offering) => {
     const aTime = a.latest_review_at ? new Date(a.latest_review_at).getTime() : 0;
     const bTime = b.latest_review_at ? new Date(b.latest_review_at).getTime() : 0;
     return bTime - aTime;
   };
+  // 口コミ件数が多い順（同数なら口コミが新しい順）
+  const byReviewCount = (a: Offering, b: Offering) => {
+    if (b.review_count !== a.review_count) return b.review_count - a.review_count;
+    return byLatestReview(a, b);
+  };
 
   const filteredOfferings = useMemo(() => {
     const items = offerings.filter(matchesSearch);
-    return isEnglishRequiredCategory ? [...items].sort(byLatestReview) : items;
-  }, [offerings, searchQuery, isEnglishRequiredCategory]);
+    if (isEnglishRequiredCategory) return [...items].sort(byLatestReview);
+    if (isFoundationList) return [...items].sort(byReviewCount);
+    return items;
+  }, [offerings, searchQuery, isEnglishRequiredCategory, isFoundationList]);
 
   // 外国語科目は同じ担当教員が複数クラス（曜日・時限違い）を持つのが普通で、
   // データとしては別々の正当な授業。ただし一覧表示は教員名しか出さないため
@@ -283,7 +293,7 @@ export function CategoryPage({
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-sm text-gray-600">
             該当する授業が見つかりませんでした。
           </div>
-        ) : isEnglishRequiredCategory ? (
+        ) : usesNarrowCards ? (
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
             {displayedOfferings.map((offering) => (
               <button
@@ -292,9 +302,18 @@ export function CategoryPage({
                 className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
               >
                 <span className="flex flex-col overflow-hidden">
-                  <span className="line-clamp-1 text-base font-bold text-[#2B4DCA]">
-                    {offering.instructor_names.join('、') || '担当教員未設定'}
-                  </span>
+                  {isEnglishRequiredCategory ? (
+                    <span className="line-clamp-1 text-base font-bold text-[#2B4DCA]">
+                      {offering.instructor_names.join('、') || '担当教員未設定'}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="line-clamp-1 text-base font-bold text-[#2B4DCA]">{offering.subject.title}</span>
+                      <span className="line-clamp-1 text-xs text-gray-500">
+                        {offering.instructor_names.join('、') || '担当教員未設定'}
+                      </span>
+                    </>
+                  )}
                   {offering.review_count > 0 && (
                     <span className="text-xs text-gray-500">口コミ{offering.review_count}件</span>
                   )}

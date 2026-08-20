@@ -2,10 +2,11 @@ name: Import Reviews CSV (one-off)
 
 # Manually-triggered job that loads backend/data/imports/<csv> into the
 # production user_reviews table (matching each survey response to an
-# existing foundation-list offering by course title + instructor, inserting
-# approved pros/cons/others rows). Run with dry_run=true first and check the
-# job logs before running for real — see backend/cmd/import_reviews for what
-# the matching does and doesn't accept.
+# existing offering by course title + instructor, inserting pros/cons/others
+# rows — approved by default so they're visible immediately; uncheck
+# `approve` to land them as pending for admin review first). Run with
+# dry_run=true first and check the job logs before running for real — see
+# backend/cmd/import_reviews for what the matching does and doesn't accept.
 on:
   workflow_dispatch:
     inputs:
@@ -15,6 +16,11 @@ on:
         default: "data/imports/2026_foundation_list_reviews.csv"
       dry_run:
         description: "Dry run (uncheck to actually write to the production database)"
+        type: boolean
+        required: true
+        default: true
+      approve:
+        description: "Publish reviews immediately as approved (uncheck to land them as pending, for admin review first)"
         type: boolean
         required: true
         default: true
@@ -61,11 +67,14 @@ jobs:
 
       - name: Run reviews import job
         run: |
+          ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            ARGS="-dry-run,${{ inputs.csv_path }}"
-          else
-            ARGS="${{ inputs.csv_path }}"
+            ARGS="-dry-run,"
           fi
+          if [ "${{ inputs.approve }}" = "true" ]; then
+            ARGS="${ARGS}-approve,"
+          fi
+          ARGS="${ARGS}${{ inputs.csv_path }}"
 
           gcloud run jobs deploy "${SERVICE}-import-reviews" \
             --image "${{ steps.image.outputs.image }}" \
