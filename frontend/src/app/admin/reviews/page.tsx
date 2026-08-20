@@ -4,7 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminLoadingBlock from '@/components/admin/AdminLoadingBlock';
 import { useAuth } from '@/lib/auth-context';
-import { deleteAdminReview, getApiErrorMessage, listAdminReviews, updateReviewStatus, type AdminReview } from '@/lib/api';
+import {
+  approveAllReviews,
+  deleteAdminReview,
+  getApiErrorMessage,
+  listAdminReviews,
+  updateReviewStatus,
+  type AdminReview,
+} from '@/lib/api';
 
 const statusLabels: Record<AdminReview['status'], string> = {
   pending: '未確認',
@@ -30,7 +37,9 @@ export default function ReviewsPage() {
   const [filter, setFilter] = useState<ReviewFilter>('pending');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [updatingReviewId, setUpdatingReviewId] = useState<number | null>(null);
+  const [approvingAll, setApprovingAll] = useState(false);
 
   const loadReviews = useCallback(async () => {
     setLoading(true);
@@ -89,6 +98,25 @@ export default function ReviewsPage() {
     }
   };
 
+  const handleApproveAll = async () => {
+    if (!window.confirm('未確認の口コミをすべて承認します。よろしいですか？')) {
+      return;
+    }
+    setApprovingAll(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const idToken = await getIdToken();
+      const res = await approveAllReviews(idToken);
+      setMessage(`${res.approved_count}件の口コミを承認しました。`);
+      await loadReviews();
+    } catch (err) {
+      setError(getApiErrorMessage(err, '一括承認に失敗しました。'));
+    } finally {
+      setApprovingAll(false);
+    }
+  };
+
   return (
     <AdminLayout currentPath="/admin/reviews" title="口コミ" subtitle="投稿された口コミを確認して承認・削除できます。">
       <div className="space-y-6">
@@ -97,7 +125,7 @@ export default function ReviewsPage() {
             <p className="text-lg font-semibold text-slate-900">口コミ一覧</p>
             <p className="text-sm text-slate-600">承認済みだけがユーザー画面に表示されます。</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {([
               ['pending', `未確認 ${filter === 'all' ? counts.pending : ''}`],
               ['approved', `承認済み ${filter === 'all' ? counts.approved : ''}`],
@@ -114,8 +142,20 @@ export default function ReviewsPage() {
                 {label.trim()}
               </button>
             ))}
+            <button
+              type="button"
+              disabled={approvingAll}
+              onClick={handleApproveAll}
+              className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {approvingAll ? '承認中...' : 'すべて承認'}
+            </button>
           </div>
         </div>
+
+        {message ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{message}</div>
+        ) : null}
 
         {error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>

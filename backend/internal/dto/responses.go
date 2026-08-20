@@ -119,6 +119,11 @@ type UpdateReviewStatusRequest struct {
 	Status string `json:"status"`
 }
 
+// ApproveAllReviewsResponse は口コミ一括承認の結果レスポンスです
+type ApproveAllReviewsResponse struct {
+	ApprovedCount int64 `json:"approved_count"`
+}
+
 // AdImageResponse は広告画像の管理・公開レスポンスです
 type AdImageResponse struct {
 	AdID             int64     `json:"ad_id"`

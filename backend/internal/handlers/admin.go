@@ -162,6 +162,19 @@ func UpdateReviewStatus(w http.ResponseWriter, r *http.Request) {
 	successResponse(w, toAdminReviewResponse(review))
 }
 
+// ApproveAllReviews - POST /api/v1/admin/reviews/approve-all
+// admin/editor ロールのみアクセス可能。未確認の口コミを一括で承認する。
+func ApproveAllReviews(w http.ResponseWriter, r *http.Request) {
+	revRepo := &repository.ReviewRepository{}
+	count, err := revRepo.ApproveAllPending()
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Failed to approve reviews")
+		return
+	}
+
+	successResponse(w, dto.ApproveAllReviewsResponse{ApprovedCount: count})
+}
+
 // DeleteAdminReview - DELETE /api/v1/admin/reviews/{id}
 // admin/editor ロールのみアクセス可能。レビュー行を物理削除する。
 func DeleteAdminReview(w http.ResponseWriter, r *http.Request) {

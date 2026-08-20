@@ -95,6 +95,9 @@ func SetupRoutes() http.Handler {
 	// PATCH /api/v1/admin/reviews/{id}/status
 	// 効果：口コミの状態を承認・未確認に変更する（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/reviews/{id}/status", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPatch, handlers.UpdateReviewStatus))))
+	// POST /api/v1/admin/reviews/approve-all
+	// 効果：未確認の口コミを一括承認する（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/reviews/approve-all", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPost, handlers.ApproveAllReviews))))
 	// DELETE /api/v1/admin/reviews/{id}
 	// 効果：口コミを物理削除する（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/reviews/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodDelete, handlers.DeleteAdminReview))))

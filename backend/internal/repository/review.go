@@ -173,6 +173,18 @@ func (r *ReviewRepository) UpdateReviewStatus(reviewID int64, status models.User
 	return r.getAdminReviewRecord(reviewID)
 }
 
+// ApproveAllPending approves every pending review in one statement and
+// returns how many rows were changed.
+func (r *ReviewRepository) ApproveAllPending() (int64, error) {
+	result := config.DB.Model(&models.UserReview{}).
+		Where("status = ?", string(models.UserReviewStatusPending)).
+		Update("status", string(models.UserReviewStatusApproved))
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return result.RowsAffected, nil
+}
+
 // DeleteReview physically removes a review row.
 func (r *ReviewRepository) DeleteReview(reviewID int64) error {
 	result := config.DB.Delete(&models.UserReview{}, reviewID)

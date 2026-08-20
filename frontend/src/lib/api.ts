@@ -403,6 +403,17 @@ export async function deleteAdminReview(idToken: string | null | undefined, revi
   });
 }
 
+export interface ApproveAllReviewsResponse {
+  approved_count: number;
+}
+
+export async function approveAllReviews(idToken: string | null | undefined): Promise<ApproveAllReviewsResponse> {
+  return fetchApi<ApproveAllReviewsResponse>('/admin/reviews/approve-all', {
+    method: 'POST',
+    headers: authHeaders(idToken),
+  });
+}
+
 export interface AdImage {
   ad_id: number;
   academic_year: number;
