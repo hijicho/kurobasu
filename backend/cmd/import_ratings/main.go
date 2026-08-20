@@ -10,7 +10,7 @@
 // when a title matches multiple offerings. Rows that can't be matched
 // confidently are skipped and listed in the summary rather than guessed.
 //
-// Usage: go run ./cmd/import_ratings <csv-path> [-dry-run]
+// Usage: go run ./cmd/import_ratings [-dry-run] <csv-path>
 package main
 
 import (

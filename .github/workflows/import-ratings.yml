@@ -1,0 +1,85 @@
+name: Import Ratings CSV (one-off)
+
+# Manually-triggered job that loads backend/data/imports/<csv> into the
+# production offering_ratings table (matching each survey response to an
+# existing offering by course title + instructor). Run with dry_run=true
+# first and check the job logs before running for real — see
+# backend/cmd/import_ratings for what the matching does and doesn't accept.
+on:
+  workflow_dispatch:
+    inputs:
+      csv_path:
+        description: "CSV path inside the image, relative to backend/ (e.g. data/imports/2026_fall_general_education_ratings.csv)"
+        required: true
+        default: "data/imports/2026_fall_general_education_ratings.csv"
+      dry_run:
+        description: "Dry run — report matches without writing to the database"
+        required: true
+        default: "true"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION }}
+  SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
+  ARTIFACT_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and push image
+        id: image
+        env:
+          IMAGE: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REPOSITORY }}/kurobasu-api:${{ github.sha }}
+        run: |
+          docker build -t "${IMAGE}" backend
+          docker push "${IMAGE}"
+          echo "image=${IMAGE}" >> "${GITHUB_OUTPUT}"
+
+      - name: Run ratings import job
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="-dry-run,${{ inputs.csv_path }}"
+          else
+            ARGS="${{ inputs.csv_path }}"
+          fi
+
+          gcloud run jobs deploy "${SERVICE}-import-ratings" \
+            --image "${{ steps.image.outputs.image }}" \
+            --region "${REGION}" \
+            --project "${PROJECT_ID}" \
+            --command ./import_ratings \
+            --args="${ARGS}" \
+            --set-env-vars DB_HOST=${{ vars.DB_HOST }},DB_PORT=5432,DB_USER=${{ vars.DB_USER }},DB_NAME=${{ vars.DB_NAME }},DB_SSLMODE=require \
+            --set-secrets DB_PASSWORD=${{ vars.DB_PASSWORD_SECRET_NAME }}:latest \
+            --service-account=${{ vars.CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT }} \
+            --memory=512Mi \
+            --cpu=1 \
+            --tasks=1 \
+            --max-retries=0 \
+            --quiet
+          gcloud run jobs execute "${SERVICE}-import-ratings" \
+            --region "${REGION}" \
+            --project "${PROJECT_ID}" \
+            --wait
