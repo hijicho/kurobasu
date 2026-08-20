@@ -17,6 +17,7 @@ RUN go build -o server ./cmd/server
 RUN go build -o migrate ./cmd/migrate
 RUN go build -o seed ./cmd/seed
 RUN go build -o import_ratings ./cmd/import_ratings
+RUN go build -o import_reviews ./cmd/import_reviews
 
 # Final stage
 FROM alpine:latest
@@ -30,6 +31,7 @@ COPY --from=builder /app/server .
 COPY --from=builder /app/migrate .
 COPY --from=builder /app/seed .
 COPY --from=builder /app/import_ratings .
+COPY --from=builder /app/import_reviews .
 COPY --from=builder /app/data ./data
 
 # Copy .env if needed (or mount as volume)
