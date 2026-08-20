@@ -13,9 +13,10 @@ on:
         required: true
         default: "data/imports/2026_fall_general_education_ratings.csv"
       dry_run:
-        description: "Dry run — report matches without writing to the database"
+        description: "Dry run (uncheck to actually write to the production database)"
+        type: boolean
         required: true
-        default: "true"
+        default: true
 
 permissions:
   contents: read
