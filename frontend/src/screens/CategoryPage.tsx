@@ -169,6 +169,17 @@ export function CategoryPage({
     [intensiveOfferings, searchQuery]
   );
 
+  // 時間割表示（総合教養科目）は週間グリッドが検索で絞り込まれないため、
+  // 検索欄の下に一致した授業をドロップダウンで表示する
+  const days = ['月', '火', '水', '木', '金'];
+  const meetingLabel = (offering: Offering) => {
+    const labels = offering.meetings
+      .filter((m) => m.day != null && m.period != null)
+      .map((m) => `${days[m.day! - 1] ?? ''}${m.period}限`);
+    return labels.length > 0 ? labels.join('・') : '集中講義・時間割外';
+  };
+  const showSearchDropdown = usesTimetable && searchQuery.trim() !== '';
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
@@ -205,6 +216,35 @@ export function CategoryPage({
               placeholder="科目名や担当者名で検索"
               className="w-full rounded-full border border-gray-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition-colors focus:border-[#2B4DCA] focus:ring-2 focus:ring-[#2B4DCA]/20"
             />
+
+            {showSearchDropdown && (
+              <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-96 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                {filteredOfferings.length === 0 ? (
+                  <div className="p-4 text-sm text-gray-500">該当する授業が見つかりませんでした。</div>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {filteredOfferings.map((offering) => (
+                      <li key={offering.offering_id}>
+                        <button
+                          onClick={() => onCourseClick?.(String(offering.offering_id))}
+                          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50"
+                        >
+                          <span className="flex flex-col overflow-hidden">
+                            <span className="line-clamp-1 text-sm font-bold text-[#2B4DCA]">
+                              {offering.subject.title}
+                            </span>
+                            <span className="line-clamp-1 text-xs text-gray-500">
+                              {offering.instructor_names.join('、') || '担当教員未設定'} ・ {meetingLabel(offering)}
+                            </span>
+                          </span>
+                          <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-300" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
