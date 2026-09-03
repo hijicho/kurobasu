@@ -7,9 +7,9 @@ API は GitHub Actions から Cloud Run にデプロイします。認証は Wor
 Supabase:
 
 ```text
-DB_HOST=db.bklngnttcequmywufkvf.supabase.co
+DB_HOST=aws-0-ap-south-1.pooler.supabase.com
 DB_PORT=5432
-DB_USER=postgres
+DB_USER=postgres.bklngnttcequmywufkvf
 DB_NAME=postgres
 DB_SSLMODE=require
 SUPABASE_URL=https://bklngnttcequmywufkvf.supabase.co
@@ -139,8 +139,9 @@ CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT=kurobasu-api-runtime@<project-id>.iam.gservice
 CLOUD_RUN_SERVICE=kurobasu-api
 ARTIFACT_REGISTRY_REPOSITORY=kurobasu
 
-DB_HOST=db.bklngnttcequmywufkvf.supabase.co
-DB_USER=postgres
+DB_HOST=aws-0-ap-south-1.pooler.supabase.com
+DB_PORT=5432
+DB_USER=postgres.bklngnttcequmywufkvf
 DB_NAME=postgres
 DB_PASSWORD_SECRET_NAME=kurobasu-db-password
 
