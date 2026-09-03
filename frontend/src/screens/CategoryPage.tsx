@@ -7,6 +7,7 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { getOfferings, Offering } from '../lib/api';
 import { publicTopPath, termLabels } from '../lib/public-routing';
 import { OfferingRatingStars } from '../components/OfferingRatingStars';
+import { RatingRenewalNotice } from '../components/RatingRenewalNotice';
 
 interface CategoryPageProps {
   categoryName: string;
@@ -251,23 +252,26 @@ export function CategoryPage({
         {/* おすすめ度 */}
         {usesTimetable && (
           <div className="border border-[#2B4DCA] rounded-xl p-4 mb-6 bg-[#ffffff]">
-            <h3 className="text-sm mb-2">おすすめ度</h3>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <h3 className="text-sm">おすすめ度</h3>
+              <RatingRenewalNotice />
+            </div>
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
-                <span className="text-gray-700">4〜5点</span>
+                <span className="text-gray-700">4.9〜5.0点</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
-                <span className="text-gray-700">2〜4点</span>
+                <span className="text-gray-700">4.4〜4.8点</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
-                <span className="text-gray-700">1〜2点</span>
+                <span className="text-gray-700">3.0〜4.3点</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
-                <span className="text-gray-700">0〜1点</span>
+                <span className="text-gray-700">0.0〜2.9点</span>
               </div>
             </div>
           </div>

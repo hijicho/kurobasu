@@ -7,6 +7,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { ReviewSections } from '@/components/course-detail/ReviewSections';
 import { OfferingRatingStars } from '@/components/OfferingRatingStars';
+import { RatingRenewalNotice } from '@/components/RatingRenewalNotice';
 import { createOfferingRating, getApiErrorMessage, getOffering, type Offering } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
@@ -224,7 +225,10 @@ export function ApiCourseDetailPage({
             <div className="mb-6 rounded-xl border border-gray-200 bg-white p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h2 className="text-base md:text-lg">おすすめ度</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base md:text-lg">おすすめ度</h2>
+                    <RatingRenewalNotice />
+                  </div>
                   <p className="mt-1 text-sm text-gray-600">1〜5 の星でこの授業のおすすめ度を投稿できます。</p>
                 </div>
                 <OfferingRatingStars

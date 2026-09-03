@@ -13,9 +13,9 @@ const rankClass: Record<RatingRank, string> = {
 
 export function rankForRating(rating?: number): RatingRank | undefined {
   if (rating === undefined) return undefined;
-  if (rating >= 4) return 'AA';
-  if (rating >= 2) return 'A';
-  if (rating >= 1) return 'B';
+  if (rating >= 4.9) return 'AA';
+  if (rating >= 4.4) return 'A';
+  if (rating >= 3.0) return 'B';
   return 'C';
 }
 

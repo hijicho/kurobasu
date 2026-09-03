@@ -62,11 +62,11 @@ func latestReviewAtPtr(reviews repository.ReviewSummary) *time.Time {
 
 func ratingRankForScore(score float64) string {
 	switch {
-	case score >= 4:
+	case score >= 4.9:
 		return "AA"
-	case score >= 2:
+	case score >= 4.4:
 		return "A"
-	case score >= 1:
+	case score >= 3.0:
 		return "B"
 	default:
 		return "C"
