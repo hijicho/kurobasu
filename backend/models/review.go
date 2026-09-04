@@ -10,13 +10,16 @@ const (
 	UserReviewStatusApproved UserReviewStatus = "approved"
 )
 
-// UserReviewType は1行が良い点・悪い点・その他のどれかを表します
+// UserReviewType は1行が良い点・悪い点・評価基準・テスト持ち込み・その他の
+// どれかを表します
 type UserReviewType string
 
 const (
-	UserReviewTypePros   UserReviewType = "pros"
-	UserReviewTypeCons   UserReviewType = "cons"
-	UserReviewTypeOthers UserReviewType = "others"
+	UserReviewTypePros        UserReviewType = "pros"
+	UserReviewTypeCons        UserReviewType = "cons"
+	UserReviewTypeOthers      UserReviewType = "others"
+	UserReviewTypeCriteria    UserReviewType = "criteria"
+	UserReviewTypeTestBringIn UserReviewType = "test_bring_in"
 )
 
 // UserReview テーブル: ユーザーが投稿する授業レビュー

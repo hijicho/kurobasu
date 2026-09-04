@@ -70,7 +70,11 @@ type ListReviewsResponse struct {
 	Pros   []string `json:"pros"`
 	Cons   []string `json:"cons"`
 	Others []string `json:"others"`
-	Count  int      `json:"count"`
+	// Criteria / TestBringIn: 評価基準・テスト持ち込み。1件のコメントが
+	// カンマ区切りで複数値を含みうるため、トークン単位で重複除去して返す
+	Criteria    []string `json:"criteria"`
+	TestBringIn []string `json:"test_bring_in"`
+	Count       int      `json:"count"`
 }
 
 // UserReviewResponse はログインユーザーのレビュー1行分の情報を返します

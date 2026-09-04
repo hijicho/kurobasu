@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -36,30 +37,78 @@ func ListReviews(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := dto.ListReviewsResponse{
-		Pros:   []string{},
-		Cons:   []string{},
-		Others: []string{},
-	}
+	var pros, cons, others, criteria, testBringIn []string
 	for _, rev := range reviews {
 		switch rev.Type {
 		case models.UserReviewTypePros:
-			resp.Pros = append(resp.Pros, rev.Comment)
+			pros = append(pros, rev.Comment)
 		case models.UserReviewTypeCons:
-			resp.Cons = append(resp.Cons, rev.Comment)
+			cons = append(cons, rev.Comment)
+		case models.UserReviewTypeCriteria:
+			criteria = append(criteria, splitReviewValues(rev.Comment)...)
+		case models.UserReviewTypeTestBringIn:
+			testBringIn = append(testBringIn, splitReviewValues(rev.Comment)...)
 		default:
-			resp.Others = append(resp.Others, rev.Comment)
+			others = append(others, rev.Comment)
 		}
+	}
+
+	resp := dto.ListReviewsResponse{
+		Pros:        dedupeStrings(pros),
+		Cons:        dedupeStrings(cons),
+		Others:      dedupeStrings(others),
+		Criteria:    dedupeStrings(criteria),
+		TestBringIn: dedupeStrings(testBringIn),
 	}
 	resp.Count = len(reviews)
 
 	successResponse(w, resp)
 }
 
+// reviewValueSplitRe splits a multi-value 評価基準/テスト持ち込み answer
+// (e.g. "期末テスト, 中間レポート、毎回の課題") into individual values.
+var reviewValueSplitRe = regexp.MustCompile(`[、,]`)
+
+// splitReviewValues splits and trims a comma-separated review comment,
+// dropping empty tokens.
+func splitReviewValues(comment string) []string {
+	parts := reviewValueSplitRe.Split(comment, -1)
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// dedupeStrings removes duplicate values (after trimming) while preserving
+// the order they first appear in, and never returns nil so callers get `[]`
+// rather than `null` in the JSON response.
+func dedupeStrings(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	return out
+}
+
 var validReviewTypes = map[string]models.UserReviewType{
-	"pros":   models.UserReviewTypePros,
-	"cons":   models.UserReviewTypeCons,
-	"others": models.UserReviewTypeOthers,
+	"pros":          models.UserReviewTypePros,
+	"cons":          models.UserReviewTypeCons,
+	"others":        models.UserReviewTypeOthers,
+	"criteria":      models.UserReviewTypeCriteria,
+	"test_bring_in": models.UserReviewTypeTestBringIn,
 }
 
 // CreateReview - POST /api/v1/reviews
