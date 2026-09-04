@@ -160,7 +160,7 @@ export function TopPage({ academicYear, term }: TopPageProps) {
                         <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center shrink-0">
                           {link.icon}
                         </div>
-                        <h3 className="font-bold leading-tight text-[14px]">{link.title}</h3>
+                        <h3 className="font-bold leading-tight text-[11px] md:text-[14px]">{link.title}</h3>
                       </a>
                     ))}
                   </div>
@@ -174,24 +174,24 @@ export function TopPage({ academicYear, term }: TopPageProps) {
                       <div className="rounded-xl overflow-hidden">
                         <button
                           onClick={() => setSpecializedOpen(!specializedOpen)}
-                          className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
+                          className="w-full p-2 md:p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center">
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className="hidden md:flex w-10 h-10 bg-theme-primary-light rounded-lg items-center justify-center shrink-0">
                               <GraduationCap className="w-5 h-5" style={{ color: '#000000' }} />
                             </div>
-                            <h3 className="font-bold text-[14px]">専門科目</h3>
+                            <h3 className="font-bold text-[11px] md:text-[14px] whitespace-nowrap">専門科目</h3>
                           </div>
                           {specializedOpen ? (
-                            <ChevronUp className="w-5 h-5" />
+                            <ChevronUp className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
                           ) : (
-                            <ChevronDown className="w-5 h-5" />
+                            <ChevronDown className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
                           )}
                         </button>
 
                         {specializedOpen && (
                           <div className="px-3 pb-3 bg-white">
-                            <div className="pt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <div className="pt-3 grid grid-cols-1 gap-2">
                               {specializedCourses.map((course, index) => (
                                 (course as any).disabled ? (
                                   <div
@@ -224,18 +224,18 @@ export function TopPage({ academicYear, term }: TopPageProps) {
                       <div className="rounded-xl overflow-hidden">
                         <button
                           onClick={() => setSecondLanguageOpen(!secondLanguageOpen)}
-                          className="w-full p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
+                          className="w-full p-2 md:p-3 flex items-center justify-between hover:shadow-lg transition-all bg-white"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center shrink-0">
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className="hidden md:flex w-10 h-10 bg-theme-primary-light rounded-lg items-center justify-center shrink-0">
                               <Languages className="w-5 h-5" />
                             </div>
-                            <h3 className="font-bold text-[14px]">第二外国語</h3>
+                            <h3 className="font-bold text-[11px] md:text-[14px] whitespace-nowrap">第二外国語</h3>
                           </div>
                           {secondLanguageOpen ? (
-                            <ChevronUp className="w-5 h-5 shrink-0" />
+                            <ChevronUp className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
                           ) : (
-                            <ChevronDown className="w-5 h-5 shrink-0" />
+                            <ChevronDown className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
                           )}
                         </button>
 

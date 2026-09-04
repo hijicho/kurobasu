@@ -72,31 +72,22 @@ const getLevelBadgeColor = (rank?: string) => {
   }
 };
 
-// 星評価を表示するコンポーネント
+// 星評価を表示するコンポーネント（1行に収まるコンパクト表示）
 function StarRating({ rating, count }: { rating?: number; count: number }) {
   if (!count || rating === undefined) {
     return (
-      <div className="flex items-center gap-1 text-xs text-gray-400">
-        <Star className="w-3 h-3" />
+      <div className="flex items-center gap-0.5 text-[10px] sm:text-xs text-gray-400">
+        <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
         <span>未評価</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`w-3 h-3 ${
-            rating && star <= Math.round(rating)
-              ? 'fill-yellow-400 text-yellow-400'
-              : 'text-gray-300'
-          }`}
-        />
-      ))}
-      <span className="text-xs text-gray-600 ml-1">
-        {rating?.toFixed(1)}
+    <div className="flex items-center gap-0.5">
+      <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-yellow-400 text-yellow-400" />
+      <span className="text-[10px] sm:text-xs text-gray-600">
+        {rating.toFixed(1)}（{count}）
       </span>
     </div>
   );
@@ -114,12 +105,12 @@ export function TimetableView({ slots, onCourseClick, className = '' }: Timetabl
   return (
     <div className={`bg-white border border-gray-200 rounded-xl overflow-hidden ${className}`}>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse min-w-[820px]">
+        <table className="w-full border-collapse min-w-[620px] sm:min-w-[820px]">
           <thead className="bg-[#2B4DCA] sticky top-0 z-10">
             <tr>
-              <th className="border border-gray-200 p-3 text-sm font-medium text-white w-16">時限</th>
+              <th className="border border-gray-200 p-1.5 sm:p-3 text-xs sm:text-sm font-medium text-white w-10 sm:w-16">時限</th>
               {days.map((day, index) => (
-                <th key={index} className="border border-gray-200 p-3 text-sm font-medium text-white min-w-[190px]">
+                <th key={index} className="border border-gray-200 p-1.5 sm:p-3 text-xs sm:text-sm font-medium text-white min-w-[115px] sm:min-w-[190px]">
                   {day}曜日
                 </th>
               ))}
@@ -128,42 +119,37 @@ export function TimetableView({ slots, onCourseClick, className = '' }: Timetabl
           <tbody>
             {periods.map((period) => (
               <tr key={period}>
-                <td className="border border-gray-200 p-3 text-center bg-gray-50 align-top">
-                  <span className="text-sm">{period}限</span>
+                <td className="border border-gray-200 p-1 sm:p-3 text-center bg-gray-50 align-top">
+                  <span className="text-xs sm:text-sm">{period}限</span>
                 </td>
                 {days.map((_, dayIndex) => {
                   const courses = getCoursesByDayPeriod(dayIndex, period);
                   return (
-                    <td key={dayIndex} className="border border-gray-200 p-2 align-top">
-                      <div className="space-y-2">
+                    <td key={dayIndex} className="border border-gray-200 p-1 sm:p-2 align-top">
+                      <div className="space-y-1 sm:space-y-2">
                         {courses.map((course) => (
                           <button
                             key={course.id}
                             onClick={() => onCourseClick?.(course.id)}
-                            className={`w-full p-3 rounded-lg border text-left hover:shadow-md transition-all relative ${getLevelColor(course.ratingRank)}`}
+                            className={`w-full p-1.5 sm:p-3 rounded-md sm:rounded-lg border text-left hover:shadow-md transition-all relative ${getLevelColor(course.ratingRank)}`}
                             style={getLevelBackgroundStyle(course.ratingRank)}
                           >
                             {course.ratingRank && (
-                              <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded border ${getLevelBadgeColor(course.ratingRank)}`}>
+                              <span className={`absolute top-1 right-1 sm:top-2 sm:right-2 text-[9px] sm:text-xs font-bold px-1 py-0.5 sm:px-2 sm:py-1 rounded border ${getLevelBadgeColor(course.ratingRank)}`}>
                                 {course.ratingRank}
                               </span>
                             )}
 
                             {/* 授業名 */}
-                            <div className="text-sm mb-1.5 pr-10">{course.name}</div>
+                            <div className="text-[11px] sm:text-sm mb-0.5 sm:mb-1.5 pr-7 sm:pr-10 line-clamp-1">{course.name}</div>
 
                             {/* 担当教員 */}
-                            <div className="text-xs text-gray-600">{course.instructor}</div>
+                            <div className="text-[10px] sm:text-xs text-gray-600 line-clamp-1">{course.instructor}</div>
 
-                            <div className="mt-2">
+                            <div className="mt-1 sm:mt-2 flex items-center gap-1.5 flex-wrap">
                               <StarRating rating={course.ratingAverage} count={course.ratingCount} />
-                              {course.ratingAverage !== undefined ? (
-                                <div className="mt-1 text-xs text-gray-500">
-                                  おすすめ度 {course.ratingAverage.toFixed(1)} / 5（{course.ratingCount}件）
-                                </div>
-                              ) : null}
                               {course.reviewCount ? (
-                                <div className="mt-0.5 text-xs text-gray-500">口コミ{course.reviewCount}件</div>
+                                <span className="text-[10px] sm:text-xs text-gray-500">口コミ{course.reviewCount}件</span>
                               ) : null}
                             </div>
                           </button>
@@ -179,8 +165,8 @@ export function TimetableView({ slots, onCourseClick, className = '' }: Timetabl
       </div>
 
       {/* 注釈 */}
-      <div className="border-t border-gray-200 bg-gray-50 p-3">
-        <p className="text-xs text-gray-600">
+      <div className="border-t border-gray-200 bg-gray-50 p-2 sm:p-3">
+        <p className="text-[10px] sm:text-xs text-gray-600">
           ※ クリックすると授業の詳細ページに移動します。
         </p>
       </div>

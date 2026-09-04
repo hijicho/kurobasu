@@ -9,7 +9,32 @@ import (
 	"github.com/hageruto/kurobasu/internal/csvtimetable"
 	"github.com/hageruto/kurobasu/internal/dto"
 	"github.com/hageruto/kurobasu/internal/repository"
+	"golang.org/x/text/width"
 )
+
+// halfWidthCategorySlugs are the 外国語科目(英語必修) categories whose admin
+// entry is prone to full-width (zenkaku) Latin input — e.g. IME left in
+// full-width mode while pasting a roster name. Rows saved/imported for
+// these slugs get every field folded to half-width before being written.
+var halfWidthCategorySlugs = map[string]bool{
+	"english-japanese": true,
+	"english-native":   true,
+}
+
+// foldRowsHalfWidth folds full-width Latin letters/digits/symbols (and
+// half-width katakana) to their standard form in every field of rows,
+// in place. Kanji/hiragana/katakana text is left untouched since it has
+// no half-width Latin equivalent to fold to.
+func foldRowsHalfWidth(rows []csvtimetable.ParsedRow) {
+	for i := range rows {
+		rows[i].CourseCode = width.Fold.String(rows[i].CourseCode)
+		rows[i].CourseName = width.Fold.String(rows[i].CourseName)
+		rows[i].Instructor = width.Fold.String(rows[i].Instructor)
+		rows[i].Campus = width.Fold.String(rows[i].Campus)
+		rows[i].Classroom = width.Fold.String(rows[i].Classroom)
+		rows[i].Note = width.Fold.String(rows[i].Note)
+	}
+}
 
 // resolveTimetableScope reads+validates the (category_slug, academic_year,
 // term) query/form params shared by every timetable-rows endpoint.
@@ -162,6 +187,9 @@ func SaveAdminTimetableRows(w http.ResponseWriter, r *http.Request) {
 			Note:       strings.TrimSpace(in.Note),
 		}
 	}
+	if halfWidthCategorySlugs[strings.TrimSpace(req.CategorySlug)] {
+		foldRowsHalfWidth(rows)
+	}
 
 	offRepo := &repository.OfferingRepository{}
 	if _, err := offRepo.ReplaceForScope(categoryID, academicYear, term, rows); err != nil {
@@ -299,6 +327,9 @@ func ImportAdminTimetableRowsCSV(w http.ResponseWriter, r *http.Request) {
 	} else if !haveMain {
 		errorResponse(w, http.StatusBadRequest, "csv または intensive_csv のいずれかが必要です")
 		return
+	}
+	if halfWidthCategorySlugs[strings.TrimSpace(r.FormValue("category_slug"))] {
+		foldRowsHalfWidth(parsedRows)
 	}
 
 	offRepo := &repository.OfferingRepository{}
