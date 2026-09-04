@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, ChevronRight, Search } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { TimetableView } from '../components/TimetableView';
@@ -30,6 +30,7 @@ export function CategoryPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showRatingLegend, setShowRatingLegend] = useState(false);
   const usesTimetable = categoryId === 'general-education';
 
   // 授業データをAPIから取得
@@ -251,29 +252,39 @@ export function CategoryPage({
 
         {/* おすすめ度 */}
         {usesTimetable && (
-          <div className="border border-[#2B4DCA] rounded-xl p-4 mb-6 bg-[#ffffff]">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="border border-[#2B4DCA] rounded-xl mb-6 bg-[#ffffff]">
+            <button
+              type="button"
+              onClick={() => setShowRatingLegend((v) => !v)}
+              className="flex w-full flex-wrap items-center gap-2 p-4 text-left"
+              aria-expanded={showRatingLegend}
+            >
               <h3 className="text-sm">おすすめ度</h3>
               <RatingRenewalNotice />
-            </div>
-            <div className="flex flex-wrap gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
-                <span className="text-gray-700">4.9〜5.0点</span>
+              <ChevronDown
+                className={`ml-auto h-4 w-4 flex-shrink-0 text-gray-400 transition-transform ${showRatingLegend ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {showRatingLegend && (
+              <div className="flex flex-wrap gap-4 border-t border-gray-100 px-4 pb-4 pt-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
+                  <span className="text-gray-700">4.9〜5.0点</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
+                  <span className="text-gray-700">4.4〜4.8点</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
+                  <span className="text-gray-700">3.0〜4.3点</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
+                  <span className="text-gray-700">0.0〜2.9点</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
-                <span className="text-gray-700">4.4〜4.8点</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
-                <span className="text-gray-700">3.0〜4.3点</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
-                <span className="text-gray-700">0.0〜2.9点</span>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -311,7 +322,7 @@ export function CategoryPage({
                         <button
                           key={offering.offering_id}
                           onClick={() => onCourseClick?.(String(offering.offering_id))}
-                          className="relative flex h-20 flex-col justify-center overflow-hidden rounded-lg border border-gray-200 bg-white p-2 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+                          className="relative flex min-h-20 flex-col justify-center gap-0.5 rounded-lg border border-gray-200 bg-white p-2 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
                         >
                           <h3 className="line-clamp-2 text-sm font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
                           <p className="line-clamp-1 text-xs text-gray-500">{offering.instructor_names.join('、')}</p>
