@@ -252,35 +252,35 @@ export function CategoryPage({
 
         {/* おすすめ度 */}
         {usesTimetable && (
-          <div className="border border-[#2B4DCA] rounded-xl mb-6 bg-[#ffffff]">
+          <div className="border border-[#2B4DCA] rounded-xl mb-4 sm:mb-6 bg-[#ffffff]">
             <button
               type="button"
               onClick={() => setShowRatingLegend((v) => !v)}
-              className="flex w-full flex-wrap items-center gap-2 p-4 text-left"
+              className="flex w-full flex-wrap items-center gap-1.5 sm:gap-2 p-2.5 sm:p-4 text-left"
               aria-expanded={showRatingLegend}
             >
-              <h3 className="text-sm">おすすめ度</h3>
+              <h3 className="text-xs sm:text-sm">おすすめ度</h3>
               <RatingRenewalNotice />
               <ChevronDown
-                className={`ml-auto h-4 w-4 flex-shrink-0 text-gray-400 transition-transform ${showRatingLegend ? 'rotate-180' : ''}`}
+                className={`ml-auto h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-gray-400 transition-transform ${showRatingLegend ? 'rotate-180' : ''}`}
               />
             </button>
             {showRatingLegend && (
-              <div className="flex flex-wrap gap-4 border-t border-gray-100 px-4 pb-4 pt-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
+              <div className="flex flex-wrap gap-1.5 sm:gap-4 border-t border-gray-100 px-2.5 pb-2.5 pt-2 sm:px-4 sm:pb-4 sm:pt-3 text-xs sm:text-sm">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <span className="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-[11px] sm:text-sm" style={{ backgroundColor: 'rgba(252, 156, 90, 0.05)', borderColor: '#fc9c5a', borderWidth: '1px', color: '#fc9c5a' }}>AA</span>
                   <span className="text-gray-700">4.9〜5.0点</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <span className="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-[11px] sm:text-sm" style={{ backgroundColor: 'rgba(248, 37, 1, 0.05)', borderColor: '#f82501', borderWidth: '1px', color: '#f82501' }}>A</span>
                   <span className="text-gray-700">4.4〜4.8点</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <span className="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-[11px] sm:text-sm" style={{ backgroundColor: 'rgba(39, 172, 73, 0.05)', borderColor: '#27ac49', borderWidth: '1px', color: '#27ac49' }}>B</span>
                   <span className="text-gray-700">3.0〜4.3点</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <span className="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-[11px] sm:text-sm" style={{ backgroundColor: 'rgba(34, 176, 236, 0.05)', borderColor: '#22b0ec', borderWidth: '1px', color: '#22b0ec' }}>C</span>
                   <span className="text-gray-700">0.0〜2.9点</span>
                 </div>
               </div>
