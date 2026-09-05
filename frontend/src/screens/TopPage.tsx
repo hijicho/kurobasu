@@ -6,7 +6,7 @@ import { Header } from '../components/Header';
 import { GlossaryModal } from '../components/GlossaryModal';
 import { PublicAdBanner } from '../components/PublicAdBanner';
 import { getCategories, Category } from '../lib/api';
-import { publicCategoryPath, termLabels } from '../lib/public-routing';
+import { publicCategoryPath, publicTopPath, termLabels } from '../lib/public-routing';
 import hamubasuLogo from '../assets/59962a0286c10949e8d3fa57e1256b8b69b96d84.png';
 import bgPattern from '../assets/c00c039666ebe180d57a090c8744e0552d438ca4.png';
 import titleImageFall from '../assets/image-1786800393446.png';
@@ -113,7 +113,7 @@ export function TopPage({ academicYear, term }: TopPageProps) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* ヘッダー */}
-      <Header />
+      <Header homeHref={publicTopPath(academicYear, term)} />
       
       <main className="flex-1">
         <div className="max-w-[1440px] mx-auto px-6 py-8">

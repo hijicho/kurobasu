@@ -185,7 +185,7 @@ export function ApiCourseDetailPage({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
+      <Header homeHref={topHref} />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb
@@ -341,7 +341,7 @@ export function ApiCourseDetailPage({
                         <AlertDialogHeader>
                           <AlertDialogTitle className="text-black">評価を削除しますか？</AlertDialogTitle>
                           <AlertDialogDescription className="text-gray-600">
-                            あなたが投稿したこの授業へのおすすめ度を削除します。この操作は取り消せません。
+                            あなたが投稿したこの授業へのおすすめ度を削除します。
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

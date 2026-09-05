@@ -182,7 +182,7 @@ export function CategoryPage({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
+      <Header homeHref={publicTopPath(academicYear, term)} />
       
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
         <Breadcrumb items={[
@@ -381,6 +381,7 @@ export function CategoryPage({
                     reviewCount={offering.review_count}
                     showWhenUnrated={false}
                     hideRankBadge
+                    compact
                     className="mt-0.5"
                   />
                 </span>
@@ -415,6 +416,7 @@ export function CategoryPage({
                     reviewCount={offering.review_count}
                     showWhenUnrated={false}
                     hideRankBadge
+                    compact
                     className="mt-1.5"
                   />
                   {offering.note && (

@@ -6,9 +6,13 @@ import logoImage from '../assets/e52bb999d689900e37b9d134926cef87854ec798.png';
 
 interface HeaderProps {
   onGlossaryOpen?: () => void;
+  // ロゴのリンク先。省略時は "/"（サイト全体のデフォルト年度・学期へ強制的に
+  // リダイレクトされる）になるため、年度・学期のページから使う場合は現在の
+  // publicTopPath(academicYear, term) を渡し、表示中の年度・学期を維持する。
+  homeHref?: string;
 }
 
-export function Header({ onGlossaryOpen }: HeaderProps) {
+export function Header({ onGlossaryOpen, homeHref = '/' }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -16,7 +20,7 @@ export function Header({ onGlossaryOpen }: HeaderProps) {
       <div className="max-w-[1440px] mx-auto px-6 py-4">
         <div className="flex items-center justify-between gap-6">
           {/* ロゴ */}
-          <a href="/" className="flex items-center gap-3 shrink-0">
+          <a href={homeHref} className="flex items-center gap-3 shrink-0">
             <img 
               src={logoImage.src}
               alt="クロバス" 

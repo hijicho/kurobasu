@@ -40,6 +40,10 @@ interface OfferingRatingStarsProps {
   // true のとき、星・点数は表示したままランクバッジだけ非表示にする
   // （カード右上などに別途ランクバッジを出す場合、二重表示を避けるために使う）。
   hideRankBadge?: boolean;
+  // true のとき、星5つ＋「X.X / 5（N件）」の代わりに、星1つ＋「X.X（N）」だけの
+  // 1行表示にする（時間割ビューと同じ簡略表示）。一覧カードが評価の有無で縦に
+  // 伸び縮みしすぎるのを防ぐため。interactive のときは無視される。
+  compact?: boolean;
 }
 
 export function OfferingRatingStars({
@@ -56,6 +60,7 @@ export function OfferingRatingStars({
   showWhenUnrated = true,
   hideRating = false,
   hideRankBadge = false,
+  compact = false,
 }: OfferingRatingStarsProps) {
   const shownScore = selectedScore ?? rating;
   const rounded = shownScore ? Math.round(shownScore) : 0;
@@ -68,6 +73,25 @@ export function OfferingRatingStars({
 
   if (!showRatingBlock && !hasReviewCount) {
     return null;
+  }
+
+  if (compact && !interactive) {
+    return (
+      <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
+        {showRatingBlock &&
+          (hasRating ? (
+            <div className="flex items-center gap-0.5">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              <span className="text-[11px] text-gray-600">
+                {rating.toFixed(1)}（{count}）
+              </span>
+            </div>
+          ) : (
+            <span className="text-[11px] text-gray-400">未評価</span>
+          ))}
+        {hasReviewCount ? <span className="text-[11px] text-gray-500">口コミ{reviewCount}件</span> : null}
+      </div>
+    );
   }
 
   return (
