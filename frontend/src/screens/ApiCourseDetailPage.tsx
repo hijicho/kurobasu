@@ -331,7 +331,8 @@ export function ApiCourseDetailPage({
                             </AlertDialogCancel>
                             <AlertDialogAction
                               onClick={handleConfirmRate}
-                              className="bg-[#2B4DCA] text-white hover:bg-[#243fa8]"
+                              disabled={savingRating}
+                              className="bg-[#2B4DCA] text-white hover:bg-[#243fa8] disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               投稿する
                             </AlertDialogAction>
@@ -362,7 +363,8 @@ export function ApiCourseDetailPage({
                               </AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={handleConfirmDeleteRating}
-                                className="bg-gray-600 text-white hover:bg-gray-700"
+                                disabled={savingRating}
+                                className="bg-gray-600 text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 取消する
                               </AlertDialogAction>
