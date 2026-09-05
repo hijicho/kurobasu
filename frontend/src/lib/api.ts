@@ -1,3 +1,5 @@
+import { getVoterKey } from './voter-key';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1';
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1$/, '');
 
@@ -36,6 +38,13 @@ function authHeaders(idToken: string | null | undefined): HeadersInit | undefine
   return idToken ? { Authorization: `Bearer ${idToken}` } : undefined;
 }
 
+// 匿名投稿者ID(X-Voter-Key)。おすすめ度の投稿・取得・削除で「自分の評価」を
+// 紐付けるために使う。詳細は voter-key.ts のコメントを参照。
+function voterKeyHeaders(): HeadersInit {
+  const voterKey = getVoterKey();
+  return voterKey ? { 'X-Voter-Key': voterKey } : {};
+}
+
 // Fetch wrapper with error handling
 async function fetchApi<T>(
   endpoint: string,
@@ -45,8 +54,10 @@ async function fetchApi<T>(
 
   try {
     const response = await fetch(url, {
-      // Lets the anonymous rating voter cookie (set by the backend on
-      // POST /offerings/{id}/ratings) round-trip across origins.
+      // Kept for the legacy anonymous rating voter cookie fallback (see
+      // rating_guard.go); the primary mechanism is now the X-Voter-Key
+      // header from voterKeyHeaders(), since third-party-cookie blocking
+      // made the cross-origin cookie unreliable.
       credentials: 'include',
       ...options,
       headers: {
@@ -202,7 +213,9 @@ export async function getOfferings(
 }
 
 export async function getOffering(offeringId: number): Promise<Offering> {
-  return fetchApi<Offering>(`/offerings/${offeringId}`);
+  return fetchApi<Offering>(`/offerings/${offeringId}`, {
+    headers: voterKeyHeaders(),
+  });
 }
 
 export interface OfferingRatingResponse {
@@ -220,7 +233,7 @@ export async function createOfferingRating(
 ): Promise<OfferingRatingResponse> {
   return fetchApi<OfferingRatingResponse>(`/offerings/${offeringId}/ratings`, {
     method: 'POST',
-    headers: authHeaders(idToken),
+    headers: { ...voterKeyHeaders(), ...authHeaders(idToken) },
     body: JSON.stringify({ score }),
   });
 }
@@ -231,7 +244,7 @@ export async function deleteOfferingRating(
 ): Promise<OfferingRatingResponse> {
   return fetchApi<OfferingRatingResponse>(`/offerings/${offeringId}/ratings`, {
     method: 'DELETE',
-    headers: authHeaders(idToken),
+    headers: { ...voterKeyHeaders(), ...authHeaders(idToken) },
   });
 }
 

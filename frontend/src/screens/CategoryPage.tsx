@@ -9,6 +9,26 @@ import { publicTopPath, termLabels } from '../lib/public-routing';
 import { OfferingRatingStars, rankClass } from '../components/OfferingRatingStars';
 import { RatingRenewalNotice } from '../components/RatingRenewalNotice';
 
+// 専門科目（学域・学部ごとのカテゴリ）: トップページの「専門科目」欄と同じ一覧
+const SPECIALIZED_CATEGORY_SLUGS = new Set([
+  'modern-system',
+  'science',
+  'engineering',
+  'agriculture',
+  'veterinary',
+  'medicine',
+  'medical-rehab',
+  'nursing',
+  'human-life',
+  'literature',
+  'law',
+  'economics',
+  'commerce',
+]);
+
+// 第二外国語: トップページの「第二外国語」欄と同じ一覧
+const SECOND_LANGUAGE_CATEGORY_SLUGS = new Set(['chinese', 'korean', 'russian', 'german', 'french']);
+
 interface CategoryPageProps {
   categoryName: string;
   categoryId: string;
@@ -129,6 +149,9 @@ export function CategoryPage({
   // 基礎教育科目も同じ「幅の狭いカード」表示にし、口コミが多い授業を先頭に並べる
   const isFoundationList = categoryId === 'foundation-list';
   const usesNarrowCards = isEnglishRequiredCategory || isFoundationList;
+  // 専門科目（学域・学部ごとのカテゴリ）と第二外国語も、口コミが多い授業を先頭に並べる
+  const isSpecializedCategory = SPECIALIZED_CATEGORY_SLUGS.has(categoryId);
+  const isSecondLanguageCategory = SECOND_LANGUAGE_CATEGORY_SLUGS.has(categoryId);
   const byLatestReview = (a: Offering, b: Offering) => {
     const aTime = a.latest_review_at ? new Date(a.latest_review_at).getTime() : 0;
     const bTime = b.latest_review_at ? new Date(b.latest_review_at).getTime() : 0;
@@ -143,9 +166,9 @@ export function CategoryPage({
   const filteredOfferings = useMemo(() => {
     const items = offerings.filter(matchesSearch);
     if (isEnglishRequiredCategory) return [...items].sort(byLatestReview);
-    if (isFoundationList) return [...items].sort(byReviewCount);
+    if (isFoundationList || isSpecializedCategory || isSecondLanguageCategory) return [...items].sort(byReviewCount);
     return items;
-  }, [offerings, searchQuery, isEnglishRequiredCategory, isFoundationList]);
+  }, [offerings, searchQuery, isEnglishRequiredCategory, isFoundationList, isSpecializedCategory, isSecondLanguageCategory]);
 
   // 外国語科目は同じ担当教員が複数クラス（曜日・時限違い）を持つのが普通で、
   // データとしては別々の正当な授業。ただし一覧表示は教員名しか出さないため
@@ -368,7 +391,15 @@ export function CategoryPage({
                     </span>
                   ) : (
                     <>
-                      <span className="line-clamp-1 text-base font-bold text-[#2B4DCA]">{offering.subject.title}</span>
+                      <span
+                        className={
+                          isFoundationList
+                            ? 'text-base font-bold text-[#2B4DCA]'
+                            : 'line-clamp-1 text-base font-bold text-[#2B4DCA]'
+                        }
+                      >
+                        {offering.subject.title}
+                      </span>
                       <span className="line-clamp-1 text-xs text-gray-500">
                         {offering.instructor_names.join('、') || '担当教員未設定'}
                       </span>

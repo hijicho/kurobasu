@@ -19,11 +19,12 @@ func CORS(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			// Needed so the browser sends/keeps the anonymous rating
-			// voter cookie (see internal/handlers/rating_guard.go) on
-			// cross-origin requests. Safe alongside the exact-origin
-			// echo above (never "*", which credentialed CORS forbids).
+			// X-Voter-Key carries the anonymous rating voter id (see
+			// internal/handlers/rating_guard.go); it's sent explicitly by
+			// the frontend rather than via cookie so it isn't dropped by
+			// third-party-cookie blocking on the cross-origin Vercel/Cloud
+			// Run split.
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Voter-Key")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		}
 

@@ -175,9 +175,9 @@ export function ApiCourseDetailPage({
       });
       setHasOwnRating(false);
       setSelectedScore(null);
-      setRatingMessage('あなたのおすすめ度を削除しました。');
+      setRatingMessage('あなたのおすすめ度を取り消しました。');
     } catch (err) {
-      setRatingMessage(getApiErrorMessage(err, 'おすすめ度の削除に失敗しました。'));
+      setRatingMessage(getApiErrorMessage(err, 'おすすめ度の取消に失敗しました。'));
     } finally {
       setSavingRating(false);
     }
@@ -344,16 +344,16 @@ export function ApiCourseDetailPage({
                             <button
                               type="button"
                               disabled={savingRating}
-                              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              {savingRating ? '処理中…' : '削除する'}
+                              {savingRating ? '処理中…' : '取消する'}
                             </button>
                           </AlertDialogTrigger>
                           <AlertDialogContent className="bg-white">
                             <AlertDialogHeader>
-                              <AlertDialogTitle className="text-black">評価を削除しますか？</AlertDialogTitle>
+                              <AlertDialogTitle className="text-black">評価を取り消しますか？</AlertDialogTitle>
                               <AlertDialogDescription className="text-gray-600">
-                                あなたが投稿したこの授業へのおすすめ度を削除します。
+                                あなたが投稿したこの授業へのおすすめ度を取り消します。みんなのおすすめ度からも反映されなくなります。
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -362,9 +362,9 @@ export function ApiCourseDetailPage({
                               </AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={handleConfirmDeleteRating}
-                                className="bg-red-600 text-white hover:bg-red-700"
+                                className="bg-gray-600 text-white hover:bg-gray-700"
                               >
-                                削除する
+                                取消する
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>

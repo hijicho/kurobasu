@@ -11,20 +11,35 @@ import (
 )
 
 // Anti-abuse for anonymous offering ratings. There's no login requirement,
-// so instead of a user_id we hand each anonymous visitor an opaque id in a
-// long-lived cookie (voterCookieName) and use that to dedupe repeat votes on
-// the same offering (see OfferingRatingRepository.SaveRating). A per-IP rate
-// limit backs that up in case a visitor clears cookies / uses a new browser
-// to vote again — it doesn't stop a determined person, but it raises the
-// bar past "click the button a bunch of times".
-
+// so instead of a user_id we hand each anonymous visitor an opaque id and use
+// that to dedupe repeat votes on the same offering (see
+// OfferingRatingRepository.SaveRating). A per-IP rate limit backs that up in
+// case a visitor clears their id / uses a new browser to vote again — it
+// doesn't stop a determined person, but it raises the bar past "click the
+// button a bunch of times".
+//
+// The id itself is sent by the frontend as the voterKeyHeader header, backed
+// by localStorage rather than a cookie: the frontend and API live on
+// different sites in production (Vercel + Cloud Run), so a cookie set by the
+// API response is a cross-site cookie, and browsers increasingly refuse to
+// store/send those (Safari ITP, Firefox ETP, Chrome's third-party-cookie
+// phase-out) — which silently broke deletes ("rating not found") for anyone
+// whose browser dropped the cookie between the create and delete requests.
+// The legacy cookie is still read as a fallback so any pre-existing rows
+// keyed by it stay reachable, but it's no longer minted for new votes.
 const voterCookieName = "kb_voter"
 const voterCookieMaxAge = 2 * 365 * 24 * time.Hour // ~2 years
+const voterKeyHeader = "X-Voter-Key"
 
-// voterKeyFromRequest returns the caller's anonymous voter id, reading it
-// from voterCookieName if present or minting and setting a new one
-// otherwise. Only meaningful for anonymous (not-logged-in) requests.
+// voterKeyFromRequest returns the caller's anonymous voter id: the
+// voterKeyHeader header if the frontend sent one, the legacy voterCookieName
+// cookie if present, or a newly minted cookie-backed id otherwise (kept for
+// clients that don't send the header). Only meaningful for anonymous
+// (not-logged-in) requests.
 func voterKeyFromRequest(w http.ResponseWriter, r *http.Request) string {
+	if key := strings.TrimSpace(r.Header.Get(voterKeyHeader)); key != "" {
+		return key
+	}
 	if c, err := r.Cookie(voterCookieName); err == nil && c.Value != "" {
 		return c.Value
 	}
@@ -51,11 +66,15 @@ func voterKeyFromRequest(w http.ResponseWriter, r *http.Request) string {
 	return key
 }
 
-// voterKeyIfPresent returns the caller's anonymous voter id if voterCookieName
-// is already set, or "" otherwise. Unlike voterKeyFromRequest, it never mints
-// a new cookie — for read-only lookups (e.g. "what's my own rating?") and for
+// voterKeyIfPresent returns the caller's anonymous voter id from the
+// voterKeyHeader header or the legacy voterCookieName cookie, or "" if
+// neither is present. Unlike voterKeyFromRequest, it never mints a new
+// cookie — for read-only lookups (e.g. "what's my own rating?") and for
 // deletes, where a freshly minted id obviously has no prior rating to find.
 func voterKeyIfPresent(r *http.Request) string {
+	if key := strings.TrimSpace(r.Header.Get(voterKeyHeader)); key != "" {
+		return key
+	}
 	if c, err := r.Cookie(voterCookieName); err == nil {
 		return c.Value
 	}
