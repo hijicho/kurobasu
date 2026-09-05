@@ -116,7 +116,7 @@ func buildColumnIndex(header []string) (columnIndex, error) {
 // (rows with no 学期 value, or when term is unrecognized, are not filtered
 // out).
 func Parse(r io.Reader, term string) ([]ParsedRow, error) {
-	decoded, err := decodeJapaneseCSV(r)
+	decoded, err := DecodeJapaneseCSV(r)
 	if err != nil {
 		return nil, err
 	}
@@ -221,11 +221,12 @@ func parsePeriod(s string) *int16 {
 	return &n
 }
 
-// decodeJapaneseCSV reads r fully and returns its content as UTF-8 bytes.
+// DecodeJapaneseCSV reads r fully and returns its content as UTF-8 bytes.
 // University-issued CSV exports commonly use Shift-JIS, but the app also
 // accepts plain UTF-8 (with or without a BOM) so an admin can re-save the
-// file in either encoding.
-func decodeJapaneseCSV(r io.Reader) ([]byte, error) {
+// file in either encoding. Shared with internal/csvreviews, which parses a
+// differently-shaped admin CSV export but needs the same encoding handling.
+func DecodeJapaneseCSV(r io.Reader) ([]byte, error) {
 	raw, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("CSVの読み込みに失敗しました: %w", err)

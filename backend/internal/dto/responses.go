@@ -304,6 +304,21 @@ type TimetableRowInput struct {
 	Note       string `json:"note"`
 }
 
+// =====================
+// Admin: 口コミ一括追加 (CSV import) Response DTO
+// =====================
+
+// ImportAdminReviewsResponse summarizes a 口コミ一括追加 CSV import: how many
+// rows matched an offering and were written, and which course/instructor
+// pairs the admin should double-check because no offering could be matched.
+type ImportAdminReviewsResponse struct {
+	TotalRows          int      `json:"total_rows"`
+	MatchedRows        int      `json:"matched_rows"`
+	ReviewRowsInserted int      `json:"review_rows_inserted"`
+	RatingsInserted    int      `json:"ratings_inserted"`
+	Unmatched          []string `json:"unmatched"`
+}
+
 // Error Response
 type ErrorResponse struct {
 	Error string `json:"error"`

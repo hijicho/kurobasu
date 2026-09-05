@@ -197,6 +197,19 @@ func (r *ReviewRepository) DeleteReview(reviewID int64) error {
 	return nil
 }
 
+// BulkInsertReviews inserts review rows for a CSV bulk import, where rows
+// can reference many different offerings that were already validated by the
+// caller (matched against offerings it just loaded) — unlike CreateReviews,
+// it skips the per-call offering-existence check, since doing that once per
+// CSV row would mean one extra round trip per row on a several-hundred-row
+// import.
+func (r *ReviewRepository) BulkInsertReviews(reviews []*models.UserReview) error {
+	if len(reviews) == 0 {
+		return nil
+	}
+	return config.DB.Create(&reviews).Error
+}
+
 // CreateReviews creates review rows atomically. All rows must reference the same offering.
 func (r *ReviewRepository) CreateReviews(reviews []*models.UserReview) error {
 	if len(reviews) == 0 {

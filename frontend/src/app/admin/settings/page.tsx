@@ -66,9 +66,9 @@ export default function SettingsPage() {
       setAcademicYear(settings.default_academic_year);
       setTerm(termOptions.some((item) => item.key === settings.default_term) ? settings.default_term : termOptions[0].key);
       setUpdatedAt(settings.updated_at);
-      setMessage({ tone: 'success', text: '公開設定を更新しました。' });
+      setMessage({ tone: 'success', text: `公開トップを${settings.default_academic_year}年度 ${termLabels[settings.default_term] ?? settings.default_term}に固定しました。` });
     } catch (err) {
-      setMessage({ tone: 'error', text: getApiErrorMessage(err, '公開設定の更新に失敗しました。') });
+      setMessage({ tone: 'error', text: getApiErrorMessage(err, '公開トップの固定に失敗しました。') });
     } finally {
       setSaving(false);
     }
@@ -144,7 +144,7 @@ export default function SettingsPage() {
                 className="inline-flex items-center gap-2 rounded-full bg-[#2b4dca] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#203fb0] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Save className="h-4 w-4" />
-                {saving ? '保存中' : '保存'}
+                {saving ? '固定中…' : 'この年度・学期に固定する'}
               </button>
             </div>
           </section>

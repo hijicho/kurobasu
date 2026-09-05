@@ -103,6 +103,9 @@ func SetupRoutes() http.Handler {
 	// DELETE /api/v1/admin/reviews/{id}
 	// 効果：口コミを物理削除する（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/reviews/{id}", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodDelete, handlers.DeleteAdminReview))))
+	// POST /api/v1/admin/reviews/import
+	// 効果：口コミ一括追加CSVを取り込み、対象カテゴリ・年度・学期の既存授業に紐づけて登録する（admin/editor ロール）
+	mux.HandleFunc("/api/v1/admin/reviews/import", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(methodHandler(http.MethodPost, handlers.ImportAdminReviewsCSV))))
 	// GET/POST /api/v1/admin/ads
 	// 効果：広告画像一覧の取得・アップロード（admin/editor ロール）
 	mux.HandleFunc("/api/v1/admin/ads", middleware.RequireAuth(middleware.RequireRole("admin", "editor")(adminAdsHandler())))

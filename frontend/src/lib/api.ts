@@ -432,6 +432,34 @@ export async function approveAllReviews(idToken: string | null | undefined): Pro
   });
 }
 
+export interface ImportAdminReviewsResponse {
+  total_rows: number;
+  matched_rows: number;
+  review_rows_inserted: number;
+  ratings_inserted: number;
+  unmatched: string[];
+}
+
+export async function importAdminReviewsCSV(
+  idToken: string | null | undefined,
+  categorySlug: string,
+  academicYear: number,
+  term: string,
+  csv: File
+): Promise<ImportAdminReviewsResponse> {
+  const formData = new FormData();
+  formData.append('category_slug', categorySlug);
+  formData.append('academic_year', String(academicYear));
+  formData.append('term', term);
+  formData.append('csv', csv);
+
+  return fetchApi<ImportAdminReviewsResponse>('/admin/reviews/import', {
+    method: 'POST',
+    headers: authHeaders(idToken),
+    body: formData,
+  });
+}
+
 export interface AdImage {
   ad_id: number;
   academic_year: number;
