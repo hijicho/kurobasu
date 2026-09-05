@@ -66,7 +66,7 @@ export function OfferingRatingStars({
   // 平均を使ってよいのは読み取り専用の全体表示のときだけ。
   const shownScore = interactive ? selectedScore : selectedScore ?? rating;
   const rounded = shownScore ? Math.round(shownScore) : 0;
-  const starSize = size === 'lg' ? 'h-7 w-7' : size === 'md' ? 'h-5 w-5' : 'h-3.5 w-3.5';
+  const starSize = size === 'lg' ? 'h-6 w-6 md:h-7 md:w-7' : size === 'md' ? 'h-5 w-5' : 'h-3.5 w-3.5';
   const textSize = size === 'lg' ? 'text-sm' : 'text-xs';
   const resolvedRank = rank ?? rankForRating(rating);
   const hasReviewCount = reviewCount !== undefined && reviewCount > 0;

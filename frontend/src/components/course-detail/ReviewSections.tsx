@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { CheckCircle, XCircle, Info, Clock, ClipboardList, FileCheck2 } from 'lucide-react';
 import { User } from 'lucide-react';
 import { createReview, getReviews } from '@/lib/api';
@@ -17,6 +17,8 @@ interface ReviewSectionsProps {
   cons: string[];
   others: string[];
   offeringId?: number;
+  // 「口コミを投稿する」フォームの直前に差し込む要素（おすすめ度の入力欄など）
+  ratingSection?: ReactNode;
 }
 
 const CATEGORY_LABELS: Record<ReviewCategory, string> = {
@@ -50,7 +52,7 @@ function EvaluationTags({ values }: { values: string[] }) {
   );
 }
 
-export function ReviewSections({ pros, cons, others, offeringId }: ReviewSectionsProps) {
+export function ReviewSections({ pros, cons, others, offeringId, ratingSection }: ReviewSectionsProps) {
   const { isAuthenticated, getIdToken } = useAuth();
   const [submitted, setSubmitted] = useState<SubmittedReview[]>([]);
   const [apiReviews, setApiReviews] = useState<ApiReviews | null>(null);
@@ -267,6 +269,8 @@ export function ReviewSections({ pros, cons, others, offeringId }: ReviewSection
           )}
         </div>
       )}
+
+      {ratingSection}
 
       <ReviewForm onSubmit={handleSubmit} disabled={formDisabled} disabledMessage={disabledMessage} />
     </div>
