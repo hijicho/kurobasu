@@ -35,7 +35,7 @@ func SetupRoutes() http.Handler {
 	mux.HandleFunc("/api/v1/categories/{slug}/offerings", methodHandler(http.MethodGet, handlers.ListOfferingsByCategory))
 	// GET /api/v1/offerings/{id}
 	// 効果：特定の開講情報を詳詳情報 (会議、講师など) 付きで一件取得
-	mux.HandleFunc("/api/v1/offerings/{id}", methodHandler(http.MethodGet, handlers.GetOffering))
+	mux.HandleFunc("/api/v1/offerings/{id}", middleware.OptionalAuth(methodHandler(http.MethodGet, handlers.GetOffering)))
 	// POST /api/v1/offerings/{id}/ratings
 	// 効果：特定の開講におすすめ度（1〜5）を投稿。未ログインでも投稿でき、ログイン済みならユーザーに紐づく
 	// DELETE /api/v1/offerings/{id}/ratings

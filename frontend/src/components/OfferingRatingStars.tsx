@@ -62,7 +62,9 @@ export function OfferingRatingStars({
   hideRankBadge = false,
   compact = false,
 }: OfferingRatingStarsProps) {
-  const shownScore = selectedScore ?? rating;
+  // interactive（=「あなたの」入力欄）では、未選択時に全体平均へフォールバックさせない。
+  // 平均を使ってよいのは読み取り専用の全体表示のときだけ。
+  const shownScore = interactive ? selectedScore : selectedScore ?? rating;
   const rounded = shownScore ? Math.round(shownScore) : 0;
   const starSize = size === 'lg' ? 'h-7 w-7' : size === 'md' ? 'h-5 w-5' : 'h-3.5 w-3.5';
   const textSize = size === 'lg' ? 'text-sm' : 'text-xs';
