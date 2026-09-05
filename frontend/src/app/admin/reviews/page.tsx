@@ -22,6 +22,8 @@ const typeLabels: Record<AdminReview['type'], string> = {
   pros: '良かったところ',
   cons: '悪かったところ',
   others: 'その他',
+  criteria: '評価基準',
+  test_bring_in: 'テスト持ち込み',
 };
 
 const termLabels: Record<string, string> = {

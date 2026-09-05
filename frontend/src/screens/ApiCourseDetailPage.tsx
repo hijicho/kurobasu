@@ -8,6 +8,17 @@ import { Header } from '@/components/Header';
 import { ReviewSections } from '@/components/course-detail/ReviewSections';
 import { OfferingRatingStars } from '@/components/OfferingRatingStars';
 import { RatingRenewalNotice } from '@/components/RatingRenewalNotice';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { createOfferingRating, getApiErrorMessage, getOffering, type Offering } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
@@ -116,14 +127,19 @@ export function ApiCourseDetailPage({
     return Array.from(new Set(classrooms)).join(' / ');
   }, [offering]);
 
-  const handleRate = async (score: number) => {
-    if (!offering) return;
+  // 星をクリックした時点ではまだ選択のみ（送信は「反映する」ボタンから確認の上で行う）
+  const handlePickScore = (score: number) => {
     setSelectedScore(score);
+    setRatingMessage(null);
+  };
+
+  const handleConfirmRate = async () => {
+    if (!offering || selectedScore === null) return;
     setSavingRating(true);
     setRatingMessage(null);
     try {
       const idToken = await getIdToken();
-      const rating = await createOfferingRating(offering.offering_id, score, idToken);
+      const rating = await createOfferingRating(offering.offering_id, selectedScore, idToken);
       setOffering({
         ...offering,
         rating_average: rating.rating_average,
@@ -248,9 +264,41 @@ export function ApiCourseDetailPage({
                   interactive
                   selectedScore={selectedScore}
                   disabled={savingRating}
-                  onSelect={handleRate}
+                  onSelect={handlePickScore}
                 />
-                {ratingMessage ? <p className="mt-2 text-sm text-gray-600">{ratingMessage}</p> : null}
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={selectedScore === null || savingRating}
+                        className="rounded-lg bg-[#2B4DCA] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#243fa8] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {savingRating ? '送信中…' : '反映する'}
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-black">評価を投稿しますか？</AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-600">
+                          皆様の評価の上で成り立っています。くれぐれも正当な評価をお願いいたします。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="border-gray-200 bg-white text-black hover:bg-gray-50">
+                          キャンセル
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleConfirmRate}
+                          className="bg-[#2B4DCA] text-white hover:bg-[#243fa8]"
+                        >
+                          投稿する
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  {ratingMessage ? <p className="text-sm text-gray-600">{ratingMessage}</p> : null}
+                </div>
               </div>
             </div>
 

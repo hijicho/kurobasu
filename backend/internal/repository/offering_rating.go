@@ -7,6 +7,7 @@ import (
 	"github.com/hageruto/kurobasu/config"
 	"github.com/hageruto/kurobasu/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type OfferingRatingSummary struct {
@@ -53,6 +54,14 @@ func (r *OfferingRatingRepository) GetSummariesByOfferingIDs(offeringIDs []int64
 // is an opaque id from the caller's anonymous-voter cookie. An anonymous
 // submission with no voterKey at all (cookie blocked/unavailable) always
 // inserts a new row, same as before this dedup existed.
+//
+// The dedup is enforced by a DB-level partial unique index per case (see
+// migration.ensureOfferingRatingUniqueIndexes), and this upserts (ON
+// CONFLICT) against it rather than doing a check-then-write. A plain
+// check-then-write has a race: two concurrent requests from the same voter
+// can both see "no existing row" before either commits, landing two rows for
+// what should be one vote — letting someone bypass the dedup by firing
+// requests in parallel. The unique index (and this upsert) close that.
 func (r *OfferingRatingRepository) SaveRating(offeringID int64, userID *int64, voterKey string, score int16) (OfferingRatingSummary, error) {
 	var summary OfferingRatingSummary
 	err := config.DB.Transaction(func(tx *gorm.DB) error {
@@ -67,47 +76,33 @@ func (r *OfferingRatingRepository) SaveRating(offeringID int64, userID *int64, v
 		now := time.Now()
 		switch {
 		case userID != nil:
-			var existing models.OfferingRating
-			err := tx.Where("offering_id = ? AND user_id = ?", offeringID, *userID).First(&existing).Error
-			if err == nil {
-				existing.Score = score
-				existing.UpdatedAt = now
-				if err := tx.Save(&existing).Error; err != nil {
-					return err
-				}
-			} else if errors.Is(err, gorm.ErrRecordNotFound) {
-				if err := tx.Create(&models.OfferingRating{
-					OfferingID: offeringID,
-					UserID:     userID,
-					Score:      score,
-					CreatedAt:  now,
-					UpdatedAt:  now,
-				}).Error; err != nil {
-					return err
-				}
-			} else {
+			rating := models.OfferingRating{
+				OfferingID: offeringID,
+				UserID:     userID,
+				Score:      score,
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			}
+			if err := tx.Clauses(clause.OnConflict{
+				Columns:     []clause.Column{{Name: "offering_id"}, {Name: "user_id"}},
+				TargetWhere: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: "user_id IS NOT NULL"}}},
+				DoUpdates:   clause.AssignmentColumns([]string{"score", "updated_at"}),
+			}).Create(&rating).Error; err != nil {
 				return err
 			}
 		case voterKey != "":
-			var existing models.OfferingRating
-			err := tx.Where("offering_id = ? AND voter_key = ?", offeringID, voterKey).First(&existing).Error
-			if err == nil {
-				existing.Score = score
-				existing.UpdatedAt = now
-				if err := tx.Save(&existing).Error; err != nil {
-					return err
-				}
-			} else if errors.Is(err, gorm.ErrRecordNotFound) {
-				if err := tx.Create(&models.OfferingRating{
-					OfferingID: offeringID,
-					VoterKey:   voterKey,
-					Score:      score,
-					CreatedAt:  now,
-					UpdatedAt:  now,
-				}).Error; err != nil {
-					return err
-				}
-			} else {
+			rating := models.OfferingRating{
+				OfferingID: offeringID,
+				VoterKey:   voterKey,
+				Score:      score,
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			}
+			if err := tx.Clauses(clause.OnConflict{
+				Columns:     []clause.Column{{Name: "offering_id"}, {Name: "voter_key"}},
+				TargetWhere: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: "voter_key <> ''"}}},
+				DoUpdates:   clause.AssignmentColumns([]string{"score", "updated_at"}),
+			}).Create(&rating).Error; err != nil {
 				return err
 			}
 		default:

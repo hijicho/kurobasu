@@ -136,8 +136,8 @@ export function TopPage({ academicYear, term }: TopPageProps) {
           </div>
 
           {/* カテゴリボタン＆専門科目セクション - 統一背景 */}
-          <div 
-            className="relative rounded-2xl overflow-hidden mb-6 p-6"
+          <div
+            className="relative rounded-2xl overflow-hidden mb-6 px-4 py-6 md:p-6"
             style={{
               backgroundImage: `url(${bgPattern.src})`,
               backgroundSize: 'cover',
@@ -150,26 +150,26 @@ export function TopPage({ academicYear, term }: TopPageProps) {
               <>
                 {/* カテゴリボタン */}
                 {quickLinks.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 md:gap-4 mb-4">
                     {quickLinks.map((link) => (
                       <a
                         key={link.href}
                         href={link.href}
-                        className="flex items-center gap-3 p-2.5 bg-white rounded-xl hover:shadow-lg transition-all"
+                        className="flex items-center gap-2 md:gap-3 p-2 md:p-2.5 bg-white rounded-xl hover:shadow-lg transition-all"
                       >
-                        <div className="w-10 h-10 bg-theme-primary-light rounded-lg flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 md:w-10 md:h-10 bg-theme-primary-light rounded-lg flex items-center justify-center shrink-0">
                           {link.icon}
                         </div>
-                        <h3 className="font-bold leading-tight text-[11px] md:text-[14px]">{link.title}</h3>
+                        <h3 className="font-bold leading-tight text-[11px] md:text-[14px] flex-1 min-w-0">{link.title}</h3>
                       </a>
                     ))}
                   </div>
                 )}
 
-                {/* 専門科目 + 第二外国語 */}
-                <div className="flex gap-4 items-start">
+                {/* 専門科目 + 第二外国語（カテゴリボタンと同じグリッドで幅・位置を揃える） */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 md:gap-4 items-start">
                   {/* 専門科目（PC:2/3・スマホ:1/2） */}
-                  <div className="w-1/2 md:w-2/3">
+                  <div className="col-span-1 md:col-span-2">
                     {specializedCourses.length > 0 && (
                       <div className="rounded-xl overflow-hidden">
                         <button
@@ -219,7 +219,7 @@ export function TopPage({ academicYear, term }: TopPageProps) {
                   </div>
 
                   {/* 第二外国語（PC:1/3・スマホ:1/2） */}
-                  <div className="w-1/2 md:w-1/3">
+                  <div className="col-span-1">
                     {secondLanguageCourses.length > 0 && (
                       <div className="rounded-xl overflow-hidden">
                         <button

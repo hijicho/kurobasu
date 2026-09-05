@@ -230,6 +230,10 @@ func RunMigrations() error {
 		return err
 	}
 
+	if err := ensureOfferingRatingUniqueIndexes(); err != nil {
+		return err
+	}
+
 	if err := dropRatingImportTables(); err != nil {
 		return err
 	}
@@ -495,6 +499,60 @@ func addConstraintIfNotExists(tableName, constraintName, ddl string) error {
 	}
 	if err := config.DB.Exec(ddl).Error; err != nil {
 		return fmt.Errorf("failed creating constraint %s on %s: %w", constraintName, tableName, err)
+	}
+	return nil
+}
+
+// ensureOfferingRatingUniqueIndexes makes the "one vote per person per
+// offering" rule a DB-level guarantee instead of just an application-level
+// check-then-write (see OfferingRatingRepository.SaveRating). Without this,
+// two concurrent requests from the same voter can both pass the "no existing
+// row" check before either commits, landing two rows for the same voter —
+// letting someone bypass the per-voter dedup entirely by firing requests in
+// parallel. A partial unique index (scoped to rows that actually carry a
+// voter identity) closes that race at the database level; SaveRating's
+// upsert (ON CONFLICT) then relies on it.
+//
+// Existing duplicate rows (if any predate this index, e.g. from the race
+// above) are collapsed first, keeping the most recently updated row per
+// voter/offering, since CREATE UNIQUE INDEX fails outright on a table that
+// already violates the constraint.
+func ensureOfferingRatingUniqueIndexes() error {
+	dedupeSQL := `
+		DELETE FROM offering_ratings
+		WHERE offering_rating_id IN (
+			SELECT offering_rating_id FROM (
+				SELECT offering_rating_id,
+					ROW_NUMBER() OVER (
+						PARTITION BY offering_id, %s
+						ORDER BY updated_at DESC, offering_rating_id DESC
+					) AS rn
+				FROM offering_ratings
+				WHERE %s
+			) ranked
+			WHERE ranked.rn > 1
+		)
+	`
+	if err := config.DB.Exec(fmt.Sprintf(dedupeSQL, "user_id", "user_id IS NOT NULL")).Error; err != nil {
+		return fmt.Errorf("failed deduping offering_ratings by user_id: %w", err)
+	}
+	if err := config.DB.Exec(fmt.Sprintf(dedupeSQL, "voter_key", "voter_key <> ''")).Error; err != nil {
+		return fmt.Errorf("failed deduping offering_ratings by voter_key: %w", err)
+	}
+
+	if err := config.DB.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_offering_ratings_user_unique
+		ON offering_ratings (offering_id, user_id)
+		WHERE user_id IS NOT NULL
+	`).Error; err != nil {
+		return fmt.Errorf("failed creating offering_ratings user unique index: %w", err)
+	}
+	if err := config.DB.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_offering_ratings_voter_unique
+		ON offering_ratings (offering_id, voter_key)
+		WHERE voter_key <> ''
+	`).Error; err != nil {
+		return fmt.Errorf("failed creating offering_ratings voter_key unique index: %w", err)
 	}
 	return nil
 }

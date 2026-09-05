@@ -6,7 +6,7 @@ import { TimetableView } from '../components/TimetableView';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { getOfferings, Offering } from '../lib/api';
 import { publicTopPath, termLabels } from '../lib/public-routing';
-import { OfferingRatingStars } from '../components/OfferingRatingStars';
+import { OfferingRatingStars, rankClass } from '../components/OfferingRatingStars';
 import { RatingRenewalNotice } from '../components/RatingRenewalNotice';
 
 interface CategoryPageProps {
@@ -129,8 +129,6 @@ export function CategoryPage({
   // 基礎教育科目も同じ「幅の狭いカード」表示にし、口コミが多い授業を先頭に並べる
   const isFoundationList = categoryId === 'foundation-list';
   const usesNarrowCards = isEnglishRequiredCategory || isFoundationList;
-  // 外国語科目・基礎教育科目はおすすめ度を表示しない（口コミ件数は表示する）
-  const hidesRating = usesNarrowCards;
   const byLatestReview = (a: Offering, b: Offering) => {
     const aTime = a.latest_review_at ? new Date(a.latest_review_at).getTime() : 0;
     const bTime = b.latest_review_at ? new Date(b.latest_review_at).getTime() : 0;
@@ -354,9 +352,16 @@ export function CategoryPage({
               <button
                 key={offering.offering_id}
                 onClick={() => onCourseClick?.(String(offering.offering_id))}
-                className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
+                className="relative flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
               >
-                <span className="flex flex-col overflow-hidden">
+                {offering.rating_rank && (
+                  <span
+                    className={`absolute top-2 right-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${rankClass[offering.rating_rank]}`}
+                  >
+                    {offering.rating_rank}
+                  </span>
+                )}
+                <span className="flex flex-col overflow-hidden pr-7">
                   {isEnglishRequiredCategory ? (
                     <span className="line-clamp-1 text-base font-bold text-[#2B4DCA]">
                       {offering.instructor_names.join('、') || '担当教員未設定'}
@@ -369,9 +374,15 @@ export function CategoryPage({
                       </span>
                     </>
                   )}
-                  {offering.review_count > 0 && (
-                    <span className="text-xs text-gray-500">口コミ{offering.review_count}件</span>
-                  )}
+                  <OfferingRatingStars
+                    rating={offering.rating_average}
+                    count={offering.rating_count}
+                    rank={offering.rating_rank}
+                    reviewCount={offering.review_count}
+                    showWhenUnrated={false}
+                    hideRankBadge
+                    className="mt-0.5"
+                  />
                 </span>
                 <ChevronRight className="h-5 w-5 flex-shrink-0 text-gray-300" />
               </button>
@@ -386,7 +397,14 @@ export function CategoryPage({
                   onClick={() => onCourseClick?.(String(offering.offering_id))}
                   className="relative flex h-24 flex-col justify-center overflow-hidden rounded-xl border border-gray-200 bg-white p-2.5 text-left transition-all hover:border-[#2B4DCA] hover:shadow-md"
                 >
-                  <h3 className="line-clamp-2 text-base font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
+                  {offering.rating_rank && (
+                    <span
+                      className={`absolute top-2 right-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${rankClass[offering.rating_rank]}`}
+                    >
+                      {offering.rating_rank}
+                    </span>
+                  )}
+                  <h3 className="line-clamp-2 pr-7 text-base font-bold text-[#2B4DCA]">{offering.subject.title}</h3>
                   <p className="line-clamp-1 text-xs text-gray-500">
                     {offering.instructor_names.join('、') || '担当教員未設定'}
                   </p>
@@ -396,7 +414,7 @@ export function CategoryPage({
                     rank={offering.rating_rank}
                     reviewCount={offering.review_count}
                     showWhenUnrated={false}
-                    hideRating={hidesRating}
+                    hideRankBadge
                     className="mt-1.5"
                   />
                   {offering.note && (

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Send } from 'lucide-react';
 
-export type ReviewCategory = 'pros' | 'cons' | 'others';
+export type ReviewCategory = 'pros' | 'cons' | 'others' | 'criteria' | 'test_bring_in';
 
 interface ReviewFormProps {
   onSubmit: (review: { type: ReviewCategory; comment: string }) => Promise<void> | void;
@@ -12,25 +12,52 @@ interface ReviewFormProps {
 const categoryOptions: { value: ReviewCategory; label: string }[] = [
   { value: 'pros', label: '良かったところ' },
   { value: 'cons', label: '悪かったところ' },
+  { value: 'criteria', label: '評価基準' },
+  { value: 'test_bring_in', label: 'テスト持ち込み' },
   { value: 'others', label: 'その他の情報' },
 ];
+
+const CRITERIA_CHOICES = ['出席点あり', '期末テスト', '中間テスト', '期末レポート', '中間レポート', '毎回の課題'];
+const TEST_BRING_IN_CHOICES = ['持ち込みなし', 'レジュメ', '自筆ノート', '教科書'];
+
+const choicesByCategory: Partial<Record<ReviewCategory, string[]>> = {
+  criteria: CRITERIA_CHOICES,
+  test_bring_in: TEST_BRING_IN_CHOICES,
+};
 
 export function ReviewForm({ onSubmit, disabled = false, disabledMessage }: ReviewFormProps) {
   const [type, setType] = useState<ReviewCategory>('pros');
   const [comment, setComment] = useState('');
+  const [selectedChoices, setSelectedChoices] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const choices = choicesByCategory[type];
+  const value = choices ? selectedChoices.join('、') : comment;
+
+  const handleCategoryChange = (next: ReviewCategory) => {
+    setType(next);
+    setComment('');
+    setSelectedChoices([]);
+  };
+
+  const toggleChoice = (choice: string) => {
+    setSelectedChoices((prev) =>
+      prev.includes(choice) ? prev.filter((c) => c !== choice) : [...prev, choice]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (disabled || !comment.trim()) return;
+    if (disabled || !value.trim()) return;
 
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit({ type, comment: comment.trim() });
+      await onSubmit({ type, comment: value.trim() });
       setComment('');
+      setSelectedChoices([]);
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);
     } catch {
@@ -63,12 +90,12 @@ export function ReviewForm({ onSubmit, disabled = false, disabledMessage }: Revi
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {categoryOptions.map((option) => (
             <button
               key={option.value}
               type="button"
-              onClick={() => setType(option.value)}
+              onClick={() => handleCategoryChange(option.value)}
               disabled={disabled || submitting}
               className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
                 type === option.value
@@ -81,19 +108,43 @@ export function ReviewForm({ onSubmit, disabled = false, disabledMessage }: Revi
           ))}
         </div>
 
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder={`${categoryOptions.find((option) => option.value === type)?.label}を入力`}
-          rows={4}
-          disabled={disabled || submitting}
-          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 transition-colors disabled:bg-gray-50 disabled:text-gray-400"
-        />
+        {choices ? (
+          <div className="flex flex-wrap gap-2">
+            {choices.map((choice) => {
+              const isSelected = selectedChoices.includes(choice);
+              return (
+                <button
+                  key={choice}
+                  type="button"
+                  onClick={() => toggleChoice(choice)}
+                  disabled={disabled || submitting}
+                  aria-pressed={isSelected}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    isSelected
+                      ? 'border-[#2B4DCA] bg-[#2B4DCA] text-white'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-blue-200 hover:bg-blue-50'
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  {choice}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder={`${categoryOptions.find((option) => option.value === type)?.label}を入力`}
+            rows={4}
+            disabled={disabled || submitting}
+            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 transition-colors disabled:bg-gray-50 disabled:text-gray-400"
+          />
+        )}
 
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={disabled || submitting || !comment.trim()}
+            disabled={disabled || submitting || !value.trim()}
             className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-[#2B4DCA] text-white rounded-xl text-sm md:text-base hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4" />

@@ -221,10 +221,14 @@ export async function createOfferingRating(
   });
 }
 
+export type ReviewType = 'pros' | 'cons' | 'others' | 'criteria' | 'test_bring_in';
+
 export interface ReviewsResponse {
   pros: string[];
   cons: string[];
   others: string[];
+  criteria: string[];
+  test_bring_in: string[];
   count: number;
 }
 
@@ -234,14 +238,14 @@ export async function getReviews(offeringId: number): Promise<ReviewsResponse> {
 
 export interface CreateReviewResponse {
   review_id: number;
-  type: 'pros' | 'cons' | 'others';
+  type: ReviewType;
   status: string;
 }
 
 export async function createReview(
   idToken: string | null | undefined,
   offeringId: number,
-  review: { type: 'pros' | 'cons' | 'others'; comment: string }
+  review: { type: ReviewType; comment: string }
 ): Promise<CreateReviewResponse> {
   return fetchApi<CreateReviewResponse>('/reviews', {
     method: 'POST',
@@ -363,7 +367,7 @@ export interface AdminReview {
   academic_year: number;
   term: string;
   comment: string;
-  type: 'pros' | 'cons' | 'others';
+  type: ReviewType;
   status: 'pending' | 'approved';
   created_at: string;
   updated_at: string;

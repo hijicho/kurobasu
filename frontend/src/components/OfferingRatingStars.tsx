@@ -2,9 +2,9 @@
 
 import { Star } from 'lucide-react';
 
-type RatingRank = 'AA' | 'A' | 'B' | 'C';
+export type RatingRank = 'AA' | 'A' | 'B' | 'C';
 
-const rankClass: Record<RatingRank, string> = {
+export const rankClass: Record<RatingRank, string> = {
   AA: 'bg-[#fc9c5a] text-white border-[#fc9c5a]',
   A: 'bg-[#f82501] text-white border-[#f82501]',
   B: 'bg-[#27ac49] text-white border-[#27ac49]',
@@ -37,6 +37,9 @@ interface OfferingRatingStarsProps {
   // true のとき、評価が付いていても星・ランク・点数を一切表示しない
   // （そのカテゴリではおすすめ度自体を見せたくない場合用。口コミ件数は表示する）。
   hideRating?: boolean;
+  // true のとき、星・点数は表示したままランクバッジだけ非表示にする
+  // （カード右上などに別途ランクバッジを出す場合、二重表示を避けるために使う）。
+  hideRankBadge?: boolean;
 }
 
 export function OfferingRatingStars({
@@ -52,6 +55,7 @@ export function OfferingRatingStars({
   reviewCount,
   showWhenUnrated = true,
   hideRating = false,
+  hideRankBadge = false,
 }: OfferingRatingStarsProps) {
   const shownScore = selectedScore ?? rating;
   const rounded = shownScore ? Math.round(shownScore) : 0;
@@ -93,7 +97,7 @@ export function OfferingRatingStars({
               );
             })}
           </div>
-          {resolvedRank ? (
+          {resolvedRank && !hideRankBadge ? (
             <span className={`rounded border px-1.5 py-0.5 font-bold ${textSize} ${rankClass[resolvedRank]}`}>
               {resolvedRank}
             </span>

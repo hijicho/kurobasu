@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, Info, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Info, Clock, ClipboardList, FileCheck2 } from 'lucide-react';
 import { User } from 'lucide-react';
 import { createReview, getReviews } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -23,12 +23,37 @@ const CATEGORY_LABELS: Record<ReviewCategory, string> = {
   pros: '良かったところ',
   cons: '悪かったところ',
   others: 'その他の情報',
+  criteria: '評価基準',
+  test_bring_in: 'テスト持ち込み',
 };
+
+interface ApiReviews {
+  pros: string[];
+  cons: string[];
+  others: string[];
+  criteria: string[];
+  test_bring_in: string[];
+}
+
+function EvaluationTags({ values }: { values: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {values.map((value) => (
+        <span
+          key={value}
+          className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs md:text-sm text-[#2B4DCA]"
+        >
+          {value}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export function ReviewSections({ pros, cons, others, offeringId }: ReviewSectionsProps) {
   const { isAuthenticated, getIdToken } = useAuth();
   const [submitted, setSubmitted] = useState<SubmittedReview[]>([]);
-  const [apiReviews, setApiReviews] = useState<{ pros: string[]; cons: string[]; others: string[] } | null>(null);
+  const [apiReviews, setApiReviews] = useState<ApiReviews | null>(null);
   const [loadingReviews, setLoadingReviews] = useState(false);
 
   useEffect(() => {
@@ -48,6 +73,8 @@ export function ReviewSections({ pros, cons, others, offeringId }: ReviewSection
             pros: response.pros ?? [],
             cons: response.cons ?? [],
             others: response.others ?? [],
+            criteria: response.criteria ?? [],
+            test_bring_in: response.test_bring_in ?? [],
           });
         }
       } catch {
@@ -82,6 +109,8 @@ export function ReviewSections({ pros, cons, others, offeringId }: ReviewSection
   const displayPros = apiReviews?.pros ?? pros;
   const displayCons = apiReviews?.cons ?? cons;
   const displayOthers = apiReviews?.others ?? others;
+  const displayCriteria = apiReviews?.criteria ?? [];
+  const displayTestBringIn = apiReviews?.test_bring_in ?? [];
   const pendingList = submitted.filter((r) => !r.approved);
   const approvedList = submitted.filter((r) => r.approved);
   const hasSubmitted = submitted.length > 0;
@@ -95,6 +124,31 @@ export function ReviewSections({ pros, cons, others, offeringId }: ReviewSection
       {loadingReviews && (
         <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 text-sm text-gray-500">
           口コミを読み込んでいます。
+        </div>
+      )}
+
+      {(displayCriteria.length > 0 || displayTestBringIn.length > 0) && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 space-y-4">
+          {displayCriteria.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <ClipboardList className="w-5 h-5 text-[#2B4DCA] shrink-0" />
+                <h2 className="text-base md:text-xl">評価基準</h2>
+              </div>
+              <EvaluationTags values={displayCriteria} />
+            </div>
+          )}
+
+          {displayTestBringIn.length > 0 && (
+            <div>
+              {displayCriteria.length > 0 && <div className="border-t border-gray-100 my-1" />}
+              <div className="flex items-center gap-2 mb-3">
+                <FileCheck2 className="w-5 h-5 text-[#2B4DCA] shrink-0" />
+                <h2 className="text-base md:text-xl">テスト持ち込み</h2>
+              </div>
+              <EvaluationTags values={displayTestBringIn} />
+            </div>
+          )}
         </div>
       )}
 
