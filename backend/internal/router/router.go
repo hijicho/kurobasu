@@ -38,7 +38,9 @@ func SetupRoutes() http.Handler {
 	mux.HandleFunc("/api/v1/offerings/{id}", methodHandler(http.MethodGet, handlers.GetOffering))
 	// POST /api/v1/offerings/{id}/ratings
 	// 効果：特定の開講におすすめ度（1〜5）を投稿。未ログインでも投稿でき、ログイン済みならユーザーに紐づく
-	mux.HandleFunc("/api/v1/offerings/{id}/ratings", middleware.OptionalAuth(methodHandler(http.MethodPost, handlers.CreateOfferingRating)))
+	// DELETE /api/v1/offerings/{id}/ratings
+	// 効果：呼び出し元自身の評価だけを削除
+	mux.HandleFunc("/api/v1/offerings/{id}/ratings", middleware.OptionalAuth(offeringRatingHandler()))
 	// GET /api/v1/offerings/{id}/reviews
 	// 効果：特定の開講に尊するして国を一覧取得
 	mux.HandleFunc("/api/v1/offerings/{id}/reviews", methodHandler(http.MethodGet, handlers.ListReviews))
@@ -155,6 +157,19 @@ func methodHandler(method string, handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		handler(w, r)
+	}
+}
+
+func offeringRatingHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			handlers.CreateOfferingRating(w, r)
+		case http.MethodDelete:
+			handlers.DeleteOfferingRating(w, r)
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
 	}
 }
 

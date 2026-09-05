@@ -51,6 +51,17 @@ func voterKeyFromRequest(w http.ResponseWriter, r *http.Request) string {
 	return key
 }
 
+// voterKeyIfPresent returns the caller's anonymous voter id if voterCookieName
+// is already set, or "" otherwise. Unlike voterKeyFromRequest, it never mints
+// a new cookie — for read-only lookups (e.g. "what's my own rating?") and for
+// deletes, where a freshly minted id obviously has no prior rating to find.
+func voterKeyIfPresent(r *http.Request) string {
+	if c, err := r.Cookie(voterCookieName); err == nil {
+		return c.Value
+	}
+	return ""
+}
+
 func generateVoterKey() string {
 	buf := make([]byte, 16)
 	if _, err := rand.Read(buf); err != nil {

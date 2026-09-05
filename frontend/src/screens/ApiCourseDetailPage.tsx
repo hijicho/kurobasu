@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { createOfferingRating, getApiErrorMessage, getOffering, type Offering } from '@/lib/api';
+import { createOfferingRating, deleteOfferingRating, getApiErrorMessage, getOffering, type Offering } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 interface ApiCourseDetailPageProps {
@@ -69,6 +69,7 @@ export function ApiCourseDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedScore, setSelectedScore] = useState<number | null>(null);
+  const [hasOwnRating, setHasOwnRating] = useState(false);
   const [savingRating, setSavingRating] = useState(false);
   const [ratingMessage, setRatingMessage] = useState<string | null>(null);
 
@@ -82,6 +83,10 @@ export function ApiCourseDetailPage({
         if (!cancelled) {
           setOffering(response);
           setError(null);
+          if (response.your_rating !== undefined) {
+            setSelectedScore(response.your_rating);
+            setHasOwnRating(true);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch offering:', err);
@@ -146,9 +151,33 @@ export function ApiCourseDetailPage({
         rating_count: rating.rating_count,
         rating_rank: rating.rating_rank,
       });
+      setHasOwnRating(true);
       setRatingMessage('おすすめ度を保存しました。');
     } catch (err) {
       setRatingMessage(getApiErrorMessage(err, 'おすすめ度の保存に失敗しました。'));
+    } finally {
+      setSavingRating(false);
+    }
+  };
+
+  const handleConfirmDeleteRating = async () => {
+    if (!offering) return;
+    setSavingRating(true);
+    setRatingMessage(null);
+    try {
+      const idToken = await getIdToken();
+      const rating = await deleteOfferingRating(offering.offering_id, idToken);
+      setOffering({
+        ...offering,
+        rating_average: rating.rating_average,
+        rating_count: rating.rating_count,
+        rating_rank: rating.rating_rank,
+      });
+      setHasOwnRating(false);
+      setSelectedScore(null);
+      setRatingMessage('あなたのおすすめ度を削除しました。');
+    } catch (err) {
+      setRatingMessage(getApiErrorMessage(err, 'おすすめ度の削除に失敗しました。'));
     } finally {
       setSavingRating(false);
     }
@@ -297,6 +326,38 @@ export function ApiCourseDetailPage({
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  {hasOwnRating && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={savingRating}
+                          className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {savingRating ? '処理中…' : '削除する'}
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-white">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-black">評価を削除しますか？</AlertDialogTitle>
+                          <AlertDialogDescription className="text-gray-600">
+                            あなたが投稿したこの授業へのおすすめ度を削除します。この操作は取り消せません。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="border-gray-200 bg-white text-black hover:bg-gray-50">
+                            キャンセル
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleConfirmDeleteRating}
+                            className="bg-red-600 text-white hover:bg-red-700"
+                          >
+                            削除する
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                   {ratingMessage ? <p className="text-sm text-gray-600">{ratingMessage}</p> : null}
                 </div>
               </div>

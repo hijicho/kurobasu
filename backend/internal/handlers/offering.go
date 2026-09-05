@@ -157,7 +157,24 @@ func GetOffering(w http.ResponseWriter, r *http.Request) {
 	reviewRepo := &repository.ReviewRepository{}
 	reviewSummariesByOffering, _ := reviewRepo.GetApprovedSummariesByOfferingIDs([]int64{offering.OfferingID})
 
-	successResponse(w, toOfferingResponse(*offering, meetings, ratingsByOffering[offering.OfferingID], reviewSummariesByOffering[offering.OfferingID]))
+	response := toOfferingResponse(*offering, meetings, ratingsByOffering[offering.OfferingID], reviewSummariesByOffering[offering.OfferingID])
+
+	// 削除ボタンの表示可否をフロントで判断できるよう、このリクエストの投稿者
+	// (ログインユーザー or 既存の匿名Cookie)自身の評価があれば含める。ここでは
+	// 新規にCookieを発行しない(voterKeyIfPresent) — Cookieが無ければ「まだ何も
+	// 投稿していない」で確定なので、その場合の問い合わせは省略する。
+	var userID *int64
+	if user, ok := middleware.CurrentUser(r); ok {
+		userID = &user.UserID
+	}
+	voterKey := voterKeyIfPresent(r)
+	if userID != nil || voterKey != "" {
+		if score, err := ratingRepo.GetMyRating(offering.OfferingID, userID, voterKey); err == nil {
+			response.YourRating = &score
+		}
+	}
+
+	successResponse(w, response)
 }
 
 // CreateOfferingRating - POST /api/v1/offerings/{id}/ratings
@@ -199,14 +216,53 @@ func CreateOfferingRating(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	average := summary.AverageScore
-	rank := ratingRankForScore(summary.AverageScore)
+	response := ratingResponseFromSummary(offeringID, summary)
+	response.YourRating = &req.Score
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{"data": dto.OfferingRatingResponse{
-		OfferingID:    offeringID,
-		RatingAverage: &average,
-		RatingCount:   summary.SampleCount,
-		RatingRank:    &rank,
-	}})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": response})
+}
+
+// DeleteOfferingRating - DELETE /api/v1/offerings/{id}/ratings
+// 呼び出し元自身(ログインユーザー or 匿名Cookie)の評価だけを削除する。
+func DeleteOfferingRating(w http.ResponseWriter, r *http.Request) {
+	offeringID := extractID(r, "id")
+
+	var userID *int64
+	if user, ok := middleware.CurrentUser(r); ok {
+		userID = &user.UserID
+	}
+	// 削除時は新規にCookieを発行しない: 発行したばかりのCookieに評価がある
+	// はずがないので、無ければ「削除対象なし」で即座に確定できる。
+	voterKey := voterKeyIfPresent(r)
+
+	ratingRepo := &repository.OfferingRatingRepository{}
+	summary, err := ratingRepo.DeleteRating(offeringID, userID, voterKey)
+	if err != nil {
+		if errors.Is(err, repository.ErrRatingNotFound) {
+			errorResponse(w, http.StatusNotFound, "削除対象の評価が見つかりません")
+			return
+		}
+		errorResponse(w, http.StatusInternalServerError, "Failed to delete rating")
+		return
+	}
+
+	successResponse(w, ratingResponseFromSummary(offeringID, summary))
+}
+
+// ratingResponseFromSummary builds the rating portion of a response from an
+// aggregate summary, omitting average/rank when there are no ratings left
+// (SampleCount == 0) rather than reporting a misleading zero.
+func ratingResponseFromSummary(offeringID int64, summary repository.OfferingRatingSummary) dto.OfferingRatingResponse {
+	response := dto.OfferingRatingResponse{
+		OfferingID:  offeringID,
+		RatingCount: summary.SampleCount,
+	}
+	if summary.SampleCount > 0 {
+		average := summary.AverageScore
+		rank := ratingRankForScore(summary.AverageScore)
+		response.RatingAverage = &average
+		response.RatingRank = &rank
+	}
+	return response
 }

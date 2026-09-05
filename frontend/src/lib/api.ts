@@ -179,6 +179,9 @@ export interface Offering {
   rating_average?: number;
   rating_count: number;
   rating_rank?: 'AA' | 'A' | 'B' | 'C';
+  // your_rating: 自分（ログインユーザー or 匿名Cookie）が過去に投稿した評価スコア。
+  // 未投稿ならundefined。getOffering（単体取得）でのみ設定される。
+  your_rating?: number;
   review_count: number; // 承認済みの口コミ（良かった/悪かった/その他）の件数合計
   latest_review_at?: string; // 最新の承認済み口コミの投稿日時（口コミが無ければ未設定）
   meetings: Meeting[];
@@ -207,6 +210,7 @@ export interface OfferingRatingResponse {
   rating_average?: number;
   rating_count: number;
   rating_rank?: 'AA' | 'A' | 'B' | 'C';
+  your_rating?: number;
 }
 
 export async function createOfferingRating(
@@ -218,6 +222,16 @@ export async function createOfferingRating(
     method: 'POST',
     headers: authHeaders(idToken),
     body: JSON.stringify({ score }),
+  });
+}
+
+export async function deleteOfferingRating(
+  offeringId: number,
+  idToken?: string | null
+): Promise<OfferingRatingResponse> {
+  return fetchApi<OfferingRatingResponse>(`/offerings/${offeringId}/ratings`, {
+    method: 'DELETE',
+    headers: authHeaders(idToken),
   });
 }
 

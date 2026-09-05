@@ -56,6 +56,10 @@ type OfferingResponse struct {
 	RatingAverage   *float64          `json:"rating_average,omitempty"`
 	RatingCount     int               `json:"rating_count"`
 	RatingRank      *string           `json:"rating_rank,omitempty"`
+	// YourRating: このリクエストの投稿者（ログインユーザー or 匿名Cookie）自身が
+	// 過去に投稿した評価スコア。未投稿ならnil。GetOffering でのみ設定される
+	// （一覧APIではコストの都合上、常に未設定=nil）。
+	YourRating *int16 `json:"your_rating,omitempty"`
 	// ReviewCount: 承認済みの口コミ（良かった/悪かった/その他）の件数合計
 	ReviewCount int `json:"review_count"`
 	// LatestReviewAt: 最新の承認済み口コミの投稿日時（口コミ順ソート用、口コミが無ければnil）
@@ -213,6 +217,9 @@ type OfferingRatingResponse struct {
 	RatingAverage *float64 `json:"rating_average,omitempty"`
 	RatingCount   int      `json:"rating_count"`
 	RatingRank    *string  `json:"rating_rank,omitempty"`
+	// YourRating: この投稿/削除の後で、投稿者自身が持つ評価スコア。
+	// 投稿後はそのスコア、削除後はnil。
+	YourRating *int16 `json:"your_rating,omitempty"`
 }
 
 // BootstrapUserRequest

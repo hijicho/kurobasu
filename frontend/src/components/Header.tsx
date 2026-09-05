@@ -26,7 +26,7 @@ export function Header({ onGlossaryOpen }: HeaderProps) {
 
           {/* フォーム入力リンク（デスクトップ） */}
           <a
-            href="https://forms.gle/Ash6hm2xLsgiwHGh9"
+            href="https://t.co/giO9o56EAa"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[#2B4DCA] bg-white text-[#2B4DCA] hover:bg-[#2B4DCA] hover:text-white transition-all duration-200 shadow-sm hover:shadow-md"
@@ -79,7 +79,7 @@ export function Header({ onGlossaryOpen }: HeaderProps) {
           <div className="md:hidden mt-4 space-y-4 pb-4 border-t pt-4">
             {/* フォーム入力リンク（モバイル） */}
             <a
-              href="https://forms.gle/Ash6hm2xLsgiwHGh9"
+              href="https://t.co/giO9o56EAa"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl border-2 border-[#2B4DCA] bg-white text-[#2B4DCA] hover:bg-[#2B4DCA] hover:text-white transition-all duration-200"

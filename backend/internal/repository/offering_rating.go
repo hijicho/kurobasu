@@ -138,3 +138,78 @@ func (r *OfferingRatingRepository) SaveRating(offeringID int64, userID *int64, v
 	})
 	return summary, err
 }
+
+// ErrRatingNotFound is returned when the caller (by userID or voterKey) has
+// no existing rating on the given offering to fetch/delete.
+var ErrRatingNotFound = errors.New("rating not found")
+
+// GetMyRating returns the caller's own previously-submitted score for an
+// offering, identified the same way as SaveRating (userID when logged in,
+// otherwise voterKey). Returns ErrRatingNotFound if they have none.
+func (r *OfferingRatingRepository) GetMyRating(offeringID int64, userID *int64, voterKey string) (int16, error) {
+	var query *gorm.DB
+	switch {
+	case userID != nil:
+		query = config.DB.Where("offering_id = ? AND user_id = ?", offeringID, *userID)
+	case voterKey != "":
+		query = config.DB.Where("offering_id = ? AND voter_key = ?", offeringID, voterKey)
+	default:
+		return 0, ErrRatingNotFound
+	}
+
+	var rating models.OfferingRating
+	if err := query.Select("score").First(&rating).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, ErrRatingNotFound
+		}
+		return 0, err
+	}
+	return rating.Score, nil
+}
+
+// DeleteRating removes the caller's own rating on an offering (identified the
+// same way as SaveRating) and returns the resulting aggregate. Returns
+// ErrRatingNotFound if they had none to delete.
+func (r *OfferingRatingRepository) DeleteRating(offeringID int64, userID *int64, voterKey string) (OfferingRatingSummary, error) {
+	var summary OfferingRatingSummary
+	err := config.DB.Transaction(func(tx *gorm.DB) error {
+		var query *gorm.DB
+		switch {
+		case userID != nil:
+			query = tx.Where("offering_id = ? AND user_id = ?", offeringID, *userID)
+		case voterKey != "":
+			query = tx.Where("offering_id = ? AND voter_key = ?", offeringID, voterKey)
+		default:
+			return ErrRatingNotFound
+		}
+
+		result := query.Delete(&models.OfferingRating{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrRatingNotFound
+		}
+
+		var row struct {
+			OfferingID   int64
+			AverageScore float64
+			SampleCount  int
+		}
+		if err := tx.
+			Model(&models.OfferingRating{}).
+			Select("offering_id, AVG(score) AS average_score, COUNT(*) AS sample_count").
+			Where("offering_id = ?", offeringID).
+			Group("offering_id").
+			Scan(&row).Error; err != nil {
+			return err
+		}
+		summary = OfferingRatingSummary{
+			OfferingID:   offeringID,
+			AverageScore: row.AverageScore,
+			SampleCount:  row.SampleCount,
+		}
+		return nil
+	})
+	return summary, err
+}
