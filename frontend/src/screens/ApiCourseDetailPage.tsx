@@ -267,6 +267,26 @@ export function ApiCourseDetailPage({
               </div>
             </div>
 
+            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 md:p-6">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base md:text-lg">みんなのおすすめ度</h2>
+                    <RatingRenewalNotice />
+                  </div>
+                  <p className="mt-1 text-xs md:text-sm text-gray-600">
+                    1〜5 の星でこの授業のおすすめ度を投稿できます。
+                  </p>
+                </div>
+                <OfferingRatingStars
+                  rating={offering.rating_average}
+                  count={offering.rating_count}
+                  rank={offering.rating_rank}
+                  size="lg"
+                />
+              </div>
+            </div>
+
             <div className="mb-6">
               <ReviewSections
                 pros={[]}
@@ -275,52 +295,65 @@ export function ApiCourseDetailPage({
                 offeringId={offering.offering_id}
                 ratingSection={
                   <div className="rounded-2xl border border-gray-200 bg-white p-4 md:p-6">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-base md:text-lg">みんなのおすすめ度</h2>
-                          <RatingRenewalNotice />
-                        </div>
-                        <p className="mt-1 text-xs md:text-sm text-gray-600">
-                          1〜5 の星でこの授業のおすすめ度を投稿できます。
-                        </p>
-                      </div>
-                      <OfferingRatingStars
-                        rating={offering.rating_average}
-                        count={offering.rating_count}
-                        rank={offering.rating_rank}
-                        size="lg"
-                      />
-                    </div>
-                    <div className="mt-4 rounded-xl bg-gray-50 p-3 md:p-4">
-                      <p className="text-xs font-semibold text-[#2B4DCA]">去年この授業を受けた人へ</p>
-                      <p className="mb-2 text-sm font-medium text-gray-700">あなたのおすすめ度</p>
-                      <OfferingRatingStars
-                        rating={offering.rating_average}
-                        count={offering.rating_count}
-                        rank={offering.rating_rank}
-                        size="lg"
-                        interactive
-                        selectedScore={selectedScore}
-                        disabled={savingRating}
-                        onSelect={handlePickScore}
-                      />
-                      <div className="mt-2 flex flex-wrap items-center gap-3 md:mt-3">
+                    <p className="text-xs font-semibold text-[#2B4DCA]">去年この授業を受けた人へ</p>
+                    <p className="mb-2 text-sm font-medium text-gray-700">あなたのおすすめ度</p>
+                    <OfferingRatingStars
+                      rating={offering.rating_average}
+                      count={offering.rating_count}
+                      rank={offering.rating_rank}
+                      size="lg"
+                      interactive
+                      selectedScore={selectedScore}
+                      disabled={savingRating}
+                      onSelect={handlePickScore}
+                    />
+                    <div className="mt-2 flex flex-wrap items-center gap-3 md:mt-3">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={selectedScore === null || savingRating}
+                            className="rounded-lg bg-[#2B4DCA] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#243fa8] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {savingRating ? '送信中…' : '反映する'}
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-white">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-black">評価を投稿しますか？</AlertDialogTitle>
+                            <AlertDialogDescription className="text-gray-600">
+                              皆様の評価の上で成り立っています。くれぐれも正当な評価をお願いいたします。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="border-gray-200 bg-white text-black hover:bg-gray-50">
+                              キャンセル
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleConfirmRate}
+                              className="bg-[#2B4DCA] text-white hover:bg-[#243fa8]"
+                            >
+                              投稿する
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      {hasOwnRating && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <button
                               type="button"
-                              disabled={selectedScore === null || savingRating}
-                              className="rounded-lg bg-[#2B4DCA] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#243fa8] disabled:cursor-not-allowed disabled:opacity-50"
+                              disabled={savingRating}
+                              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              {savingRating ? '送信中…' : '反映する'}
+                              {savingRating ? '処理中…' : '削除する'}
                             </button>
                           </AlertDialogTrigger>
                           <AlertDialogContent className="bg-white">
                             <AlertDialogHeader>
-                              <AlertDialogTitle className="text-black">評価を投稿しますか？</AlertDialogTitle>
+                              <AlertDialogTitle className="text-black">評価を削除しますか？</AlertDialogTitle>
                               <AlertDialogDescription className="text-gray-600">
-                                皆様の評価の上で成り立っています。くれぐれも正当な評価をお願いいたします。
+                                あなたが投稿したこの授業へのおすすめ度を削除します。
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -328,48 +361,16 @@ export function ApiCourseDetailPage({
                                 キャンセル
                               </AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={handleConfirmRate}
-                                className="bg-[#2B4DCA] text-white hover:bg-[#243fa8]"
+                                onClick={handleConfirmDeleteRating}
+                                className="bg-red-600 text-white hover:bg-red-700"
                               >
-                                投稿する
+                                削除する
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
-                        {hasOwnRating && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <button
-                                type="button"
-                                disabled={savingRating}
-                                className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {savingRating ? '処理中…' : '削除する'}
-                              </button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-white">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="text-black">評価を削除しますか？</AlertDialogTitle>
-                                <AlertDialogDescription className="text-gray-600">
-                                  あなたが投稿したこの授業へのおすすめ度を削除します。
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel className="border-gray-200 bg-white text-black hover:bg-gray-50">
-                                  キャンセル
-                                </AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={handleConfirmDeleteRating}
-                                  className="bg-red-600 text-white hover:bg-red-700"
-                                >
-                                  削除する
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                        {ratingMessage ? <p className="text-sm text-gray-600">{ratingMessage}</p> : null}
-                      </div>
+                      )}
+                      {ratingMessage ? <p className="text-sm text-gray-600">{ratingMessage}</p> : null}
                     </div>
                   </div>
                 }
